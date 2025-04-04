@@ -1,8 +1,9 @@
-import { DatabaseService } from './DatabaseService.js';
+import { DatabaseService, User } from './DatabaseService.js';
 import { StorageService } from './StorageService.js';
 import { expect } from 'chai';
 import { join } from 'path';
 import { writeFile, rm } from 'fs/promises';
+import { v4 as uuidv4 } from 'uuid';
 
 describe('DatabaseService - Materials', () => {
   let db: DatabaseService;
@@ -107,3 +108,130 @@ describe('DatabaseService - Materials', () => {
     });
   });
 }); 
+
+describe('DatabaseService - User Management', () => {
+  let db: DatabaseService;
+
+  beforeEach(() => {
+    db = new DatabaseService();
+  });
+
+  it('should create a user', async () => {
+    const userId = uuidv4();
+    const userData = {
+      id: userId,
+      username: 'testuser',
+      email: 'test@example.com',
+      password_hash: 'hashed_password', // In real scenarios, this would be a bcrypt hash
+      position: 'student',
+    };
+
+    await db.createUser(userData);    
+    const retrievedUser = await db.getUserByEmail('test@example.com');
+
+    
+    expect(retrievedUser).to.not.be.null;
+    expect(retrievedUser?.username).to.equal('testuser');
+    expect(retrievedUser?.email).to.equal('test@example.com');
+    expect(retrievedUser?.password_hash).to.equal('hashed_password');
+    expect(retrievedUser?.position).to.equal('student');
+    expect(retrievedUser?.created_at).to.not.be.null;
+
+    await db.deleteUserById(userId); // Clean up after test
+  });
+
+  it('should get a user by email', async () => {
+    const userId = uuidv4();
+    const userData = {
+      id: userId,
+      username: 'testuser2',
+      email: 'test2@example.com',
+      password_hash: 'hashed_password2',
+      position: 'teacher',
+      created_at: new Date().toISOString()
+    };
+
+    await db.createUser(userData);
+    const user = await db.getUserByEmail('test2@example.com');
+
+    expect(user).to.not.be.null;
+    expect(user?.username).to.equal('testuser2');
+    expect(user?.email).to.equal('test2@example.com');
+    expect(user?.password_hash).to.equal('hashed_password2');
+    expect(user?.position).to.equal('teacher');
+    expect(user?.created_at).to.not.be.null;
+
+    await db.deleteUserById(userId); // Clean up after test  
+  });
+
+  it('should return null if user not found', async () => {
+    const user = await db.getUserByEmail('nonexistent@example.com');
+    expect(user).to.be.null;
+  });
+
+  it('should handle duplicate email', async () => {
+    const userId1 = uuidv4();
+    const userData1 = {
+        id: userId1,
+        username: 'user1',
+        email: 'duplicate@example.com',
+        password_hash: 'hashed1',
+        position: 'student',
+        created_at: new Date().toISOString()
+    };
+    await db.createUser(userData1);
+
+    const userId2 = uuidv4();
+    const userData2 = {
+        id: userId2,
+        username: 'user2',
+        email: 'duplicate@example.com',
+        password_hash: 'hashed2',
+        position: 'teacher',
+        created_at: new Date().toISOString()
+    };
+
+    try {
+        await db.createUser(userData2);
+        expect.fail('Expected createUser to throw an error');
+    } catch (error: any) {
+        expect(error.message).to.include('UNIQUE constraint failed'); // Adjust this to match your DB error message
+    }
+
+    await db.deleteUserById(userId1); // Clean up after test  
+    await db.deleteUserById(userId2); // Clean up after test  
+});
+
+it('should handle duplicate username', async () => {
+    const userId1 = uuidv4();
+    const userData1 = {
+        id: userId1,
+        username: 'duplicateuser',
+        email: 'user1@example.com',
+        password_hash: 'hashed1',
+        position: 'student',
+        created_at: new Date().toISOString()
+    };
+    await db.createUser(userData1);
+
+    const userId2 = uuidv4();
+    const userData2 = {
+        id: userId2,
+        username: 'duplicateuser',
+        email: 'user2@example.com',
+        password_hash: 'hashed2',
+        position: 'teacher',
+        created_at: new Date().toISOString()
+    };
+
+    try {
+        await db.createUser(userData2);
+        expect.fail('Expected createUser to throw an error');
+    } catch (error: any) {
+        expect(error.message).to.include('UNIQUE constraint failed'); // Adjust this to match your DB error message
+    }
+
+    await db.deleteUserById(userId1); // Clean up after test  
+    await db.deleteUserById(userId2); // Clean up after test  
+  });
+});
