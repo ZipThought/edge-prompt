@@ -1,0 +1,23 @@
+{
+  "id": "validation_template",
+  "type": "validation",
+  "pattern": "You are evaluating a student answer to a question.\n\nQUESTION: [question]\n\nSTUDENT ANSWER: [answer]\n\nPlease evaluate this answer based on the following criteria:\n\n1. LENGTH: Is the answer sufficiently detailed?\n2. VOCABULARY: Is the vocabulary appropriate for the grade level?\n3. CONTENT: Does the answer address the question directly?\n4. ACCURACY: Is the information provided accurate?\n\nProvide your evaluation in the following format:\n\n```json\n{\n  \"passed\": true|false,\n  \"score\": number between 0-10,\n  \"feedback\": \"your feedback here\"\n}\n```",
+  "constraints": [
+    "Be objective and fair in your assessment",
+    "Consider the grade level (Grade 5) when evaluating vocabulary",
+    "Assess only the content presented, not stylistic elements",
+    "Provide constructive feedback"
+  ],
+  "answerSpace": {
+    "minWords": 1,
+    "maxWords": 200,
+    "vocabulary": "grade-appropriate",
+    "structure": "json",
+    "prohibitedContent": ["subjective opinions", "personal preferences"]
+  },
+  "variables": {
+    "question": "The educational question being asked",
+    "answer": "The student's answer to evaluate",
+    "grade_level": "The grade level for evaluating appropriateness (default: Grade 5)"
+  }
+} 
