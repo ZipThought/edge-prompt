@@ -39,6 +39,10 @@ else
     source "$RESEARCH_DIR/.venv/bin/activate"
 fi
 
+# Add research directory to Python path
+export PYTHONPATH="$RESEARCH_DIR:$PYTHONPATH"
+echo "PYTHONPATH set to include: $RESEARCH_DIR"
+
 # Function to run a test suite
 run_test_suite() {
     local suite=$1
@@ -50,7 +54,7 @@ run_test_suite() {
     
     mkdir -p "$output_dir"
     
-    $PYTHON -m research.runner.runner_cli \
+    $PYTHON -m runner.runner_cli \
         --config "$suite" \
         --output "$output_dir" \
         --log-level INFO
@@ -79,11 +83,11 @@ done
 # Process results and generate figures
 echo ""
 echo "Processing results..."
-$PYTHON "$SCRIPT_DIR/analyze_results.py"
+$PYTHON "$SCRIPT_DIR/analyze_results.py" --data-dir "$DATA_DIR/raw" --output-dir "$DATA_DIR/processed"
 
 echo ""
 echo "Generating figures..."
-$PYTHON "$SCRIPT_DIR/render_figures.py"
+$PYTHON "$SCRIPT_DIR/render_figures.py" --data-dir "$DATA_DIR/processed" --output-dir "$RESEARCH_DIR/figures"
 
 echo ""
 echo "All tests completed successfully!"

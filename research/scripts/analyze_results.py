@@ -63,18 +63,41 @@ def load_results(data_dir: str, logger: logging.Logger) -> pd.DataFrame:
                 except json.JSONDecodeError:
                     logger.warning(f"Skipping invalid JSON line in {jsonl_path}")
                     
-    # If no JSONL or no results, try individual JSON files
+    # If no JSONL or no results, try individual JSON files (both in data_dir and subdirectories)
     if not results:
-        logger.info(f"No JSONL file found, checking individual JSON files in {data_dir}")
-        json_files = [f for f in os.listdir(data_dir) if f.endswith('.json')]
+        logger.info(f"No JSONL file found, checking individual JSON files in {data_dir} and subdirectories")
         
-        for json_file in json_files:
-            file_path = os.path.join(data_dir, json_file)
-            try:
-                with open(file_path, 'r') as f:
-                    results.append(json.load(f))
-            except json.JSONDecodeError:
-                logger.warning(f"Skipping invalid JSON file: {json_file}")
+        # Function to process JSON files in a directory
+        def process_json_files(directory):
+            nonlocal results
+            if not os.path.exists(directory):
+                return
+                
+            for item in os.listdir(directory):
+                full_path = os.path.join(directory, item)
+                if os.path.isdir(full_path):
+                    # Process subdirectories for test suite results
+                    process_json_files(full_path)
+                elif item.endswith('.json'):
+                    try:
+                        with open(full_path, 'r') as f:
+                            data = json.load(f)
+                            # Only add result files that have the expected structure
+                            if isinstance(data, dict) and any(key in data for key in ['id', 'test_case_id', 'model_id']):
+                                # Add test_suite_id if missing by inferring from path
+                                if 'test_suite_id' not in data:
+                                    path_parts = full_path.split(os.sep)
+                                    # Try to find known test suite names in the path
+                                    for part in path_parts:
+                                        if part in ['multi_stage_validation', 'neural_symbolic_validation', 'resource_optimization']:
+                                            data['test_suite_id'] = part
+                                            break
+                                results.append(data)
+                    except json.JSONDecodeError:
+                        logger.warning(f"Skipping invalid JSON file: {full_path}")
+        
+        # Process the data directory and its subdirectories
+        process_json_files(data_dir)
     
     logger.info(f"Loaded {len(results)} results")
     
@@ -95,6 +118,19 @@ def analyze_multi_stage_validation(df: pd.DataFrame, output_dir: str, logger: lo
         output_dir: Directory to save processed results
         logger: Logger instance
     """
+    # Check if test_suite_id column exists
+    if 'test_suite_id' not in df.columns:
+        # Try to infer from the file path or result content
+        logger.info("No test_suite_id column found, attempting to infer from data")
+        
+        # Check for paths or filenames containing 'multi_stage_validation'
+        if any(df.get('id', '').str.contains('multi_stage_validation').fillna(False)):
+            df['test_suite_id'] = 'multi_stage_validation'
+        else:
+            # Assume all results are from the most recently run test suite
+            df['test_suite_id'] = 'multi_stage_validation'
+            logger.warning("Assuming all results are from multi_stage_validation test suite")
+    
     # Filter for multi-stage validation test suite
     validation_df = df[df['test_suite_id'] == 'multi_stage_validation'].copy()
     
@@ -145,6 +181,14 @@ def analyze_multi_stage_validation(df: pd.DataFrame, output_dir: str, logger: lo
     logger.info(f"Saved validation stage effectiveness to {output_file}")
     
     # Calculate validation sequence efficiency
+    # First, check if the required columns exist
+    required_cols = ['model_id', 'hardware_profile', 'metrics.execution_time_ms', 'metrics.memory_usage_mb', 'validation_result.isValid']
+    missing_cols = [col for col in required_cols if col not in validation_df.columns]
+    
+    if missing_cols:
+        logger.warning(f"Missing required columns for sequence efficiency analysis: {missing_cols}")
+        return
+    
     sequence_efficiency = validation_df.groupby(['model_id', 'hardware_profile']).agg({
         'metrics.execution_time_ms': 'mean',
         'metrics.memory_usage_mb': 'mean',
@@ -173,6 +217,14 @@ def analyze_hardware_performance(df: pd.DataFrame, output_dir: str, logger: logg
         output_dir: Directory to save processed results
         logger: Logger instance
     """
+    # Check if required columns exist
+    required_cols = ['hardware_profile', 'model_id', 'metrics.execution_time_ms', 'metrics.memory_usage_mb']
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    
+    if missing_cols:
+        logger.warning(f"Missing required columns for hardware performance analysis: {missing_cols}")
+        return
+        
     # Group by hardware profile and model
     hardware_df = df.groupby(['hardware_profile', 'model_id']).agg({
         'metrics.execution_time_ms': ['mean', 'std'],
