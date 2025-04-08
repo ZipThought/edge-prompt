@@ -13,11 +13,18 @@ import fs from 'fs/promises';
 import { DatabaseService } from './services/DatabaseService.js';
 import { StorageService } from './services/StorageService.js';
 import { v4 as uuid } from 'uuid';
+import { registerUser, loginUser } from './services/AuthenticationService.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
@@ -44,7 +51,35 @@ const storageMulter = multer.diskStorage({
 
 const upload = multer({ storage: storageMulter });
 
-app.post('/api/validate', async (req, res): Promise<void> => {
+// SIGNIN (Login) Endpoint - leverages loginUser from AuthenticationService.ts
+app.post('/api/signin', async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required.' });
+  }
+
+  try {
+    // Authenticate using loginUser which queries the DB and verifies password
+    const user = await loginUser(email, password);
+
+    // Generate a JWT token for the authenticated session.
+    const token = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET || 'supersecret',
+      { expiresIn: '1h' }
+    );
+
+    return res.status(200).json({ token });
+  } catch (error) {
+    console.error('Signin error:', error);
+    return res.status(401).json({ message: 'Invalid email or password.' });
+  }
+});
+
+// ---------------- Existing Endpoints Below ---------------- //
+
+app.post('/api/validate', async (req, res) => {
   try {
     const { questionId, answer } = req.body;
     
@@ -90,7 +125,7 @@ app.post('/api/validate', async (req, res): Promise<void> => {
   }
 });
 
-app.post('/api/generate', async (req, res): Promise<void> => {
+app.post('/api/generate', async (req, res) => {
   try {
     const { materialId, promptTemplateId, templateIndex, useSourceLanguage } = req.body;
     
@@ -182,7 +217,7 @@ app.post('/api/generate', async (req, res): Promise<void> => {
   }
 });
 
-app.get('/api/health', async (_req, res): Promise<void> => {
+app.get('/api/health', async (_req, res) => {
   try {
     const isLMStudioAvailable = await lmStudio.isAvailable();
     res.json({ 
@@ -198,7 +233,7 @@ app.get('/api/health', async (_req, res): Promise<void> => {
   }
 });
 
-app.post('/api/materials/process', async (req, res): Promise<void> => {
+app.post('/api/materials/process', async (req, res) => {
   const { material, projectId } = req.body;
   
   if (!projectId) {
@@ -260,8 +295,7 @@ app.post('/api/materials/process', async (req, res): Promise<void> => {
   }
 });
 
-// Add file upload endpoint
-app.post('/api/materials/upload', upload.single('file'), async (req, res): Promise<void> => {
+app.post('/api/materials/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       res.status(400).json({ error: 'No file uploaded' });
@@ -332,12 +366,6 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res): Promi
     // Update material status to completed
     await db.updateMaterialStatus(materialId, 'completed');
     
-    // Clean up the uploaded file if needed (since we've already extracted the content)
-    // Uncomment this if you don't need the original file anymore
-    // await fs.unlink(req.file.path).catch(err => {
-    //   console.warn('Failed to delete uploaded file:', err);
-    // });
-
     res.json({
       id: materialId,
       content,
@@ -347,7 +375,6 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res): Promi
       status: 'success'
     });
   } catch (error) {
-    // Clean up file on error
     if (req.file) {
       await fs.unlink(req.file.path).catch(() => {});
     }
@@ -361,7 +388,7 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res): Promi
 });
 
 // Project endpoints
-app.get('/api/projects', async (_req, res): Promise<void> => {
+app.get('/api/projects', async (_req, res) => {
   try {
     const projects = await db.getProjects();
     res.json(projects);
@@ -371,7 +398,7 @@ app.get('/api/projects', async (_req, res): Promise<void> => {
   }
 });
 
-app.post('/api/projects', async (req, res): Promise<void> => {
+app.post('/api/projects', async (req, res) => {
   try {
     const projectId = await db.createProject(req.body);
     const project = await db.getProject(projectId);
@@ -382,7 +409,7 @@ app.post('/api/projects', async (req, res): Promise<void> => {
   }
 });
 
-app.put('/api/projects/:id', async (req, res): Promise<void> => {
+app.put('/api/projects/:id', async (req, res) => {
   try {
     await db.updateProject(req.params.id, req.body);
     const project = await db.getProject(req.params.id);
@@ -393,7 +420,7 @@ app.put('/api/projects/:id', async (req, res): Promise<void> => {
   }
 });
 
-app.delete('/api/projects/:id', async (req, res): Promise<void> => {
+app.delete('/api/projects/:id', async (req, res) => {
   try {
     await db.deleteProject(req.params.id);
     res.json({ success: true });
@@ -404,7 +431,7 @@ app.delete('/api/projects/:id', async (req, res): Promise<void> => {
 });
 
 // Prompt template endpoints
-app.get('/api/prompt-templates', async (_req, res): Promise<void> => {
+app.get('/api/prompt-templates', async (_req, res) => {
   try {
     const templates = await db.getPromptTemplates();
     res.json(templates);
@@ -414,7 +441,7 @@ app.get('/api/prompt-templates', async (_req, res): Promise<void> => {
   }
 });
 
-app.post('/api/prompt-templates', async (req, res): Promise<void> => {
+app.post('/api/prompt-templates', async (req, res) => {
   try {
     const templateId = await db.createPromptTemplate(req.body);
     const template = await db.getPromptTemplate(templateId);
@@ -426,7 +453,7 @@ app.post('/api/prompt-templates', async (req, res): Promise<void> => {
 });
 
 // Add materials endpoints
-app.get('/api/materials', async (req, res): Promise<void> => {
+app.get('/api/materials', async (req, res) => {
   try {
     const projectId = req.query.projectId as string;
     if (!projectId) {
@@ -445,7 +472,7 @@ app.get('/api/materials', async (req, res): Promise<void> => {
   }
 });
 
-app.get('/api/materials/:id', async (req, res): Promise<void> => {
+app.get('/api/materials/:id', async (req, res) => {
   try {
     const id = req.params.id;
     const material = await db.getMaterial(id);
@@ -459,7 +486,7 @@ app.get('/api/materials/:id', async (req, res): Promise<void> => {
   }
 });
 
-app.delete('/api/materials/:id', async (req, res): Promise<void> => {
+app.delete('/api/materials/:id', async (req, res) => {
   try {
     const id = req.params.id;
     await db.deleteMaterial(id);
@@ -474,7 +501,7 @@ app.delete('/api/materials/:id', async (req, res): Promise<void> => {
 });
 
 // Add question endpoints
-app.get('/api/questions', async (req, res): Promise<void> => {
+app.get('/api/questions', async (req, res) => {
   try {
     const { materialId } = req.query;
     
@@ -502,7 +529,7 @@ app.get('/api/questions', async (req, res): Promise<void> => {
   }
 });
 
-app.post('/api/questions', async (req, res): Promise<void> => {
+app.post('/api/questions', async (req, res) => {
   try {
     const { materialId, promptTemplateId, question, metadata } = req.body;
     
@@ -518,17 +545,15 @@ app.post('/api/questions', async (req, res): Promise<void> => {
       return;
     }
     
-    // Use the DatabaseService createQuestion method
     const questionId = await db.createQuestion({
       materialId,
       promptTemplateId,
       question,
-      template: JSON.stringify({}),  // Empty template object since we're not using it anymore
-      rules: JSON.stringify({}),     // Empty rules object since we're not using it anymore
+      template: JSON.stringify({}),
+      rules: JSON.stringify({}),
       metadata
     });
     
-    // Return the saved question with its ID
     res.json({
       id: questionId,
       materialId,
@@ -546,7 +571,7 @@ app.post('/api/questions', async (req, res): Promise<void> => {
 });
 
 // Add response endpoints
-app.get('/api/responses', async (req, res): Promise<void> => {
+app.get('/api/responses', async (req, res) => {
   try {
     const questionId = req.query.questionId as string;
     if (!questionId) {
@@ -565,7 +590,7 @@ app.get('/api/responses', async (req, res): Promise<void> => {
   }
 });
 
-app.post('/api/responses', async (req, res): Promise<void> => {
+app.post('/api/responses', async (req, res) => {
   try {
     const { questionId, response, score, feedback, metadata } = req.body;
     
@@ -599,8 +624,8 @@ app.post('/api/responses', async (req, res): Promise<void> => {
   }
 });
 
-// Add this endpoint to handle material content updates
-app.patch('/api/materials/:id/content', async (req, res): Promise<void> => {
+// Add endpoint for material content updates
+app.patch('/api/materials/:id/content', async (req, res) => {
   try {
     const { id } = req.params;
     const { content } = req.body;
@@ -610,13 +635,7 @@ app.patch('/api/materials/:id/content', async (req, res): Promise<void> => {
       return;
     }
     
-    // Get the existing material
-    const material = await db.getMaterial(id);
-    
-    // Update just the content
     await db.updateMaterialContent(id, content);
-    
-    // Return the updated material
     const updatedMaterial = await db.getMaterial(id);
     res.json(updatedMaterial);
   } catch (error) {
@@ -628,8 +647,8 @@ app.patch('/api/materials/:id/content', async (req, res): Promise<void> => {
   }
 });
 
-// Add this endpoint to update material title
-app.patch('/api/materials/:id/title', async (req, res): Promise<void> => {
+// Endpoint to update material title
+app.patch('/api/materials/:id/title', async (req, res) => {
   try {
     const { id } = req.params;
     const { title } = req.body;
@@ -640,8 +659,6 @@ app.patch('/api/materials/:id/title', async (req, res): Promise<void> => {
     }
     
     await db.updateMaterialTitle(id, title);
-    
-    // Return the updated material
     const updatedMaterial = await db.getMaterial(id);
     res.json(updatedMaterial);
   } catch (error) {
@@ -653,8 +670,8 @@ app.patch('/api/materials/:id/title', async (req, res): Promise<void> => {
   }
 });
 
-// Add this endpoint to re-upload and reprocess a material
-app.post('/api/materials/:id/reprocess', upload.single('file'), async (req, res): Promise<void> => {
+// Endpoint to reprocess a material
+app.post('/api/materials/:id/reprocess', upload.single('file'), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -663,14 +680,12 @@ app.post('/api/materials/:id/reprocess', upload.single('file'), async (req, res)
       return;
     }
     
-    // Get original material to preserve metadata
     const originalMaterial = await db.getMaterial(id);
     if (!originalMaterial) {
       res.status(404).json({ error: 'Material not found' });
       return;
     }
     
-    // Get file extension without the dot
     const fileType = path.extname(req.file.originalname).toLowerCase().substring(1);
     
     if (!['txt', 'pdf', 'doc', 'docx', 'md'].includes(fileType)) {
@@ -681,7 +696,6 @@ app.post('/api/materials/:id/reprocess', upload.single('file'), async (req, res)
       return;
     }
     
-    // Extract content from new file
     const material = {
       type: fileType,
       content: req.file.path,
@@ -692,10 +706,8 @@ app.post('/api/materials/:id/reprocess', upload.single('file'), async (req, res)
       }
     };
     
-    // Process file to extract content
     const content = await materialProcessor.extractContent(material);
     
-    // Generate objectives and templates
     const objectives = await materialProcessor.extractLearningObjectives(
       content, 
       originalMaterial.focusArea,
@@ -709,7 +721,6 @@ app.post('/api/materials/:id/reprocess', upload.single('file'), async (req, res)
       originalMaterial.metadata?.useSourceLanguage
     );
     
-    // Update the material with new content and processed data
     await db.updateMaterialReprocessed({
       id,
       content,
@@ -725,10 +736,8 @@ app.post('/api/materials/:id/reprocess', upload.single('file'), async (req, res)
       }
     });
     
-    // Update material status to completed
     await db.updateMaterialStatus(id, 'completed');
     
-    // Return the updated material
     const updatedMaterial = await db.getMaterial(id);
     res.json({
       id,
@@ -739,6 +748,10 @@ app.post('/api/materials/:id/reprocess', upload.single('file'), async (req, res)
       status: 'success'
     });
   } catch (error) {
+    if (req.file) {
+      await fs.unlink(req.file.path).catch(() => {});
+    }
+    
     console.error('Material reprocessing error:', error);
     res.status(500).json({ 
       error: 'Failed to reprocess material',
@@ -747,28 +760,20 @@ app.post('/api/materials/:id/reprocess', upload.single('file'), async (req, res)
   }
 });
 
-// Create debug info logging function
+// Debug info logging function
 function logServerConfiguration() {
   console.log('\n----- EdgePrompt Server Configuration -----');
-  
-  // Log basic server info
   console.log(`\n🌐 Server running on port: ${PORT}`);
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
-  
-  // Log LM Studio configuration
   const llmConfig = lmStudio.getConfig();
   console.log('\n🤖 LLM Service Configuration:');
   console.log(`   - API URL: ${llmConfig.apiUrl}`);
   console.log(`   - Model: ${llmConfig.model || 'Not specified'}`);
   console.log(`   - Temperature: ${llmConfig.temperature || 'Default'}`);
   console.log(`   - Max Tokens: ${llmConfig.maxTokens || 'Default'}`);
-  
-  // Log database info
   console.log('\n💾 Database Configuration:');
   console.log(`   - Database Path: ${db.getDatabasePath()}`);
   console.log(`   - Uploads Directory: ${uploadsDir}`);
-  
-  // Only try to access storage if it exists
   try {
     if (storage && typeof storage.getConfig === 'function') {
       console.log(`   - Storage Root: ${storage.getConfig().rootDir}`);
@@ -779,41 +784,31 @@ function logServerConfiguration() {
     console.log(`   - Storage: Error accessing configuration`);
   }
   
-  // Log registered API endpoints
   console.log('\n📡 Registered API Endpoints:');
-  
-  // Get all registered routes
   const routes: string[] = [];
   
-  // Function to extract routes recursively from Express app
   function extractRoutes(app: any, basePath = '') {
     if (!app._router || !app._router.stack) return;
-    
     app._router.stack.forEach((layer: any) => {
       if (layer.route) {
-        // Routes registered directly on the app
         const methods = Object.keys(layer.route.methods)
           .filter(method => layer.route.methods[method])
           .map(method => method.toUpperCase())
           .join(', ');
-        
         routes.push(`   ${methods} ${basePath}${layer.route.path}`);
       } else if (layer.name === 'router' && layer.handle.stack) {
-        // Router middleware
         const routerPath = layer.regexp.toString()
           .replace('\\/?(?=\\/|$)', '')
           .replace('?', '')
           .replace(/\\/g, '')
           .replace(/\^|\$/g, '')
           .replace(/\(\?:\(\[\^\\\/\]\+\?\)\)/g, ':param');
-          
         layer.handle.stack.forEach((stackItem: any) => {
           if (stackItem.route) {
             const methods = Object.keys(stackItem.route.methods)
               .filter(method => stackItem.route.methods[method])
               .map(method => method.toUpperCase())
               .join(', ');
-            
             routes.push(`   ${methods} ${basePath}${routerPath}${stackItem.route.path}`);
           }
         });
@@ -822,26 +817,19 @@ function logServerConfiguration() {
   }
   
   extractRoutes(app);
-  
-  // Filter to show only /api routes and sort them
   const apiRoutes = routes
     .filter(route => route.includes('/api'))
     .sort((a, b) => {
-      // Sort by HTTP method first, then by path
       const methodA = a.trim().split(' ')[0];
       const methodB = b.trim().split(' ')[0];
       const pathA = a.trim().split(' ')[1];
       const pathB = b.trim().split(' ')[1];
-      
       if (pathA === pathB) {
         return methodA.localeCompare(methodB);
       }
       return pathA.localeCompare(pathB);
     });
-  
-  // Output all API routes
   apiRoutes.forEach(route => console.log(route));
-  
   console.log('\n------------------------------------------\n');
 }
 
@@ -849,4 +837,4 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   logServerConfiguration();
-}); 
+});
