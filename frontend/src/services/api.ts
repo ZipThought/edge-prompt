@@ -26,6 +26,13 @@ class ApiClient {
     return response.json();
   }
 
+  async signin(data: { email: string; password: string; }) {
+    return this.request<{ token: string }>('/signin', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Project endpoints
   async getProjects() {
     return this.request<Project[]>('/projects');
