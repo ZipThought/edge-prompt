@@ -1,20 +1,19 @@
 import express from 'express';
 import cors from 'cors';
-import { ValidationService } from './services/ValidationService.js';
-import { LMStudioService } from './services/LMStudioService.js';
-import { MaterialProcessor } from './services/MaterialProcessor.js';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { mkdirSync } from 'fs';
-import { MaterialSource } from './types/index.js';
 import fs from 'fs/promises';
+import { v4 as uuid } from 'uuid';
+import { ValidationService } from './services/ValidationService.js';
+import { LMStudioService } from './services/LMStudioService.js';
+import { MaterialProcessor } from './services/MaterialProcessor.js';
+import { MaterialSource } from './types/index.js';
 import { DatabaseService } from './services/DatabaseService.js';
 import { StorageService } from './services/StorageService.js';
-import { v4 as uuid } from 'uuid';
 import { registerUser } from './services/AuthenticationService.js';
-import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -49,11 +48,10 @@ const upload = multer({ storage: storageMulter });
 // Signup Endpoint - connected to AuthenticationService.ts
 app.post('/api/signup', async (req, res) => {
   const { firstname, lastname, email, passwordhash, dob } = req.body;
-  const hashedPassword = await bcrypt.hash(passwordhash, 10);
   const id = uuid();
 
   try {
-    await registerUser(id, firstname, lastname, email, hashedPassword, dob);
+    await registerUser(id, firstname, lastname, email, passwordhash, dob);
     res.status(201).json({ message: 'User created successfully' });
   } catch (err) {
     res.status(500).json({ error: 'User creation failed', details: err.message });

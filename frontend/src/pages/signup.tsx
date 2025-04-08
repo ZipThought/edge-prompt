@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { api } from '../services/api';
+import bcrypt from 'bcryptjs';
 
 const SignUpPage: React.FC = () => {
   const navigate = useNavigate();
@@ -14,7 +15,6 @@ const SignUpPage: React.FC = () => {
   });
 
   const [passwordVisible, setPasswordVisible] = useState(false);
-
   const [message, setMessage] = useState('');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -25,11 +25,21 @@ const SignUpPage: React.FC = () => {
     setPasswordVisible(!passwordVisible);
   };
 
-  // Handle form submission - connected to api.ts
+  // Handle form submission with password hashing - connected to api.ts
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.signup(formData);
+      const hashedPassword = bcrypt.hashSync(formData.passwordhash, 10);
+
+      const userToSubmit = {
+        firstname: formData.firstname,
+        lastname: formData.lastname,
+        email: formData.email,
+        passwordhash: hashedPassword,
+        dob: formData.dob,
+      };
+
+      await api.signup(userToSubmit);
       setMessage('Account created successfully!');
       setFormData({
         firstname: "",
@@ -106,7 +116,7 @@ const SignUpPage: React.FC = () => {
                 type={passwordVisible ? "text" : "passwordhash"}
                 className="form-control"
                 id="passwordhash"
-                name="passwordhash"
+                name="password"
                 value={formData.passwordhash}
                 onChange={handleInputChange}
                 required
@@ -143,6 +153,9 @@ const SignUpPage: React.FC = () => {
 
         <p className="text-center mt-3">
           Already have an account?{" "}
+          <Link to="/signin" className="text-primary fw-bold text-decoration-none">
+            Sign in
+          </Link>
         </p>
       </div>
     </div>

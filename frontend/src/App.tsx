@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { SimplifiedMaterialUploader } from './components/teacher/SimplifiedMaterialUploader';
-import { MaterialDetailView } from './components/teacher/MaterialDetailView';
-import { ProjectProvider, useProject } from './contexts/ProjectContext';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { PromptTemplateManager } from './components/prompt/PromptTemplateManager';
+import { ProjectForm } from './components/project/ProjectForm';
 import PromptEngineeringTool from './components/tools/PromptEngineeringTool';
+import { MaterialDetailView } from './components/teacher/MaterialDetailView';
+import { PromptTemplateManager } from './components/prompt/PromptTemplateManager';
+import { SimplifiedMaterialUploader } from './components/teacher/SimplifiedMaterialUploader';
+import { ProjectProvider, useProject } from './contexts/ProjectContext';
 import { api } from './services/api';
 import { Material } from './types';
-import { ProjectForm } from './components/project/ProjectForm';
-
-import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import SignUpPage from "./pages/signup"; 
 import { LoginPage } from "./pages/signin";
 
