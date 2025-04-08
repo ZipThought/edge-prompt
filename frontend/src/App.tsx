@@ -122,7 +122,7 @@ const MainContent: React.FC = () => {
             <button className="btn btn-info me-3" onClick={() => navigate("/signup")}>
               <i className="bi bi-person-plus"></i> Sign Up
             </button>
-            <button className="btn btn-info me-3" onClick={() => navigate("/login")}>
+            <button className="btn btn-info me-3" onClick={() => navigate("/signin")}>
               <i className="bi bi-person me-2"></i> Login
             </button>
 
@@ -373,7 +373,7 @@ const App: React.FC = () => {
       <Routes>
         {/* Signup page route - connected to signup.tsx */}
         <Route path="/signup" element={<SignUpPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signin" element={<LoginPage />} />
         <Route path="/" element ={<MainContent/>} />
       </Routes>
     </Router>

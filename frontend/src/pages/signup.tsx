@@ -116,7 +116,7 @@ const SignUpPage: React.FC = () => {
                 type={passwordVisible ? "text" : "passwordhash"}
                 className="form-control"
                 id="passwordhash"
-                name="password"
+                name="passwordhash"
                 value={formData.passwordhash}
                 onChange={handleInputChange}
                 required
