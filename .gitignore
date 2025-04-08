@@ -73,3 +73,51 @@ common/node_modules/
 .cache/
 .temp/
 repomix-output.xml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# EdgePrompt specific
+research/data/raw/*
+research/data/processed/*
+research/figures/*
+research/.venv/
+research/notebooks/.ipynb_checkpoints/
+
+# Keep .gitkeep files to preserve directory structure
+!research/data/raw/.gitkeep
+!research/data/processed/.gitkeep
+!research/figures/.gitkeep

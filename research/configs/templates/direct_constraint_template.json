@@ -1,0 +1,30 @@
+{
+  "id": "direct_constraint_template",
+  "type": "question_generation",
+  "pattern": "TASK: Create a Grade 5 [content_type] about [topic]\nCONSTRAINTS:\n- Vocabulary level: Grade 5 (ages 10-11)\n- Content length: [length_parameters]\n- Safety boundaries: [explicit_safety_rules]\n- Learning objectives: [learning_objectives]\nADDITIONAL CONTEXT:\n[educational_material]",
+  "constraints": [
+    "Age-appropriate vocabulary",
+    "No sensitive content",
+    "Curriculum alignment",
+    "Educational value"
+  ],
+  "answerSpace": {
+    "minWords": 50,
+    "maxWords": 150,
+    "vocabulary": "grade-appropriate",
+    "structure": "depends on content_type",
+    "prohibitedContent": ["violence", "inappropriate language", "sensitive topics"]
+  },
+  "learningObjectives": [
+    "Students will understand key concepts related to the topic",
+    "Students will demonstrate content knowledge in their assigned grade level"
+  ],
+  "variables": {
+    "content_type": "Type of content (paragraph, story, poem, question, etc.)",
+    "topic": "Subject matter to write about",
+    "length_parameters": "Specific length requirements",
+    "explicit_safety_rules": "Detailed safety boundaries",
+    "learning_objectives": "Specific learning goals",
+    "educational_material": "Source material for context"
+  }
+} 
