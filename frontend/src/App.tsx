@@ -1,23 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { SimplifiedMaterialUploader } from './components/teacher/SimplifiedMaterialUploader';
-import { MaterialDetailView } from './components/teacher/MaterialDetailView';
-import { ProjectProvider, useProject } from './contexts/ProjectContext';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { PromptTemplateManager } from './components/prompt/PromptTemplateManager';
+import { ProjectForm } from './components/project/ProjectForm';
 import PromptEngineeringTool from './components/tools/PromptEngineeringTool';
+import { MaterialDetailView } from './components/teacher/MaterialDetailView';
+import { PromptTemplateManager } from './components/prompt/PromptTemplateManager';
+import { SimplifiedMaterialUploader } from './components/teacher/SimplifiedMaterialUploader';
+import { ProjectProvider, useProject } from './contexts/ProjectContext';
 import { api } from './services/api';
 import { Material } from './types';
-import { ProjectForm } from './components/project/ProjectForm';
+import SignUpPage from "./pages/signup"; 
+import { LoginPage } from "./pages/signin";
 
 // Main content wrapper that uses the project context
 const MainContent: React.FC = () => {
   const { projects, activeProject, setActiveProject } = useProject();
-  const [activeTab, setActiveTab] = useState<'generator' | 'templates' | 'promptTools'>('generator');
+  const [activeTab, setActiveTab] = useState<
+    "generator" | "templates" | "promptTools"
+  >("generator");
   const [autoSelectDisabled, setAutoSelectDisabled] = useState(false);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoadingMaterials, setIsLoadingMaterials] = useState(false);
-  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(
+    null
+  );
   const [showCreateProject, setShowCreateProject] = useState(false);
+  const navigate = useNavigate();
 
   // Auto-select first project if none selected
   useEffect(() => {
@@ -30,30 +38,29 @@ const MainContent: React.FC = () => {
   useEffect(() => {
     const loadMaterials = async () => {
       if (!activeProject) return;
-      
       setIsLoadingMaterials(true);
       try {
         const projectMaterials = await api.getMaterials(activeProject.id);
         setMaterials(projectMaterials);
       } catch (error) {
-        console.error('Error loading materials:', error);
+        console.error("Error loading materials:", error);
       } finally {
         setIsLoadingMaterials(false);
       }
     };
-    
+
     loadMaterials();
   }, [activeProject]);
 
   // Handle material upload completion
   const handleMaterialUploaded = async () => {
     if (!activeProject) return;
-    
+
     try {
       const projectMaterials = await api.getMaterials(activeProject.id);
       setMaterials(projectMaterials);
     } catch (error) {
-      console.error('Error refreshing materials:', error);
+      console.error("Error refreshing materials:", error);
     }
   };
 
@@ -74,10 +81,10 @@ const MainContent: React.FC = () => {
       );
     }
 
-    if (activeTab === 'generator') {
+    if (activeTab === "generator") {
       if (selectedMaterialId) {
         return (
-          <MaterialDetailView 
+          <MaterialDetailView
             materialId={selectedMaterialId}
             onBack={() => setSelectedMaterialId(null)}
             onRefresh={handleMaterialUploaded}
@@ -89,13 +96,14 @@ const MainContent: React.FC = () => {
             <i className="bi bi-file-earmark-text display-1 text-muted"></i>
             <h4 className="mt-3">Select a Material</h4>
             <p className="text-muted">
-              Click on a material from the list on the left,<br />
+              Click on a material from the list on the left,
+              <br />
               or upload a new material to begin.
             </p>
           </div>
         );
       }
-    } else if (activeTab === 'templates') {
+    } else if (activeTab === "templates") {
       return <PromptTemplateManager />;
     } else {
       return <PromptEngineeringTool />;
@@ -109,16 +117,25 @@ const MainContent: React.FC = () => {
           <h1 className="h4 mb-0">
             <i className="bi bi-braces"></i> EdgePrompt
           </h1>
-          {activeProject ? (
-            <div className="badge bg-light text-primary">
-              {activeProject.name} ({activeProject.modelName})
-            </div>
-          ) : (
-            <div className="badge bg-warning text-dark">
-              <i className="bi bi-exclamation-triangle-fill me-1"></i>
-              No project selected
-            </div>
-          )}
+          <div className="ms-auto d-flex align-items-center">
+            <button className="btn btn-info me-3" onClick={() => navigate("/signup")}>
+              <i className="bi bi-person-plus"></i> Sign Up
+            </button>
+            <button className="btn btn-info me-3" onClick={() => navigate("/signin")}>
+              <i className="bi bi-person me-2"></i> Login
+            </button>
+
+            {activeProject ? (
+              <div className="badge bg-light text-primary">
+                {activeProject.name} ({activeProject.modelName})
+              </div>
+            ) : (
+              <div className="badge bg-warning text-dark">
+                <i className="bi bi-exclamation-triangle-fill me-1"></i>
+                No project selected
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -134,7 +151,7 @@ const MainContent: React.FC = () => {
               {projects.length === 0 ? (
                 <div className="text-center py-3">
                   <p className="text-muted">No projects found</p>
-                  <button 
+                  <button
                     className="btn btn-sm btn-primary"
                     onClick={() => setShowCreateProject(true)}
                   >
@@ -144,17 +161,22 @@ const MainContent: React.FC = () => {
                 </div>
               ) : (
                 <div className="list-group list-group-flush">
-                  {projects.map(project => (
+                  {projects.map((project) => (
                     <button
                       key={project.id}
-                      className={`list-group-item list-group-item-action ${activeProject?.id === project.id ? 'active' : ''}`}
+                      className={`list-group-item list-group-item-action ${
+                        activeProject?.id === project.id ? "active" : ""
+                      }`}
                       onClick={() => setActiveProject(project)}
                     >
                       <div className="d-flex w-100 justify-content-between">
                         <h6 className="mb-0">{project.name}</h6>
                         <small>{project.modelName}</small>
                       </div>
-                      <small className="text-truncate d-block" style={{ maxWidth: '100%' }}>
+                      <small
+                        className="text-truncate d-block"
+                        style={{ maxWidth: "100%" }}
+                      >
                         {project.description}
                       </small>
                     </button>
@@ -167,7 +189,9 @@ const MainContent: React.FC = () => {
           {/* Upload Material Section (only when project is selected) */}
           {activeProject && (
             <>
-              <SimplifiedMaterialUploader onMaterialUploaded={handleMaterialUploaded} />
+              <SimplifiedMaterialUploader
+                onMaterialUploaded={handleMaterialUploaded}
+              />
 
               {/* Materials List */}
               <div className="card">
@@ -180,32 +204,49 @@ const MainContent: React.FC = () => {
                 <div className="card-body p-0">
                   {isLoadingMaterials ? (
                     <div className="text-center py-3">
-                      <div className="spinner-border spinner-border-sm" role="status">
+                      <div
+                        className="spinner-border spinner-border-sm"
+                        role="status"
+                      >
                         <span className="visually-hidden">Loading...</span>
                       </div>
                       <p className="small mt-2 mb-0">Loading materials...</p>
                     </div>
                   ) : materials.length === 0 ? (
                     <div className="text-center py-3">
-                      <p className="text-muted small mb-0">No materials found</p>
+                      <p className="text-muted small mb-0">
+                        No materials found
+                      </p>
                     </div>
                   ) : (
                     <div className="list-group list-group-flush">
-                      {materials.map(material => (
+                      {materials.map((material) => (
                         <button
                           key={material.id}
-                          className={`list-group-item list-group-item-action ${selectedMaterialId === material.id ? 'active' : ''}`}
+                          className={`list-group-item list-group-item-action ${
+                            selectedMaterialId === material.id ? "active" : ""
+                          }`}
                           onClick={() => setSelectedMaterialId(material.id)}
                         >
                           <div className="d-flex justify-content-between">
-                            <span className="fw-semibold text-truncate" style={{ maxWidth: '180px' }}>
-                              {material.title || 'Untitled Material'}
+                            <span
+                              className="fw-semibold text-truncate"
+                              style={{ maxWidth: "180px" }}
+                            >
+                              {material.title || "Untitled Material"}
                             </span>
-                            <span className={`badge bg-${getBadgeColor(material.status)}`}>
+                            <span
+                              className={`badge bg-${getBadgeColor(
+                                material.status
+                              )}`}
+                            >
                               {material.status}
                             </span>
                           </div>
-                          <small className="text-truncate d-block" style={{ maxWidth: '100%' }}>
+                          <small
+                            className="text-truncate d-block"
+                            style={{ maxWidth: "100%" }}
+                          >
                             {material.focusArea}
                           </small>
                         </button>
@@ -223,10 +264,12 @@ const MainContent: React.FC = () => {
           {activeProject && (
             <ul className="nav nav-tabs mb-4">
               <li className="nav-item">
-                <button 
-                  className={`nav-link ${activeTab === 'generator' ? 'active' : ''}`}
+                <button
+                  className={`nav-link ${
+                    activeTab === "generator" ? "active" : ""
+                  }`}
                   onClick={() => {
-                    setActiveTab('generator');
+                    setActiveTab("generator");
                   }}
                 >
                   <i className="bi bi-file-text me-1"></i>
@@ -234,10 +277,12 @@ const MainContent: React.FC = () => {
                 </button>
               </li>
               <li className="nav-item">
-                <button 
-                  className={`nav-link ${activeTab === 'templates' ? 'active' : ''}`}
+                <button
+                  className={`nav-link ${
+                    activeTab === "templates" ? "active" : ""
+                  }`}
                   onClick={() => {
-                    setActiveTab('templates');
+                    setActiveTab("templates");
                     setSelectedMaterialId(null);
                   }}
                 >
@@ -246,10 +291,12 @@ const MainContent: React.FC = () => {
                 </button>
               </li>
               <li className="nav-item">
-                <button 
-                  className={`nav-link ${activeTab === 'promptTools' ? 'active' : ''}`}
+                <button
+                  className={`nav-link ${
+                    activeTab === "promptTools" ? "active" : ""
+                  }`}
                   onClick={() => {
-                    setActiveTab('promptTools');
+                    setActiveTab("promptTools");
                     setSelectedMaterialId(null);
                   }}
                 >
@@ -265,23 +312,27 @@ const MainContent: React.FC = () => {
       </div>
 
       {showCreateProject && (
-        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div
+          className="modal show d-block"
+          tabIndex={-1}
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+        >
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Create New Project</h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
+                <button
+                  type="button"
+                  className="btn-close"
                   onClick={() => setShowCreateProject(false)}
                 ></button>
               </div>
               <div className="modal-body">
-                <ProjectForm 
+                <ProjectForm
                   onSuccess={() => {
                     setShowCreateProject(false);
                     // Refresh projects list
-                    api.getProjects().then(projectsData => {
+                    api.getProjects().then((projectsData) => {
                       if (projectsData.length > 0) {
                         setActiveProject(projectsData[0]);
                       }
@@ -301,23 +352,35 @@ const MainContent: React.FC = () => {
 // Helper function for badge colors
 function getBadgeColor(status: string): string {
   switch (status) {
-    case 'completed': return 'success';
-    case 'pending': return 'warning';
-    case 'processing': return 'primary';
-    case 'error': return 'danger';
-    default: return 'secondary';
+    case "completed":
+      return "success";
+    case "pending":
+      return "warning";
+    case "processing":
+      return "primary";
+    case "error":
+      return "danger";
+    default:
+      return "secondary";
   }
 }
 
-// Wrap the app with ProjectProvider
-function App() {
+const App: React.FC = () => {
   return (
-    <ErrorBoundary>
-      <ProjectProvider>
-        <MainContent />
-      </ProjectProvider>
-    </ErrorBoundary>
+    <ProjectProvider>
+    <Router>
+      <Routes>
+        {/* Signup page route - connected to signup.tsx */}
+        <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/signin" element={<LoginPage />} />
+        <Route path="/" element ={<MainContent/>} />
+      </Routes>
+    </Router>
+    </ProjectProvider>
+    
   );
-}
+};
 
-export default App; 
+export default App;
+
+

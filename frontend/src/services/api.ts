@@ -8,6 +8,14 @@ export interface ApiError {
   details?: any;
 }
 
+export interface SignupData {
+  firstname: string;
+  lastname: string;
+  email: string;
+  passwordhash: string;
+  dob: string;
+}
+
 class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -24,6 +32,14 @@ class ApiClient {
     }
 
     return response.json();
+  }
+
+  // Signup and authentication endpoints - connected to backend index.ts
+  async signup(data: SignupData) {
+    return this.request<{ message: string }>('/signup', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   async signin(data: { email: string; password: string; }) {
@@ -202,3 +218,4 @@ class ApiClient {
 }
 
 export const api = new ApiClient(); 
+

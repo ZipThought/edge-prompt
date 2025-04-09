@@ -51,7 +51,20 @@ const storageMulter = multer.diskStorage({
 
 const upload = multer({ storage: storageMulter });
 
-// SIGNIN (Login) Endpoint - leverages loginUser from AuthenticationService.ts
+app.post('/api/signup', async (req, res) => {
+  const { firstname, lastname, email, passwordhash, dob } = req.body;
+  const hashedPassword = await bcrypt.hash(passwordhash, 10);
+  const id = uuid();
+
+  try {
+    await registerUser(id, firstname, lastname, email, hashedPassword, dob);
+    res.status(201).json({ message: 'User created successfully' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'User creation failed', details: err.message });
+  }
+});
+
+// SIGNIN (Login) Endpoint
 app.post('/api/signin', async (req, res) => {
   const { email, password } = req.body;
 
@@ -60,10 +73,10 @@ app.post('/api/signin', async (req, res) => {
   }
 
   try {
-    // Authenticate using loginUser which queries the DB and verifies password
+    // Authenticate the user using the new loginUser function.
     const user = await loginUser(email, password);
 
-    // Generate a JWT token for the authenticated session.
+    // Generate a JWT token upon successful authentication.
     const token = jwt.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET || 'supersecret',
@@ -71,7 +84,7 @@ app.post('/api/signin', async (req, res) => {
     );
 
     return res.status(200).json({ token });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Signin error:', error);
     return res.status(401).json({ message: 'Invalid email or password.' });
   }
