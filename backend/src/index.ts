@@ -13,6 +13,9 @@ import fs from 'fs/promises';
 import { DatabaseService } from './services/DatabaseService.js';
 import { StorageService } from './services/StorageService.js';
 import { v4 as uuid } from 'uuid';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { authMiddleware } from './middleware/authMiddleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,6 +23,9 @@ const __dirname = dirname(__filename);
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+const jwtSecret = 'your-secret-key';
+
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = join(dirname(__dirname), 'uploads');
@@ -44,6 +50,28 @@ const storageMulter = multer.diskStorage({
 
 const upload = multer({ storage: storageMulter });
 
+ /* Material endpoints (PROTECTED)
+ app.post('/api/materials', authMiddleware, upload.single('file'), async (req, res): Promise<void> => { ... });
+ app.get('/api/materials/:id', authMiddleware, async (req, res): Promise<void> => { ... });
+ app.get('/api/projects/:projectId/materials', authMiddleware, async (req, res): Promise<void> => { ... });
+ app.put('/api/materials/:id', authMiddleware, async (req, res): Promise<void> => { ... });
+ app.delete('/api/materials/:id', authMiddleware, async (req, res): Promise<void> => { ... });
+ app.post('/api/materials/:id/reprocess', authMiddleware, upload.single('file'), async (req, res): Promise<void> => { ... });
+ 
+ // Project endpoints (PROTECTED)
+ app.get('/api/projects', authMiddleware, async (_req, res): Promise<void> => { ... });
+ app.post('/api/projects', authMiddleware, async (req, res): Promise<void> => { ... });
+ app.put('/api/projects/:id', authMiddleware, async (req, res): Promise<void> => { ... });
+ app.delete('/api/projects/:id', authMiddleware, async (req, res): Promise<void> => { ... });
+ 
+ // Prompt template endpoints (PROTECTED)
+ app.get('/api/prompt-templates', authMiddleware, async (_req, res): Promise<void> => { ... });
+ app.get('/api/prompt-templates/:id', authMiddleware, async (req, res): Promise<void> => { ... });
+ app.post('/api/prompt-templates', authMiddleware, async (req, res): Promise<void> => { ... });
+ app.put('/api/prompt-templates/:id', authMiddleware, async (req, res): Promise<void> => { ... });
+ app.delete('/api/prompt-templates/:id', authMiddleware, async (req, res): Promise<void> => { ... });
+  */
+ 
 app.post('/api/validate', async (req, res): Promise<void> => {
   try {
     const { questionId, answer } = req.body;
@@ -850,3 +878,38 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   logServerConfiguration();
 }); 
+
+// Signup
+app.post('/api/signup', async (req, res) => {
+  const { username, email, password, position } = req.body;
+  try {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const userId = uuid();
+      await db.createUser({ id: userId, username, email, password_hash: hashedPassword, position });
+      const token = jwt.sign({ userId, username, email, position }, 'your-secret-key', { expiresIn: '1h' });
+      res.status(201).json({ token });
+  } catch (error: any) {
+      if (error.message.includes('UNIQUE constraint failed')) {
+          return res.status(400).json({ message: 'Username or email already exists' });
+      }
+      console.error('Signup error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Login
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+      const user = await db.getUserByEmail(email);
+      if (user && await bcrypt.compare(password, user.password_hash)) {
+          const token = jwt.sign({ userId: user.id, username: user.username, email: user.email, position: user.position }, jwtSecret, { expiresIn: '1h' });
+          res.json({ token });
+      } else {
+          res.status(401).json({ message: 'Invalid credentials' });
+      }
+  } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+  }
+});

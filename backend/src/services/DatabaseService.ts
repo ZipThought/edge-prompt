@@ -24,6 +24,15 @@ interface ColumnInfo {
   pk: number;
 }
 
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  password_hash: string;
+  position: string;
+  created_at?: string;
+}
+
 export class DatabaseService {
   private db: Database.Database;
   private storage: StorageService;
@@ -580,5 +589,34 @@ export class DatabaseService {
       JSON.stringify(params.metadata),
       params.id
     );
+  }
+
+  // User methods
+
+  //Create User
+  async createUser(user: Omit<User, 'created_at'>): Promise<string> {
+    const stmt = this.db.prepare(`
+        INSERT INTO users (id, username, email, password_hash, position)
+        VALUES (?, ?, ?, ?, ?)
+    `);
+    stmt.run(user.id, user.username, user.email, user.password_hash, user.position);
+    return user.id;
+  }
+
+  //getUserByEmail
+  async getUserByEmail(email: string): Promise<User | null> { // Changed return type to User | null
+    const stmt = this.db.prepare(`SELECT * FROM users WHERE email = ?`);
+    const user = stmt.get(email) as User | undefined;
+    return user || null; // Return null if user is undefined
+  }
+
+  //delete User by ID
+  async deleteUserById(userId: string): Promise<void> {
+    const stmt = this.prepareStatement('DELETE FROM users WHERE id = ?');
+    stmt.run(userId);
+  }
+
+  close() {
+    this.db.close();
   }
 } 
