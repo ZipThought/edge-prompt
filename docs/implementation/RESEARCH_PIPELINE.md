@@ -124,9 +124,9 @@ Implement the following Python classes, corresponding to the components defined 
     *   **Mock Model:** Implement a `MockModel` class with a `generate(prompt, **kwargs)` method returning a predictable string (e.g., `f"[Mock output for prompt: {prompt[:30]}...]"`) and placeholder token counts (`'input_tokens': len(prompt.split()), 'output_tokens': 10`).
     *   **LM Studio Focus:** For Phase 1, this class mainly acts as a config validator and provider for the `api_identifier`.
     *   **Model Support:** Support for models specified in model_configs.json, prioritizing:
-        - gemma-3-12b-edge (GGUF, from lmstudio-community)
-        - gemma-3-4b-edge (GGUF, from lmstudio-community) 
-        - llama-3.2-3b-edge (Q8_0, from hugging-quants)
+        - gemma-3-12b-it (GGUF, from lmstudio-community)
+        - gemma-3-4b-it (GGUF, from lmstudio-community) 
+        - llama-3.2-3b-instruct (Q8_0, from hugging-quants)
     *   **Adapter Implementation:** Implement adapters for llama.cpp as the primary inference engine
     *   **Resource Management:** Include proper resource management for model loading/unloading
     *   **Context Window:** Support context window management based on model specifications

@@ -43,6 +43,14 @@ Additional options:
 - `--mock-models`: Use mock models instead of real LLMs
 - `--lm-studio-url URL`: Override the LM Studio URL from .env
 
+> **Important Note:** 
+> - You must run the CLI from the `research` directory
+> - Make sure the `model_configs.json` file exists in the `configs` directory
+> - The Python path must be set up correctly to find the modules. If you encounter import errors, try:
+>   ```sh
+>   export PYTHONPATH=$PYTHONPATH:$(pwd)  # On Windows: set PYTHONPATH=%PYTHONPATH%;%CD%
+>   ```
+
 ### Analyzing Results
 
 After running experiments, use the analysis scripts:

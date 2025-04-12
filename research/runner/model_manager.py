@@ -1,281 +1,267 @@
 """
-ModelManager - Handles loading and initialization of LLM models.
+ModelManager - Abstracts model access to decouple experiment logic from model implementation.
 
-This module provides functionality for loading, initializing, and
-managing LLM models for use in EdgePrompt experiments.
+This module separates model access concerns from experiment logic to:
+- Enable different model backends without changing experiment code
+- Support testing without requiring actual model dependencies
+- Provide a consistent interface for experiments regardless of underlying model technology
+- Allow for mock models to speed up development and testing cycles
 """
 
-import os
+import json
 import logging
-import requests
-from typing import Dict, Any, Optional, Union, List
+import os
+from pathlib import Path
+from typing import Dict, Any, Optional, Union
 
 class MockModel:
-    """Mock model class for simulation"""
-    def __init__(self, name, quantization=None, context_window=2048):
-        self.name = name
-        self.quantization = quantization
-        self.context_window = context_window
+    """
+    Facilitates development and testing without requiring actual model access.
+    
+    This approach:
+    - Speeds up development by removing dependency on heavyweight models
+    - Ensures reproducible tests even in CI/CD environments without model access
+    - Provides deterministic responses for reliable test validation
+    - Eliminates network latency and API costs during development
+    """
+    
+    def __init__(self, model_id: str):
+        """
+        Retains model identity to maintain traceability in mock scenarios.
         
-    def generate(self, prompt, max_tokens=2048, temperature=0.7, **kwargs):
-        """Mock generation method"""
-        output = f"[Mock output for prompt: {prompt[:30]}...]"
-        return {
-            'output': output,
-            'input_tokens': len(prompt.split()),
-            'output_tokens': 10
-        }
-
+        Preserving identity:
+        - Ensures mock outputs can be traced to specific model configurations
+        - Allows model-specific mock behavior when needed
+        - Maintains consistency in logs and output analysis
+        """
+        self.model_id = model_id
+        
+    def generate(self, prompt: str, **kwargs) -> str:
+        """
+        Provides predictable outputs to enable reliable testing.
+        
+        Deterministic generation:
+        - Enables exact test assertions without variability
+        - Simplifies debugging by removing model randomness
+        - Creates reproducible test scenarios across environments
+        """
+        return f"MOCK RESPONSE from model {self.model_id}: This is a response to your prompt"
+        
 class ModelManager:
     """
-    Manages LLM model configurations and metadata.
+    Abstracts model access to enable flexibility and consistency across experiments.
     
-    This class handles:
-    - Managing model metadata for LM Studio integration
-    - Verifying model availability via LM Studio API
-    - Support for mock models during testing
+    This abstraction:
+    - Decouples experiment code from specific model implementations
+    - Provides a single point for model validation and configuration
+    - Enables transparent switching between real and mock models
+    - Centralizes error handling and resource management
     """
     
-    def __init__(self, model_cache_dir: Optional[str] = None, lm_studio_url: Optional[str] = None):
+    def __init__(self, model_cache_dir: Optional[str] = None, 
+                lm_studio_url: Optional[str] = None):
         """
-        Initialize the ModelManager.
+        Supports flexible configuration to accommodate different environments and use cases.
         
-        Args:
-            model_cache_dir: Directory for caching model weights (optional)
-            lm_studio_url: Base URL for LM Studio server (optional)
+        This flexibility:
+        - Enables running in various environments without code changes
+        - Allows customization for different storage constraints and network setups
+        - Supports both development and production configurations
+        - Facilitates testing with environment-specific settings
         """
-        self.logger = logging.getLogger("edgeprompt.runner.model")
-        self.model_cache_dir = model_cache_dir or os.path.join(os.path.expanduser("~"), ".cache", "edgeprompt", "models")
-        self.lm_studio_url = lm_studio_url
+        self.logger = logging.getLogger("edgeprompt.runner.model_manager")
+        
+        # Configure cache directory to persist across sessions while remaining user-specific
+        self.model_cache_dir = model_cache_dir or os.path.expanduser("~/.edgeprompt/models")
         self._ensure_cache_dir()
+        
+        # Allow URL configuration to support different deployment scenarios
+        self.lm_studio_url = lm_studio_url or os.environ.get("LM_STUDIO_URL", "http://localhost:1234")
+        
+        # Cache loaded models to prevent redundant initialization and improve performance
         self.loaded_models = {}
-        self.logger.info(f"ModelManager initialized with cache dir: {self.model_cache_dir}")
-        if self.lm_studio_url:
-            self.logger.info(f"LM Studio URL: {self.lm_studio_url}")
-    
-    def _ensure_cache_dir(self) -> None:
-        """Create the model cache directory if it doesn't exist"""
-        if not os.path.exists(self.model_cache_dir):
+        
+        # Centralize configuration to ensure consistency across the application
+        self.model_configs = self._load_model_configs()
+        
+    def _ensure_cache_dir(self):
+        """
+        Prevents runtime errors by validating cache directory access early.
+        
+        Early validation:
+        - Fails fast with clear error messages rather than during model loading
+        - Ensures permissions are appropriate before attempting model operations
+        - Creates necessary directory structure to avoid scattered mkdir calls
+        """
+        try:
             os.makedirs(self.model_cache_dir, exist_ok=True)
-            self.logger.info(f"Created model cache directory: {self.model_cache_dir}")
-    
-    def initialize_model(self, model_id: str, model_config: Optional[Dict[str, Any]] = None, mock_mode: bool = False) -> Any:
-        """
-        Initialize a model for inference.
-        
-        For LM Studio integration, this primarily verifies that the model
-        is available and returns metadata needed by TestExecutor.
-        
-        Args:
-            model_id: Identifier for the model
-            model_config: Optional configuration overrides
-            mock_mode: Whether to use a mock model instead of real model
+        except Exception as e:
+            self.logger.error(f"Failed to create model cache directory: {str(e)}")
+            raise RuntimeError(f"Cannot create model cache directory: {str(e)}")
             
-        Returns:
-            Model metadata dictionary or MockModel instance
-            
-        Raises:
-            ValueError: If model cannot be found or initialized
+    def _load_model_configs(self) -> Dict[str, Any]:
         """
-        self.logger.info(f"Initializing model: {model_id} (mock_mode={mock_mode})")
+        Centralizes model configuration to reduce duplication and increase consistency.
         
-        # Use mock model if requested
+        This centralization:
+        - Provides a single source of truth for model parameters
+        - Simplifies adding or updating models across the system
+        - Reduces the risk of inconsistent configurations
+        - Improves maintainability by isolating configuration changes
+        """
+        # Get the research root directory and look for the config file in configs/
+        research_root = Path(__file__).parent.parent  # Go up one level from runner/ to research/
+        config_path = research_root / "configs" / "model_configs.json"
+        
+        if not config_path.exists():
+            self.logger.warning(f"Model configuration file not found at {config_path}")
+            return {}
+            
+        try:
+            with open(config_path, "r") as f:
+                config_data = json.load(f)
+                # Convert list to dict keyed by model_id for easier lookup
+                config_dict = {}
+                for model in config_data:
+                    if "model_id" in model:
+                        config_dict[model["model_id"]] = model
+                
+                return config_dict
+        except Exception as e:
+            self.logger.error(f"Failed to load model configurations: {str(e)}")
+            return {}
+            
+    def initialize_model(self, model_id: str, 
+                         model_config: Optional[Dict[str, Any]] = None,
+                         mock_mode: bool = False) -> Union[Dict[str, Any], MockModel]:
+        """
+        Abstracts model initialization to isolate complexity from experiment code.
+        
+        This abstraction:
+        - Shields experiments from model-specific initialization details
+        - Enables switching between real and mock models transparently
+        - Centralizes error handling for more robust experiments
+        - Provides a consistent interface regardless of model implementation
+        """
+        # Support mock mode for faster development and testing
         if mock_mode:
-            self.logger.info(f"Using mock model for {model_id}")
-            mock_model = MockModel(
-                name=model_id,
-                quantization=model_config.get('quantization', 'int8') if model_config else 'int8',
-                context_window=model_config.get('context_window', 2048) if model_config else 2048
-            )
-            self.loaded_models[model_id] = mock_model
-            return mock_model
-        
-        # Check if already loaded
+            self.logger.info(f"Initializing mock model for {model_id}")
+            mock = MockModel(model_id)
+            
+            # Include mock flag to ensure downstream code knows this is a mock
+            model_metadata = self._get_model_details(model_id, model_config)
+            model_metadata["mock"] = True
+            model_metadata["instance"] = mock
+            
+            return model_metadata
+            
+        # Reuse existing model instances to prevent resource duplication
         if model_id in self.loaded_models:
-            self.logger.info(f"Using already loaded model: {model_id}")
+            self.logger.info(f"Using already initialized model: {model_id}")
             return self.loaded_models[model_id]
-        
-        # Get model details
+            
+        # Retrieve model configuration with validation
         model_details = self._get_model_details(model_id, model_config)
         
-        # Verify the model has an API identifier for LM Studio
-        if 'api_identifier' not in model_details:
-            error_msg = f"Model {model_id} lacks required 'api_identifier' for LM Studio integration"
-            self.logger.error(error_msg)
-            raise ValueError(error_msg)
+        # Validate model availability before returning to prevent downstream failures
+        if "api_identifier" in model_details:
+            api_id = model_details["api_identifier"]
+            if not self.check_model_availability(api_id):
+                raise ValueError(f"Model {api_id} not available in LM Studio")
+                
+        # Cache for future requests to improve performance
+        self.loaded_models[model_id] = model_details
+        return model_details
         
-        # Verify model availability in LM Studio (if URL is provided)
-        if self.lm_studio_url:
-            if not self.check_model_availability(model_details['api_identifier']):
-                error_msg = f"Model {model_details['api_identifier']} not available in LM Studio"
-                self.logger.error(error_msg)
-                raise ValueError(error_msg)
-        
-        # For LM Studio, we just need to return the API identifier and basic metadata
-        model_metadata = {
-            'api_identifier': model_details['api_identifier'],
-            'model_id': model_id
-        }
-        
-        # Cache the model metadata
-        self.loaded_models[model_id] = model_metadata
-        
-        self.logger.info(f"Model {model_id} initialized successfully with api_identifier: {model_details['api_identifier']}")
-        return model_metadata
-    
     def check_model_availability(self, api_identifier: str) -> bool:
         """
-        Check if a model is available in LM Studio.
+        Validates model availability early to prevent failures during experiments.
         
-        Args:
-            api_identifier: Model identifier in LM Studio
-            
-        Returns:
-            True if model is available, False otherwise
+        Early validation:
+        - Fails before experiment execution rather than during critical sections
+        - Provides immediate feedback on configuration or connection issues
+        - Prevents wasted resources on experiments that would eventually fail
+        - Improves error messages by identifying missing models explicitly
         """
-        if not self.lm_studio_url:
-            self.logger.warning("Cannot check model availability: LM Studio URL not provided")
-            return True  # Assume available if no URL
-        
         try:
-            # Query the LM Studio API for available models
-            url = f"{self.lm_studio_url}/v1/models"
-            response = requests.get(url, timeout=10)
+            # Import at runtime to avoid dependency when using mock models
+            from openai import OpenAI
             
-            if response.status_code != 200:
-                self.logger.error(f"Failed to query LM Studio models: {response.status_code}")
-                return False
+            client = OpenAI(
+                base_url=f"{self.lm_studio_url}/v1",
+                api_key="lm-studio"
+            )
             
-            # Parse the response
-            data = response.json()
-            available_models = [model['id'] for model in data.get('data', [])]
+            # Check against available models to confirm accessibility
+            models = client.models.list()
             
-            # Check if the requested model is available
-            is_available = api_identifier in available_models
-            if is_available:
-                self.logger.info(f"Model {api_identifier} is available in LM Studio")
-            else:
-                self.logger.warning(f"Model {api_identifier} not found in LM Studio. Available models: {available_models}")
-            
-            return is_available
+            for model in models.data:
+                if model.id == api_identifier:
+                    self.logger.info(f"Model {api_identifier} is available")
+                    return True
+                    
+            self.logger.warning(f"Model {api_identifier} not found in LM Studio")
+            return False
             
         except Exception as e:
             self.logger.error(f"Error checking model availability: {str(e)}")
             return False
-    
-    def _get_model_details(self, model_id: str, config_override: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Get model details by ID, with optional configuration overrides.
-        
-        Args:
-            model_id: Identifier for the model
-            config_override: Optional configuration overrides
             
-        Returns:
-            Dict containing model details
-            
-        Raises:
-            ValueError: If model ID is unknown
+    def _get_model_details(self, model_id: str, 
+                          config_override: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        # In a real implementation, this would load from a configuration source
-        # For this scaffold, we'll use hardcoded examples
-        model_configs = {
-            "gemma-3-12b-it": {
-                "base_model": "gemma-3-12b",
-                "quantization": "GGUF",
-                "context_window": 128000,
-                "download_url": "https://model.lmstudio.ai/download/lmstudio-community/gemma-3-12b-it-GGUF",
-                "local_path": os.path.join(self.model_cache_dir, "gemma-3-12b"),
-                "api_identifier": "gemma-3-12b-it",
-                "optimization": {
-                    "kv_cache": True,
-                    "flash_attention": True,
-                    "tensor_parallelism": False,
-                    "execution_provider": "CUDA"
-                }
-            },
-            "gemma-3-4b-it": {
-                "base_model": "gemma-3-4b",
-                "quantization": "GGUF",
-                "context_window": 128000,
-                "download_url": "https://model.lmstudio.ai/download/lmstudio-community/gemma-3-4b-it-GGUF",
-                "local_path": os.path.join(self.model_cache_dir, "gemma-3-4b"),
-                "api_identifier": "gemma-3-4b-it",
-                "optimization": {
-                    "kv_cache": True,
-                    "flash_attention": True,
-                    "tensor_parallelism": False,
-                    "execution_provider": "CUDA"
-                }
-            },
-            "llama-3.2-3b-instruct": {
-                "base_model": "llama-3.2-3b",
-                "quantization": "Q8_0",
-                "context_window": 128000,
-                "download_url": "https://model.lmstudio.ai/download/hugging-quants/Llama-3.2-3B-Instruct-Q8_0-GGUF",
-                "local_path": os.path.join(self.model_cache_dir, "llama-3.2-3b"),
-                "api_identifier": "llama-3.2-3b-instruct",
-                "optimization": {
-                    "kv_cache": True,
-                    "flash_attention": True,
-                    "tensor_parallelism": False,
-                    "execution_provider": "CUDA"
-                }
-            }
-        }
+        Balances configuration flexibility with consistency across the system.
         
-        if model_id not in model_configs:
-            self.logger.error(f"Unknown model ID: {model_id}")
-            raise ValueError(f"Unknown model ID: {model_id}")
+        This approach:
+        - Provides sensible defaults while enabling experiment-specific overrides
+        - Ensures core configuration remains consistent even with overrides
+        - Enables experimentation with different parameters without changing base configs
+        - Maintains backward compatibility when adding new configuration options
+        """
+        if model_id not in self.model_configs:
+            raise ValueError(f"Unknown model ID: {model_id}. Add it to model_configs.json first.")
+            
+        # Create copy to prevent modifying shared configuration
+        model_details = dict(self.model_configs[model_id])
         
-        model_details = model_configs[model_id].copy()
-        
-        # Apply any configuration overrides
+        # Apply experimental overrides while preserving base configuration
         if config_override:
-            # Recursively update nested dictionaries
-            for key, value in config_override.items():
-                if isinstance(value, dict) and key in model_details and isinstance(model_details[key], dict):
-                    model_details[key].update(value)
-                else:
-                    model_details[key] = value
-        
+            model_details.update(config_override)
+            
         return model_details
         
-    def unload_model(self, model_id: str) -> None:
+    def unload_model(self, model_id: str):
         """
-        Unload a model from memory.
+        Manages resource lifecycle to prevent memory leaks and resource exhaustion.
         
-        For LM Studio integration, this simply removes the cached metadata.
-        
-        Args:
-            model_id: Identifier for the model to unload
+        Explicit resource management:
+        - Prevents memory leaks in long-running applications
+        - Enables loading multiple models in sequence with limited resources
+        - Reduces resource contention in multi-user environments
+        - Ensures deterministic cleanup instead of relying on garbage collection
         """
         if model_id in self.loaded_models:
             self.logger.info(f"Unloading model: {model_id}")
+            
+            # Access model instance for cleanup if available
+            model_details = self.loaded_models[model_id]
+            model_instance = model_details.get("instance")
+            
+            # Handle model-specific cleanup operations
+            if model_instance and hasattr(model_instance, "unload"):
+                model_instance.unload()
+                
+            # Remove from cache to free memory
             del self.loaded_models[model_id]
-        else:
-            self.logger.warning(f"Model not loaded: {model_id}")
             
     def get_model_info(self, model_id: str) -> Dict[str, Any]:
         """
-        Get information about a model.
+        Separates information access from resource allocation for efficiency.
         
-        Args:
-            model_id: Identifier for the model
-            
-        Returns:
-            Dict containing model information
-            
-        Raises:
-            ValueError: If model ID is unknown
+        This separation:
+        - Enables lightweight queries without loading models
+        - Supports UI components that display model capabilities
+        - Allows filtering available models by attributes
+        - Facilitates planning before committing resources
         """
-        model_details = self._get_model_details(model_id)
-        
-        # Remove sensitive or unnecessary information
-        if 'download_url' in model_details:
-            del model_details['download_url']
-            
-        if 'local_path' in model_details:
-            del model_details['local_path']
-            
-        return model_details 
+        return self._get_model_details(model_id) 

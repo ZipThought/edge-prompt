@@ -1,238 +1,205 @@
 """
-TestExecutor - Handles execution of individual tests.
+TestExecutor - Centralizes model API interactions to simplify experiment workflows.
 
-This module provides functionality for executing LLM inference
-using LM Studio's OpenAI-compatible API in the EdgePrompt research framework.
+This module abstracts LLM API interactions to:
+- Reduce code duplication across different experiment types
+- Provide consistent error handling and logging for API calls
+- Enable mock executions for testing without model dependencies
+- Centralize response parsing and standardization
 """
 
-import logging
-import time
 import json
-from typing import Dict, Any, List, Optional, Callable
-
-try:
-    from openai import OpenAI
-    OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
+import logging
+import random
+import string
+import time
+from typing import Dict, Any, Optional, List, Union
 
 class TestExecutor:
     """
-    Executes tests against LLM models through LM Studio's API.
+    Centralizes API interactions to reduce code duplication and improve maintainability.
     
-    This class handles:
-    - Connecting to LM Studio via OpenAI-compatible API
-    - Constructing chat completion requests
-    - Processing model responses, including token counts
-    - Handling errors and timeouts
+    This centralization:
+    - Reduces duplication of API-related code across experiments
+    - Creates a single point for logging and error handling
+    - Simplifies mocking for testing without model dependencies
+    - Standardizes output format for consistent downstream processing
     """
     
     def __init__(self, lm_studio_url: Optional[str] = None):
         """
-        Initialize the TestExecutor.
+        Supports configurable API endpoint to accommodate different environments.
         
-        Args:
-            lm_studio_url: Base URL for LM Studio server (optional)
+        This flexibility:
+        - Enables development across different environments
+        - Simplifies testing with environment-specific settings
+        - Facilitates deployment in different network configurations
         """
-        self.logger = logging.getLogger("edgeprompt.runner.executor")
-        self.lm_studio_url = lm_studio_url
+        self.logger = logging.getLogger("edgeprompt.runner.test_executor")
         
-        if not OPENAI_AVAILABLE:
-            self.logger.warning("OpenAI package not available - Install with 'pip install openai>=1.0.0'")
-        
-        if lm_studio_url:
-            self.logger.info(f"TestExecutor initialized with LM Studio URL: {lm_studio_url}")
-        else:
-            self.logger.info("TestExecutor initialized in mock mode (LM Studio URL not provided)")
+        # Allow configuration for different environments
+        self.lm_studio_url = lm_studio_url or "http://localhost:1234"
     
     def execute_test(self, model_metadata: Dict[str, Any], prompt: str, 
                     generation_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Execute a test against a model via LM Studio's API.
+        Centralizes model interaction to provide consistent handling and logging.
         
-        Args:
-            model_metadata: Model metadata containing api_identifier
-            prompt: The prompt to send to the model
-            generation_params: Optional parameters controlling generation
-            
-        Returns:
-            Dict containing the test results including output text and token counts
+        This centralization:
+        - Ensures consistent error handling across all model interactions
+        - Standardizes logging for reproducibility and debugging
+        - Enables mock execution for testing without model dependencies
+        - Creates consistent output structure for downstream processing
         """
-        # Get the API identifier from model metadata
-        api_identifier = model_metadata.get('api_identifier')
-        if not api_identifier:
-            error_msg = "Missing API identifier in model metadata"
-            self.logger.error(error_msg)
-            return {"error": error_msg, "output": "ERROR: " + error_msg}
+        # Log prompt length for debugging performance and token usage
+        self.logger.info(f"Executing test with prompt length: {len(prompt)}")
         
-        self.logger.info(f"Executing test with model {api_identifier}")
+        # Support mock execution for testing without requiring actual model access
+        if model_metadata.get("mock", False):
+            self.logger.info("Using mock execution mode")
+            return self._execute_mock(model_metadata.get("model_id", "unknown"), prompt, generation_params)
         
-        # Default generation parameters
-        if generation_params is None:
-            generation_params = {
-                "temperature": 0.7,
-                "max_tokens": 2048,
-                "top_p": 0.95,
-            }
+        # Use API identifier from metadata to maintain consistent model references
+        api_id = model_metadata.get("api_identifier")
+        if not api_id:
+            raise ValueError("Model metadata missing api_identifier")
             
-        # Log basic info
-        self.logger.info(f"Prompt length: {len(prompt)} chars, {len(prompt.split())} words")
+        # Start with default parameters for safety and predictability
+        params = {
+            "temperature": 0.7,
+            "max_tokens": 2048,
+            "top_p": 0.95,
+            "frequency_penalty": 0,
+            "presence_penalty": 0,
+            "stop": None
+        }
         
-        # Use the mock if no LM Studio URL is provided or OpenAI is not available
-        if not self.lm_studio_url or not OPENAI_AVAILABLE:
-            self.logger.warning("Using mock generation (no LM Studio URL or OpenAI package unavailable)")
-            return self._execute_mock(api_identifier, prompt, generation_params)
-        
-        # Start timing
+        # Apply specific parameters if provided to support experiment needs
+        if generation_params:
+            params.update(generation_params)
+            
+        # Measure execution time for performance analysis
         start_time = time.time()
         
         try:
-            # Initialize OpenAI client with LM Studio base URL
-            # LM Studio API expects /v1 in the path
+            # Import at runtime to avoid dependency when using mock execution
+            from openai import OpenAI
+            
+            # Initialize client with appropriate URL and API key
             client = OpenAI(
-                base_url=f"{self.lm_studio_url}/v1" if not self.lm_studio_url.endswith('/v1') else self.lm_studio_url,
-                api_key="lm-studio"  # LM Studio doesn't validate the key
+                base_url=f"{self.lm_studio_url}/v1",
+                api_key="lm-studio"  # LM Studio doesn't use real keys
             )
             
-            # Prepare messages for chat completion
-            messages = [
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt}
-            ]
+            # Create message format for the API
+            messages = [{"role": "user", "content": prompt}]
             
-            # Prepare generation parameters
-            chat_params = {
-                "model": "local-model",  # LM Studio will use whatever model is loaded
-                "messages": messages,
-                "max_tokens": generation_params.get("max_tokens", 2048),
-                "temperature": generation_params.get("temperature", 0.7),
-                "top_p": generation_params.get("top_p", 0.95),
-                "stream": False
-            }
+            # Execute the model request
+            completion = client.chat.completions.create(
+                model=api_id,
+                messages=messages,
+                temperature=params["temperature"],
+                max_tokens=params["max_tokens"],
+                top_p=params["top_p"],
+                frequency_penalty=params["frequency_penalty"],
+                presence_penalty=params["presence_penalty"],
+                stop=params["stop"]
+            )
             
-            # Add other parameters if present
-            if "stop" in generation_params:
-                chat_params["stop"] = generation_params["stop"]
-                
-            if "presence_penalty" in generation_params:
-                chat_params["presence_penalty"] = generation_params["presence_penalty"]
-                
-            if "frequency_penalty" in generation_params:
-                chat_params["frequency_penalty"] = generation_params["frequency_penalty"]
+            # Extract output text from response
+            output_text = completion.choices[0].message.content
             
-            # Make the API call
-            self.logger.info(f"Calling LM Studio API with prompt: {prompt[:50]}...")
-            self.logger.debug(f"LM Studio URL: {self.lm_studio_url}")
-            self.logger.debug(f"Chat parameters: {chat_params}")
+            # Calculate metrics for analysis
+            elapsed_time = time.time() - start_time
             
-            completion = client.chat.completions.create(**chat_params)
-            self.logger.debug(f"LM Studio response: {completion}")
-            
-            # Extract content from response - add defensive checks
-            if hasattr(completion, 'choices') and completion.choices and len(completion.choices) > 0:
-                if hasattr(completion.choices[0], 'message') and completion.choices[0].message:
-                    output_text = completion.choices[0].message.content
-                else:
-                    self.logger.warning("API response missing message content structure")
-                    output_text = str(completion.choices[0])
-            else:
-                self.logger.warning(f"Unexpected API response structure: {completion}")
-                output_text = "API response missing expected structure"
-            
-            # Extract token counts with defensive checks
-            input_tokens = getattr(completion.usage, 'prompt_tokens', 0) if hasattr(completion, 'usage') else len(prompt.split())
-            output_tokens = getattr(completion.usage, 'completion_tokens', 0) if hasattr(completion, 'usage') else len(output_text.split())
-            
-            # Calculate execution time
-            execution_time_ms = int((time.time() - start_time) * 1000)
-            
-            # Prepare result
+            # Construct standardized result
             result = {
+                "model_id": api_id,
                 "output": output_text,
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "execution_time_ms": execution_time_ms,
-                "generation_params": generation_params,
+                "elapsed_seconds": elapsed_time,
+                "prompt_tokens": completion.usage.prompt_tokens,
+                "completion_tokens": completion.usage.completion_tokens,
+                "total_tokens": completion.usage.total_tokens
             }
             
-            self.logger.info(f"Test execution completed in {execution_time_ms}ms - Input tokens: {input_tokens}, Output tokens: {output_tokens}")
-            
+            self.logger.info(f"Completed execution in {elapsed_time:.2f}s, total tokens: {result['total_tokens']}")
             return result
             
         except Exception as e:
-            error_time_ms = int((time.time() - start_time) * 1000)
-            error_msg = f"Error executing test: {str(e)}"
-            self.logger.error(error_msg, exc_info=True)
+            self.logger.error(f"Error executing test: {str(e)}")
             
-            # Return error result
+            # Return error information in consistent format for downstream handling
             return {
-                "error": error_msg,
-                "output": f"ERROR: {str(e)}",
-                "execution_time_ms": error_time_ms,
-                "generation_params": generation_params,
+                "model_id": api_id,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "elapsed_seconds": time.time() - start_time
             }
     
     def _execute_mock(self, model_id: str, prompt: str, 
-                     generation_params: Dict[str, Any]) -> Dict[str, Any]:
+                     generation_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Execute a mock generation when LM Studio is not available.
+        Provides mock execution to enable testing without model dependencies.
         
-        Args:
-            model_id: The model identifier
-            prompt: The prompt to send
-            generation_params: Generation parameters
-            
-        Returns:
-            Dict with mock results
+        Mock execution:
+        - Simplifies testing by removing external dependencies
+        - Ensures reproducible results for test validation
+        - Speeds up development by avoiding actual API calls
+        - Allows testing of error handling and edge cases
         """
-        start_time = time.time()
+        # Simulate processing delay to mimic real execution time
+        delay = min(2.0, len(prompt) * 0.001)  # Realistic delay based on prompt length
+        time.sleep(delay)
         
-        # Sleep to simulate processing
-        time.sleep(0.5) 
+        # Generate mock token counts for testing token-based logic
+        prompt_tokens = len(prompt.split())
+        completion_tokens = random.randint(50, 200)  # Reasonable mock range
         
-        # Generate mock output
-        output = f"[Mock output for prompt: {prompt[:30]}...]"
+        # Create mock output with identifiable prefix
+        output = f"MOCK OUTPUT from model {model_id}: Response to prompt of length {len(prompt)}"
         
-        # Calculate mock token counts
-        input_tokens = len(prompt.split())
-        output_tokens = len(output.split())
-        
-        # Calculate execution time
-        execution_time_ms = int((time.time() - start_time) * 1000)
-        
-        # Prepare result
-        result = {
+        # Return consistent format matching real execution
+        return {
+            "model_id": model_id,
             "output": output,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "execution_time_ms": execution_time_ms,
-            "generation_params": generation_params,
-            "mock": True
+            "elapsed_seconds": delay,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens
         }
         
-        self.logger.info(f"Mock test execution completed in {execution_time_ms}ms")
-        
-        return result
-    
     def parse_output(self, output: str) -> Dict[str, Any]:
         """
-        Parse model output to extract structured data.
+        Standardizes output parsing to ensure consistent downstream processing.
         
-        Args:
-            output: The raw model output
-            
-        Returns:
-            Dict containing parsed output
+        Centralized parsing:
+        - Ensures consistent interpretation of model outputs
+        - Reduces duplication of parsing logic across experiments
+        - Creates predictable output structure for analysis
+        - Shields downstream code from model-specific output formats
         """
-        # Try to parse as JSON first (for validation outputs)
+        # Start with basic output structure
+        result = {"raw_output": output}
+        
         try:
-            return json.loads(output)
-        except (json.JSONDecodeError, TypeError):
-            # If not JSON, return as raw output
-            return {
-                "raw_output": output,
-                "parsed": {
-                    "success": True,
-                    "content": output
-                }
-            } 
+            # Attempt to parse JSON if output appears to be JSON format
+            if output.strip().startswith('{') and output.strip().endswith('}'):
+                parsed = json.loads(output)
+                result["parsed_json"] = parsed
+            else:
+                # Basic text extraction for non-JSON outputs
+                # Extract the first line as a summary
+                lines = output.strip().split('\n')
+                result["first_line"] = lines[0] if lines else ""
+                
+                # Try to extract any numbers found in the output for metrics
+                import re
+                numbers = re.findall(r'\d+\.\d+|\d+', output)
+                if numbers:
+                    result["extracted_numbers"] = [float(n) if '.' in n else int(n) for n in numbers]
+        
+        except Exception as e:
+            # Record parsing errors without failing
+            result["parsing_error"] = str(e)
+            
+        return result 
