@@ -1,0 +1,388 @@
+{
+  "test_suite_id": "multi_stage_validation",
+  "total_tests": 8,
+  "successful_tests": 2,
+  "metrics_summary": {
+    "avg_execution_time_ms": 7651.0,
+    "avg_memory_usage_mb": 65.21923828125,
+    "by_model": {
+      "gemma-3-4b-it": {
+        "count": 4,
+        "avg_execution_time_ms": 3537.5
+      },
+      "gemma-3-12b-it": {
+        "count": 4,
+        "avg_execution_time_ms": 11764.5
+      }
+    }
+  },
+  "raw_results": [
+    {
+      "id": "good_answer_gemma-3-4b-it_jetson_nano_sim",
+      "timestamp": "2025-04-12T23:38:53Z",
+      "test_case_id": "good_answer",
+      "model_id": "gemma-3-4b-it",
+      "hardware_profile": "jetson_nano_sim",
+      "generation_result": {
+        "model_id": "gemma-3-4b-it",
+        "output": "```json\n{\n  \"passed\": true,\n  \"score\": 8,\n  \"feedback\": \"This is a good response for a Grade 5 student! The answer directly addresses the question of why rainforests are important and provides several key reasons. The listed benefits \u2013 oxygen production, carbon dioxide absorption, biodiversity, climate regulation, and medicinal resources \u2013 are all accurate and relevant. \\n\\nHowever, it could be improved by adding slightly more detail or elaboration to each point. For example, mentioning *how* they help control the climate (e.g., through transpiration) would strengthen the answer.  A sentence expanding on the importance of biodiversity (mentioning a specific example like unique species) would also elevate it. The score reflects that it's a solid response showing understanding but could benefit from slightly more depth.\u201d\n}\n```",
+        "elapsed_seconds": 1.7653710842132568,
+        "prompt_tokens": 226,
+        "completion_tokens": 175,
+        "total_tokens": 401
+      },
+      "validation_result": {
+        "isValid": true,
+        "score": 3.5,
+        "stageResults": [
+          {
+            "stageId": "length_check",
+            "passed": true,
+            "score": 9,
+            "feedback": "The answer is well within the desired word count (approximately 120 words), exceeding expectations for a Grade 5 response. The feedback highlights a minor suggestion for elaboration \u2013 specifically expanding on *how* rainforests regulate climate and providing a concrete example of biodiversity \u2013 which would elevate the answer further.  The current response demonstrates strong understanding, making it a very good submission.",
+            "executionTime": 1061
+          },
+          {
+            "stageId": "vocabulary_check",
+            "passed": true,
+            "score": 8.5,
+            "feedback": "The vocabulary used in this response is generally appropriate for Grade 5 students (ages 10-11). Words like 'oxygen,' 'carbon dioxide,' 'biodiversity,' 'climate regulation,' and 'medicinal resources' are commonly encountered at this level. The suggested feedback to add detail ('transpiration,' 'unique species') actually *increases* the complexity slightly, but that\u2019s a good thing \u2013 it encourages deeper understanding which is expected of a Grade 5 student aiming for an 8 or higher.  The overall language is clear and accessible. A slight adjustment upwards in score reflects the potential for further elaboration, as noted in the original feedback.",
+            "executionTime": 1626
+          },
+          {
+            "stageId": "content_relevance",
+            "passed": true,
+            "score": 9,
+            "feedback": "The answer is highly relevant to the question and effectively addresses the main topic of why rainforests are important. The listed reasons (oxygen production, carbon dioxide absorption, biodiversity, climate regulation, and medicinal resources) are all accurate and pertinent. The feedback accurately identifies a minor area for improvement \u2013 elaborating on *how* these benefits work \u2013 which would elevate the response to a perfect score.  The provided detail in the feedback itself is excellent and demonstrates a strong understanding of the subject matter.",
+            "executionTime": 1271
+          }
+        ],
+        "aggregateFeedback": "length_check: The answer is well within the desired word count (approximately 120 words), exceeding expectations for a Grade 5 response. The feedback highlights a minor suggestion for elaboration \u2013 specifically expanding on *how* rainforests regulate climate and providing a concrete example of biodiversity \u2013 which would elevate the answer further.  The current response demonstrates strong understanding, making it a very good submission.\nvocabulary_check: The vocabulary used in this response is generally appropriate for Grade 5 students (ages 10-11). Words like 'oxygen,' 'carbon dioxide,' 'biodiversity,' 'climate regulation,' and 'medicinal resources' are commonly encountered at this level. The suggested feedback to add detail ('transpiration,' 'unique species') actually *increases* the complexity slightly, but that\u2019s a good thing \u2013 it encourages deeper understanding which is expected of a Grade 5 student aiming for an 8 or higher.  The overall language is clear and accessible. A slight adjustment upwards in score reflects the potential for further elaboration, as noted in the original feedback.\ncontent_relevance: The answer is highly relevant to the question and effectively addresses the main topic of why rainforests are important. The listed reasons (oxygen production, carbon dioxide absorption, biodiversity, climate regulation, and medicinal resources) are all accurate and pertinent. The feedback accurately identifies a minor area for improvement \u2013 elaborating on *how* these benefits work \u2013 which would elevate the response to a perfect score.  The provided detail in the feedback itself is excellent and demonstrates a strong understanding of the subject matter.\n"
+      },
+      "metrics": {
+        "avg_cpu_percent": 2.917241379310345,
+        "max_cpu_percent": 39.9,
+        "avg_memory_mb": 58.46652747844828,
+        "max_memory_mb": 59.9921875,
+        "memory_usage_mb": 59.9921875,
+        "sample_count": 58,
+        "execution_time_ms": 5822
+      }
+    },
+    {
+      "id": "good_answer_gemma-3-12b-it_jetson_nano_sim",
+      "timestamp": "2025-04-12T23:39:06Z",
+      "test_case_id": "good_answer",
+      "model_id": "gemma-3-12b-it",
+      "hardware_profile": "jetson_nano_sim",
+      "generation_result": {
+        "model_id": "gemma-3-12b-it",
+        "output": "```json\n{\n \"passed\": true,\n \"score\": 8,\n \"feedback\": \"This is a good answer for a Grade 5 student! It directly addresses the question and includes several key reasons why rainforests are important. The vocabulary is appropriate \u2013 words like 'oxygen,' 'carbon dioxide,' 'climate,' and 'medicines' show understanding of relevant concepts. However, it could be slightly more detailed. For example, expanding on *how* they control climate (e.g., through rainfall patterns) or mentioning the role rainforests play in regulating water cycles would elevate the response. Also, while it mentions many plants and animals, giving a specific example (like 'home to jaguars and poison dart frogs') could add more impact.\"\n}\n```",
+        "elapsed_seconds": 4.13525915145874,
+        "prompt_tokens": 226,
+        "completion_tokens": 159,
+        "total_tokens": 385
+      },
+      "validation_result": {
+        "isValid": true,
+        "score": 3.6,
+        "stageResults": [
+          {
+            "stageId": "length_check",
+            "passed": true,
+            "score": 9,
+            "feedback": "The answer falls comfortably within the requested word count range (5-200 words). It's concise and well-structured without feeling rushed. The feedback provided already addresses content improvements; length is not a concern.",
+            "executionTime": 1989
+          },
+          {
+            "stageId": "vocabulary_check",
+            "passed": true,
+            "score": 9,
+            "feedback": "The vocabulary used in the answer is generally very appropriate for Grade 5 students (ages 10-11). Words like 'oxygen,' 'carbon dioxide,' 'climate,' and 'medicines' are challenging but accessible with some prior exposure to science topics. The feedback correctly identifies these as demonstrating understanding of relevant concepts.  The suggestion to add specific examples is excellent, not because the current vocabulary is *inappropriate*, but because concrete details will enhance comprehension and engagement for this age group. No significant vocabulary adjustments needed \u2013 focus on adding descriptive detail!",
+            "executionTime": 3659
+          },
+          {
+            "stageId": "content_relevance",
+            "passed": true,
+            "score": 9,
+            "feedback": "The provided answer is highly relevant to the question. It comprehensively addresses the main topic of why rainforests are important by outlining key reasons like oxygen production, carbon dioxide absorption, climate regulation, and providing medicines. The feedback accurately assesses the response's strengths (directness, appropriate vocabulary) and suggests constructive improvements (more detail on climate control mechanisms, specific examples).  The assessment is well-reasoned and insightful.",
+            "executionTime": 2964
+          }
+        ],
+        "aggregateFeedback": "length_check: The answer falls comfortably within the requested word count range (5-200 words). It's concise and well-structured without feeling rushed. The feedback provided already addresses content improvements; length is not a concern.\nvocabulary_check: The vocabulary used in the answer is generally very appropriate for Grade 5 students (ages 10-11). Words like 'oxygen,' 'carbon dioxide,' 'climate,' and 'medicines' are challenging but accessible with some prior exposure to science topics. The feedback correctly identifies these as demonstrating understanding of relevant concepts.  The suggestion to add specific examples is excellent, not because the current vocabulary is *inappropriate*, but because concrete details will enhance comprehension and engagement for this age group. No significant vocabulary adjustments needed \u2013 focus on adding descriptive detail!\ncontent_relevance: The provided answer is highly relevant to the question. It comprehensively addresses the main topic of why rainforests are important by outlining key reasons like oxygen production, carbon dioxide absorption, climate regulation, and providing medicines. The feedback accurately assesses the response's strengths (directness, appropriate vocabulary) and suggests constructive improvements (more detail on climate control mechanisms, specific examples).  The assessment is well-reasoned and insightful.\n"
+      },
+      "metrics": {
+        "avg_cpu_percent": 1.48046875,
+        "max_cpu_percent": 39.9,
+        "avg_memory_mb": 62.4217529296875,
+        "max_memory_mb": 62.68359375,
+        "memory_usage_mb": 62.68359375,
+        "sample_count": 128,
+        "execution_time_ms": 12843
+      }
+    },
+    {
+      "id": "fair_answer_gemma-3-4b-it_jetson_nano_sim",
+      "timestamp": "2025-04-12T23:39:09Z",
+      "test_case_id": "fair_answer",
+      "model_id": "gemma-3-4b-it",
+      "hardware_profile": "jetson_nano_sim",
+      "generation_result": {
+        "model_id": "gemma-3-4b-it",
+        "output": "```json\n{\n  \"passed\": false,\n  \"score\": 4,\n  \"feedback\": \"This answer provides a basic understanding but needs significant expansion to fully address the question. While it correctly identifies that rainforests have animals and are important, it misses crucial aspects of their significance. \\n\\nHere's what\u2019s missing:\\n\\n*   **Oxygen Production:** The statement \u2018Rainforests make oxygen\u2019 is partially accurate but misleading. Rainforests *contribute* to oxygen production through photosynthesis, but the amount they produce relative to other ecosystems and human activities is relatively small. It needs further explanation.\\n*   **Importance Details:** The answer lacks specific reasons why rainforests are important.  A Grade 5 level response should include at least one or two of the following: regulation of climate (carbon storage), biodiversity hotspots, water cycle influence, and habitat for countless species.\\n\\nTo improve, the student could say something like: \u2018Rainforests are incredibly important because they produce oxygen through photosynthesis, help regulate our planet\u2019s climate by storing large amounts of carbon dioxide, and are home to a huge variety of plants and animals \u2013 many of which we haven't even discovered yet.\u2019\"\n}\n```",
+        "elapsed_seconds": 2.493687629699707,
+        "prompt_tokens": 204,
+        "completion_tokens": 257,
+        "total_tokens": 461
+      },
+      "validation_result": {
+        "isValid": false,
+        "score": 0.2,
+        "stageResults": [
+          {
+            "stageId": "length_check",
+            "passed": false,
+            "score": 2,
+            "feedback": "The answer is significantly shorter than the desired 5-200 word range. While it touches on key aspects like animals and oxygen production, it lacks depth and crucial details regarding rainforest importance \u2013 specifically climate regulation, biodiversity, and the water cycle. The feedback highlights a substantial gap in content that needs to be expanded upon for a Grade 5 level response.",
+            "executionTime": 1069
+          }
+        ],
+        "aggregateFeedback": "length_check: The answer is significantly shorter than the desired 5-200 word range. While it touches on key aspects like animals and oxygen production, it lacks depth and crucial details regarding rainforest importance \u2013 specifically climate regulation, biodiversity, and the water cycle. The feedback highlights a substantial gap in content that needs to be expanded upon for a Grade 5 level response.\n"
+      },
+      "metrics": {
+        "avg_cpu_percent": 2.4916666666666663,
+        "max_cpu_percent": 39.9,
+        "avg_memory_mb": 62.71875,
+        "max_memory_mb": 62.71875,
+        "memory_usage_mb": 62.71875,
+        "sample_count": 36,
+        "execution_time_ms": 3612
+      }
+    },
+    {
+      "id": "fair_answer_gemma-3-12b-it_jetson_nano_sim",
+      "timestamp": "2025-04-12T23:39:25Z",
+      "test_case_id": "fair_answer",
+      "model_id": "gemma-3-12b-it",
+      "hardware_profile": "jetson_nano_sim",
+      "generation_result": {
+        "model_id": "gemma-3-12b-it",
+        "output": "```json\n{\n \"passed\": false,\n \"score\": 3,\n \"feedback\": \"This answer demonstrates a basic understanding that rainforests are important and provide oxygen and habitat for animals. However, it's far too brief and lacks detail to fully address the question 'Describe the importance of rainforests for our planet.' For a Grade 5 student, more elaboration is expected. Here's how it could be improved:\\n\\n*   **Length:** The answer needs significantly more detail. It should mention at least one or two other key roles rainforests play (e.g., regulating climate, providing resources like medicines and wood, storing carbon).\\n*   **Vocabulary:** The vocabulary is simple and appropriate for the grade level but could be enriched slightly (e.g., instead of 'have animals', use 'provide habitats for diverse animal species').\\n*   **Content:** While it touches on oxygen production and animal habitat, it misses many other crucial aspects of rainforest importance.\\n*   **Accuracy:** The statements are factually accurate as far as they go.\"\n}\n```",
+        "elapsed_seconds": 5.762714624404907,
+        "prompt_tokens": 204,
+        "completion_tokens": 226,
+        "total_tokens": 430
+      },
+      "validation_result": {
+        "isValid": false,
+        "score": 3.0,
+        "stageResults": [
+          {
+            "stageId": "length_check",
+            "passed": true,
+            "score": 9,
+            "feedback": "The provided feedback accurately assesses the answer's length. It correctly identifies that the response is too brief (less than 50 words) and requires significant expansion to meet Grade 5 expectations. The suggestion of adding more detail and mentioning additional roles like climate regulation and resource provision directly addresses the length issue.  The scoring reflects a strong understanding of the prompt and accurate evaluation.",
+            "executionTime": 2811
+          },
+          {
+            "stageId": "vocabulary_check",
+            "passed": true,
+            "score": 9,
+            "feedback": "The vocabulary used in the feedback itself is generally appropriate for Grade 5 students. Words like 'elaboration,' 'crucial,' and 'diverse' might be new to some, but they are presented within context that allows understanding. The suggestion to replace 'have animals' with 'provide habitats for diverse animal species' is excellent \u2013 it introduces a slightly more sophisticated term ('diverse') without being overly complex.  The overall tone is encouraging and constructive, which is suitable for this age group. A slight improvement could be rephrasing 'far too brief' to something like 'could use more details' to avoid potentially discouraging the student.",
+            "executionTime": 3965
+          },
+          {
+            "stageId": "content_relevance",
+            "passed": false,
+            "score": 6,
+            "feedback": "The provided answer is primarily focused on evaluating *another* answer's quality rather than directly addressing the question of rainforest importance. While it correctly identifies shortcomings in a hypothetical response (lack of detail, simple vocabulary), it doesn't actually describe the importance of rainforests itself. Therefore, it's not relevant to the original question and fails to address the main topic. The feedback is insightful regarding grading criteria but misses the core requirement.",
+            "executionTime": 3093
+          }
+        ],
+        "aggregateFeedback": "length_check: The provided feedback accurately assesses the answer's length. It correctly identifies that the response is too brief (less than 50 words) and requires significant expansion to meet Grade 5 expectations. The suggestion of adding more detail and mentioning additional roles like climate regulation and resource provision directly addresses the length issue.  The scoring reflects a strong understanding of the prompt and accurate evaluation.\nvocabulary_check: The vocabulary used in the feedback itself is generally appropriate for Grade 5 students. Words like 'elaboration,' 'crucial,' and 'diverse' might be new to some, but they are presented within context that allows understanding. The suggestion to replace 'have animals' with 'provide habitats for diverse animal species' is excellent \u2013 it introduces a slightly more sophisticated term ('diverse') without being overly complex.  The overall tone is encouraging and constructive, which is suitable for this age group. A slight improvement could be rephrasing 'far too brief' to something like 'could use more details' to avoid potentially discouraging the student.\ncontent_relevance: The provided answer is primarily focused on evaluating *another* answer's quality rather than directly addressing the question of rainforest importance. While it correctly identifies shortcomings in a hypothetical response (lack of detail, simple vocabulary), it doesn't actually describe the importance of rainforests itself. Therefore, it's not relevant to the original question and fails to address the main topic. The feedback is insightful regarding grading criteria but misses the core requirement.\n"
+      },
+      "metrics": {
+        "avg_cpu_percent": 1.2788461538461537,
+        "max_cpu_percent": 49.8,
+        "avg_memory_mb": 63.48888221153846,
+        "max_memory_mb": 64.87890625,
+        "memory_usage_mb": 64.87890625,
+        "sample_count": 156,
+        "execution_time_ms": 15654
+      }
+    },
+    {
+      "id": "poor_answer_gemma-3-4b-it_jetson_nano_sim",
+      "timestamp": "2025-04-12T23:39:27Z",
+      "test_case_id": "poor_answer",
+      "model_id": "gemma-3-4b-it",
+      "hardware_profile": "jetson_nano_sim",
+      "generation_result": {
+        "model_id": "gemma-3-4b-it",
+        "output": "```json\n{\n  \"passed\": false,\n  \"score\": 2,\n  \"feedback\": \"This answer is insufficient. The question asks for a description of the importance of rainforests, and \u2018I don\u2019t know\u2019 provides no relevant information. For a Grade 5 student, a basic understanding could include mentioning things like rainforests producing oxygen, being home to many animals and plants, or playing a role in regulating climate. A simple sentence or two explaining even one of these points would have demonstrated some understanding. This answer receives a low score because it doesn\u2019t address the question at all.\u201d\n}\n```",
+        "elapsed_seconds": 1.3223676681518555,
+        "prompt_tokens": 197,
+        "completion_tokens": 130,
+        "total_tokens": 327
+      },
+      "validation_result": {
+        "isValid": false,
+        "score": 0.1,
+        "stageResults": [
+          {
+            "stageId": "length_check",
+            "passed": false,
+            "score": 1,
+            "feedback": "The answer is significantly below the required word count (approximately 5-200 words). The provided response ('I don\u2019t know') offers no relevant information and fails to demonstrate even a basic understanding of rainforests as requested. A score of 1 reflects this substantial shortfall in addressing the question's core requirements.",
+            "executionTime": 947
+          }
+        ],
+        "aggregateFeedback": "length_check: The answer is significantly below the required word count (approximately 5-200 words). The provided response ('I don\u2019t know') offers no relevant information and fails to demonstrate even a basic understanding of rainforests as requested. A score of 1 reflects this substantial shortfall in addressing the question's core requirements.\n"
+      },
+      "metrics": {
+        "avg_cpu_percent": 3.465217391304347,
+        "max_cpu_percent": 39.9,
+        "avg_memory_mb": 66.04177989130434,
+        "max_memory_mb": 66.703125,
+        "memory_usage_mb": 66.703125,
+        "sample_count": 23,
+        "execution_time_ms": 2308
+      }
+    },
+    {
+      "id": "poor_answer_gemma-3-12b-it_jetson_nano_sim",
+      "timestamp": "2025-04-12T23:39:38Z",
+      "test_case_id": "poor_answer",
+      "model_id": "gemma-3-12b-it",
+      "hardware_profile": "jetson_nano_sim",
+      "generation_result": {
+        "model_id": "gemma-3-12b-it",
+        "output": "```json\n{\n \"passed\": false,\n \"score\": 0,\n \"feedback\": \"This answer does not meet the requirements of the question. While it's okay for a student to admit they don't know, it provides no information at all regarding the importance of rainforests. For a Grade 5 level, even a simple list of one or two reasons would be an improvement. Encourage the student to brainstorm some ideas \u2013 perhaps starting with what they *do* know about rainforests (e.g., they have lots of trees and animals) and then exploring why those things might be important.\"\n}\n```",
+        "elapsed_seconds": 3.300402879714966,
+        "prompt_tokens": 197,
+        "completion_tokens": 130,
+        "total_tokens": 327
+      },
+      "validation_result": {
+        "isValid": false,
+        "score": 2.0,
+        "stageResults": [
+          {
+            "stageId": "length_check",
+            "passed": true,
+            "score": 10,
+            "feedback": "The provided answer's feedback explicitly addresses the content of the response, not its length. The JSON object itself is well-formed and within the specified word count (approximately 125 words). Therefore, this check passes as it fulfills the prompt's request to evaluate the given JSON.",
+            "executionTime": 2098
+          },
+          {
+            "stageId": "vocabulary_check",
+            "passed": true,
+            "score": 9,
+            "feedback": "The vocabulary used in this feedback is generally very appropriate for Grade 5 students. Words like 'requirements,' 'brainstorm,' and 'exploring' might be slightly advanced for some, but are within a reasonable range and explained with context (e.g., 'perhaps starting with what they *do* know'). The overall tone is encouraging and supportive, which is excellent. A minor adjustment could be replacing 'meet the requirements' with something simpler like 'answer the question correctly,' but that\u2019s a very small point.",
+            "executionTime": 3089
+          },
+          {
+            "stageId": "content_relevance",
+            "passed": false,
+            "score": 0.5,
+            "feedback": "The answer provided is self-referential and doesn't address the question at all. It critiques a hypothetical student response instead of providing an answer to the original prompt about rainforests. While the feedback *about* the lack of relevance is accurate, it demonstrates complete irrelevance itself. The score reflects that there's some awareness of the problem (lack of content), but no attempt to provide relevant information.",
+            "executionTime": 2708
+          }
+        ],
+        "aggregateFeedback": "length_check: The provided answer's feedback explicitly addresses the content of the response, not its length. The JSON object itself is well-formed and within the specified word count (approximately 125 words). Therefore, this check passes as it fulfills the prompt's request to evaluate the given JSON.\nvocabulary_check: The vocabulary used in this feedback is generally very appropriate for Grade 5 students. Words like 'requirements,' 'brainstorm,' and 'exploring' might be slightly advanced for some, but are within a reasonable range and explained with context (e.g., 'perhaps starting with what they *do* know'). The overall tone is encouraging and supportive, which is excellent. A minor adjustment could be replacing 'meet the requirements' with something simpler like 'answer the question correctly,' but that\u2019s a very small point.\ncontent_relevance: The answer provided is self-referential and doesn't address the question at all. It critiques a hypothetical student response instead of providing an answer to the original prompt about rainforests. While the feedback *about* the lack of relevance is accurate, it demonstrates complete irrelevance itself. The score reflects that there's some awareness of the problem (lack of content), but no attempt to provide relevant information.\n"
+      },
+      "metrics": {
+        "avg_cpu_percent": 1.6919642857142858,
+        "max_cpu_percent": 39.9,
+        "avg_memory_mb": 68.01450892857143,
+        "max_memory_mb": 68.25390625,
+        "memory_usage_mb": 68.25390625,
+        "sample_count": 112,
+        "execution_time_ms": 11237
+      }
+    },
+    {
+      "id": "inappropriate_answer_gemma-3-4b-it_jetson_nano_sim",
+      "timestamp": "2025-04-12T23:39:41Z",
+      "test_case_id": "inappropriate_answer",
+      "model_id": "gemma-3-4b-it",
+      "hardware_profile": "jetson_nano_sim",
+      "generation_result": {
+        "model_id": "gemma-3-4b-it",
+        "output": "```json\n{\n  \"passed\": false,\n  \"score\": 1,\n  \"feedback\": \"This answer is completely inadequate and fails to address the question. It demonstrates a lack of understanding regarding the importance of rainforests and expresses negativity without providing any relevant information. For a Grade 5 student, this response requires a much more detailed explanation of why rainforests are vital for our planet \u2013 including things like biodiversity, oxygen production, climate regulation, and water cycles. The sentiment expressed ('stupid and boring' and 'I hate this question') is irrelevant to the task at hand and reflects poorly on the student\u2019s engagement with learning.\"\n}\n```",
+        "elapsed_seconds": 1.2825698852539062,
+        "prompt_tokens": 203,
+        "completion_tokens": 137,
+        "total_tokens": 340
+      },
+      "validation_result": {
+        "isValid": false,
+        "score": 0.2,
+        "stageResults": [
+          {
+            "stageId": "length_check",
+            "passed": false,
+            "score": 2,
+            "feedback": "The response exceeds the requested word limit (5-200 words) by a significant margin. While the detailed feedback is valuable for constructive criticism, it's far too lengthy for a simple length check. The core issue isn\u2019t just the length but that the answer completely missed the question's intent and provided an inappropriate, negative response. A score of 2 reflects the wasted potential within the extended feedback.",
+            "executionTime": 1089
+          }
+        ],
+        "aggregateFeedback": "length_check: The response exceeds the requested word limit (5-200 words) by a significant margin. While the detailed feedback is valuable for constructive criticism, it's far too lengthy for a simple length check. The core issue isn\u2019t just the length but that the answer completely missed the question's intent and provided an inappropriate, negative response. A score of 2 reflects the wasted potential within the extended feedback.\n"
+      },
+      "metrics": {
+        "avg_cpu_percent": 3.3249999999999997,
+        "max_cpu_percent": 39.9,
+        "avg_memory_mb": 68.26171875,
+        "max_memory_mb": 68.26171875,
+        "memory_usage_mb": 68.26171875,
+        "sample_count": 24,
+        "execution_time_ms": 2408
+      }
+    },
+    {
+      "id": "inappropriate_answer_gemma-3-12b-it_jetson_nano_sim",
+      "timestamp": "2025-04-12T23:39:48Z",
+      "test_case_id": "inappropriate_answer",
+      "model_id": "gemma-3-12b-it",
+      "hardware_profile": "jetson_nano_sim",
+      "generation_result": {
+        "model_id": "gemma-3-12b-it",
+        "output": "```json\n{\n \"passed\": false,\n \"score\": 0,\n \"feedback\": \"This answer fails to meet any of the evaluation criteria. It is extremely short and provides no detail (LENGTH). The vocabulary used is inappropriate for a Grade 5 student and displays negativity (VOCABULARY). Most importantly, it completely fails to address the question about the importance of rainforests; instead expressing dislike (CONTENT). There is no accurate information present (ACCURACY).\"\n}\n```",
+        "elapsed_seconds": 2.516542911529541,
+        "prompt_tokens": 203,
+        "completion_tokens": 101,
+        "total_tokens": 304
+      },
+      "validation_result": {
+        "isValid": false,
+        "score": 1.0,
+        "stageResults": [
+          {
+            "stageId": "length_check",
+            "passed": true,
+            "score": 10,
+            "feedback": "The provided JSON object's 'feedback' field explicitly states that the answer is extremely short (less than 5 words), fulfilling the requirement of being between 5 and 200 words. The check passed because it accurately assessed the length constraint.",
+            "executionTime": 1979
+          },
+          {
+            "stageId": "vocabulary_check",
+            "passed": false,
+            "score": 2,
+            "feedback": "The feedback itself uses some words that might be tricky for Grade 5 students. Words like 'inappropriate,' 'negativity,' 'addresses,' and 'accurate' could benefit from simpler explanations or alternatives. For example, instead of 'inappropriate vocabulary,' you could say 'words that are too advanced for this age group.' While the overall message is clear, simplifying the language would make it more accessible to a 10-11 year old.",
+            "executionTime": 2776
+          }
+        ],
+        "aggregateFeedback": "length_check: The provided JSON object's 'feedback' field explicitly states that the answer is extremely short (less than 5 words), fulfilling the requirement of being between 5 and 200 words. The check passed because it accurately assessed the length constraint.\nvocabulary_check: The feedback itself uses some words that might be tricky for Grade 5 students. Words like 'inappropriate,' 'negativity,' 'addresses,' and 'accurate' could benefit from simpler explanations or alternatives. For example, instead of 'inappropriate vocabulary,' you could say 'words that are too advanced for this age group.' While the overall message is clear, simplifying the language would make it more accessible to a 10-11 year old.\n"
+      },
+      "metrics": {
+        "avg_cpu_percent": 1.773972602739726,
+        "max_cpu_percent": 39.7,
+        "avg_memory_mb": 68.26171875,
+        "max_memory_mb": 68.26171875,
+        "memory_usage_mb": 68.26171875,
+        "sample_count": 73,
+        "execution_time_ms": 7324
+      }
+    }
+  ]
+}
