@@ -1,0 +1,41 @@
+# EdgePrompt Research Requirements
+# Core requirements for running the EdgePrompt research module
+
+# General utilities
+numpy>=1.22.0
+pandas>=1.4.0
+pyyaml>=6.0
+tqdm>=4.64.0
+
+# System monitoring
+psutil>=5.9.0
+
+# Plotting and visualization
+matplotlib>=3.5.0
+seaborn>=0.12.0
+
+# Machine learning essentials (for small models or embedding)
+torch>=2.0.0
+transformers>=4.24.0
+
+# Optimization and quantization
+bitsandbytes>=0.41.0
+sentencepiece>=0.1.97
+
+# LLM APIs (commented out as they require API keys)
+# openai>=1.0.0
+# anthropic>=0.7.0
+# google-generativeai>=0.3.0
+
+# API server for validation endpoints
+fastapi>=0.103.0
+uvicorn>=0.23.0
+pydantic>=2.4.0
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.1.0
+
+# Documentation
+sphinx>=7.0.0
+sphinx-rtd-theme>=1.3.0 

@@ -1,0 +1,41 @@
+[
+  {
+    "model_id": "gemma-3-1b-edge",
+    "base_model": "gemma-3-1b",
+    "quantization": "int8",
+    "context_window": 32768,
+    "download_url": "https://huggingface.co/google/gemma-3-1b-it/resolve/main/model.safetensors",
+    "optimization": {
+      "kv_cache": true,
+      "flash_attention": true,
+      "tensor_parallelism": false,
+      "execution_provider": "CUDA"
+    }
+  },
+  {
+    "model_id": "gemma-3-4b-edge",
+    "base_model": "gemma-3-4b",
+    "quantization": "int8",
+    "context_window": 128000,
+    "download_url": "https://huggingface.co/google/gemma-3-4b-it/resolve/main/model.safetensors",
+    "optimization": {
+      "kv_cache": true,
+      "flash_attention": true,
+      "tensor_parallelism": false,
+      "execution_provider": "CUDA"
+    }
+  },
+  {
+    "model_id": "llama-3-3b-edge",
+    "base_model": "llama-3-3b",
+    "quantization": "int8",
+    "context_window": 128000,
+    "download_url": "https://huggingface.co/meta-llama/Llama-3-3b-hf/resolve/main/model.safetensors",
+    "optimization": {
+      "kv_cache": true,
+      "flash_attention": true,
+      "tensor_parallelism": false,
+      "execution_provider": "CUDA"
+    }
+  }
+] 
