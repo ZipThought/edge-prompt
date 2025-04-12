@@ -7,31 +7,51 @@ managing LLM models for use in EdgePrompt experiments.
 
 import os
 import logging
+import requests
 from typing import Dict, Any, Optional, Union, List
+
+class MockModel:
+    """Mock model class for simulation"""
+    def __init__(self, name, quantization=None, context_window=2048):
+        self.name = name
+        self.quantization = quantization
+        self.context_window = context_window
+        
+    def generate(self, prompt, max_tokens=100, temperature=0.7, **kwargs):
+        """Mock generation method"""
+        output = f"[Mock output for prompt: {prompt[:30]}...]"
+        return {
+            'output': output,
+            'input_tokens': len(prompt.split()),
+            'output_tokens': 10
+        }
 
 class ModelManager:
     """
-    Manages LLM model loading and initialization.
+    Manages LLM model configurations and metadata.
     
     This class handles:
-    - Loading model weights and configurations
-    - Applying optimizations (quantization, KV cache)
-    - Initializing models for inference
-    - Abstracting different model backends (llama.cpp, transformers, etc.)
+    - Managing model metadata for LM Studio integration
+    - Verifying model availability via LM Studio API
+    - Support for mock models during testing
     """
     
-    def __init__(self, model_cache_dir: Optional[str] = None):
+    def __init__(self, model_cache_dir: Optional[str] = None, lm_studio_url: Optional[str] = None):
         """
         Initialize the ModelManager.
         
         Args:
             model_cache_dir: Directory for caching model weights (optional)
+            lm_studio_url: Base URL for LM Studio server (optional)
         """
         self.logger = logging.getLogger("edgeprompt.runner.model")
         self.model_cache_dir = model_cache_dir or os.path.join(os.path.expanduser("~"), ".cache", "edgeprompt", "models")
+        self.lm_studio_url = lm_studio_url
         self._ensure_cache_dir()
         self.loaded_models = {}
         self.logger.info(f"ModelManager initialized with cache dir: {self.model_cache_dir}")
+        if self.lm_studio_url:
+            self.logger.info(f"LM Studio URL: {self.lm_studio_url}")
     
     def _ensure_cache_dir(self) -> None:
         """Create the model cache directory if it doesn't exist"""
@@ -39,48 +59,109 @@ class ModelManager:
             os.makedirs(self.model_cache_dir, exist_ok=True)
             self.logger.info(f"Created model cache directory: {self.model_cache_dir}")
     
-    def initialize_model(self, model_id: str, model_config: Optional[Dict[str, Any]] = None) -> Any:
+    def initialize_model(self, model_id: str, model_config: Optional[Dict[str, Any]] = None, mock_mode: bool = False) -> Any:
         """
         Initialize a model for inference.
         
-        This implements the EdgeLLMExecution algorithm from the EdgePrompt
-        methodology, handling model loading, optimization, and initialization.
+        For LM Studio integration, this primarily verifies that the model
+        is available and returns metadata needed by TestExecutor.
         
         Args:
             model_id: Identifier for the model
             model_config: Optional configuration overrides
+            mock_mode: Whether to use a mock model instead of real model
             
         Returns:
-            Initialized model instance
+            Model metadata dictionary or MockModel instance
             
         Raises:
             ValueError: If model cannot be found or initialized
         """
-        self.logger.info(f"Initializing model: {model_id}")
+        self.logger.info(f"Initializing model: {model_id} (mock_mode={mock_mode})")
+        
+        # Use mock model if requested
+        if mock_mode:
+            self.logger.info(f"Using mock model for {model_id}")
+            mock_model = MockModel(
+                name=model_id,
+                quantization=model_config.get('quantization', 'int8') if model_config else 'int8',
+                context_window=model_config.get('context_window', 2048) if model_config else 2048
+            )
+            self.loaded_models[model_id] = mock_model
+            return mock_model
         
         # Check if already loaded
         if model_id in self.loaded_models:
             self.logger.info(f"Using already loaded model: {model_id}")
             return self.loaded_models[model_id]
         
-        # 1. Determine model details
+        # Get model details
         model_details = self._get_model_details(model_id, model_config)
         
-        # 2. Download model if needed
-        if not self._is_model_cached(model_details):
-            self._download_model(model_details)
+        # Verify the model has an API identifier for LM Studio
+        if 'api_identifier' not in model_details:
+            error_msg = f"Model {model_id} lacks required 'api_identifier' for LM Studio integration"
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
         
-        # 3. Load the model with appropriate backend
-        model = self._load_model(model_details)
+        # Verify model availability in LM Studio (if URL is provided)
+        if self.lm_studio_url:
+            if not self.check_model_availability(model_details['api_identifier']):
+                error_msg = f"Model {model_details['api_identifier']} not available in LM Studio"
+                self.logger.error(error_msg)
+                raise ValueError(error_msg)
         
-        # 4. Apply optimizations
-        model = self._apply_optimizations(model, model_details)
+        # For LM Studio, we just need to return the API identifier and basic metadata
+        model_metadata = {
+            'api_identifier': model_details['api_identifier'],
+            'model_id': model_id
+        }
         
-        # 5. Cache the loaded model
-        self.loaded_models[model_id] = model
+        # Cache the model metadata
+        self.loaded_models[model_id] = model_metadata
         
-        self.logger.info(f"Model {model_id} initialized successfully")
-        return model
+        self.logger.info(f"Model {model_id} initialized successfully with api_identifier: {model_details['api_identifier']}")
+        return model_metadata
+    
+    def check_model_availability(self, api_identifier: str) -> bool:
+        """
+        Check if a model is available in LM Studio.
+        
+        Args:
+            api_identifier: Model identifier in LM Studio
+            
+        Returns:
+            True if model is available, False otherwise
+        """
+        if not self.lm_studio_url:
+            self.logger.warning("Cannot check model availability: LM Studio URL not provided")
+            return True  # Assume available if no URL
+        
+        try:
+            # Query the LM Studio API for available models
+            url = f"{self.lm_studio_url}/v1/models"
+            response = requests.get(url, timeout=10)
+            
+            if response.status_code != 200:
+                self.logger.error(f"Failed to query LM Studio models: {response.status_code}")
+                return False
+            
+            # Parse the response
+            data = response.json()
+            available_models = [model['id'] for model in data.get('data', [])]
+            
+            # Check if the requested model is available
+            is_available = api_identifier in available_models
+            if is_available:
+                self.logger.info(f"Model {api_identifier} is available in LM Studio")
+            else:
+                self.logger.warning(f"Model {api_identifier} not found in LM Studio. Available models: {available_models}")
+            
+            return is_available
+            
+        except Exception as e:
+            self.logger.error(f"Error checking model availability: {str(e)}")
+            return False
     
     def _get_model_details(self, model_id: str, config_override: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -99,12 +180,13 @@ class ModelManager:
         # In a real implementation, this would load from a configuration source
         # For this scaffold, we'll use hardcoded examples
         model_configs = {
-            "gemma-3-1b-edge": {
-                "base_model": "gemma-3-1b",
-                "quantization": "int8",
-                "context_window": 32768,
-                "download_url": "https://huggingface.co/google/gemma-3-1b-it/resolve/main/model.safetensors",
-                "local_path": os.path.join(self.model_cache_dir, "gemma-3-1b"),
+            "gemma-3-12b-edge": {
+                "base_model": "gemma-3-12b",
+                "quantization": "GGUF",
+                "context_window": 128000,
+                "download_url": "https://model.lmstudio.ai/download/lmstudio-community/gemma-3-12b-it-GGUF",
+                "local_path": os.path.join(self.model_cache_dir, "gemma-3-12b"),
+                "api_identifier": "gemma-3-12b-it",
                 "optimization": {
                     "kv_cache": True,
                     "flash_attention": True,
@@ -112,12 +194,27 @@ class ModelManager:
                     "execution_provider": "CUDA"
                 }
             },
-            "llama-3-3b-edge": {
-                "base_model": "llama-3-3b",
-                "quantization": "int8",
+            "gemma-3-4b-edge": {
+                "base_model": "gemma-3-4b",
+                "quantization": "GGUF",
                 "context_window": 128000,
-                "download_url": "https://huggingface.co/meta-llama/Llama-3-3b-hf/resolve/main/model.safetensors",
-                "local_path": os.path.join(self.model_cache_dir, "llama-3-3b"),
+                "download_url": "https://model.lmstudio.ai/download/lmstudio-community/gemma-3-4b-it-GGUF",
+                "local_path": os.path.join(self.model_cache_dir, "gemma-3-4b"),
+                "api_identifier": "gemma-3-4b-it",
+                "optimization": {
+                    "kv_cache": True,
+                    "flash_attention": True,
+                    "tensor_parallelism": False,
+                    "execution_provider": "CUDA"
+                }
+            },
+            "llama-3.2-3b-edge": {
+                "base_model": "llama-3.2-3b",
+                "quantization": "Q8_0",
+                "context_window": 128000,
+                "download_url": "https://model.lmstudio.ai/download/hugging-quants/Llama-3.2-3B-Instruct-Q8_0-GGUF",
+                "local_path": os.path.join(self.model_cache_dir, "llama-3.2-3b"),
+                "api_identifier": "llama-3.2-3b-instruct",
                 "optimization": {
                     "kv_cache": True,
                     "flash_attention": True,
@@ -143,128 +240,12 @@ class ModelManager:
                     model_details[key] = value
         
         return model_details
-    
-    def _is_model_cached(self, model_details: Dict[str, Any]) -> bool:
-        """
-        Check if model is already downloaded and cached.
-        
-        Args:
-            model_details: Dict containing model details
-            
-        Returns:
-            True if model is cached, False otherwise
-        """
-        local_path = model_details.get('local_path')
-        if not local_path:
-            return False
-            
-        # In a real implementation, would check for specific files
-        return os.path.exists(local_path)
-    
-    def _download_model(self, model_details: Dict[str, Any]) -> None:
-        """
-        Download a model from its source.
-        
-        Args:
-            model_details: Dict containing model details
-            
-        Raises:
-            RuntimeError: If download fails
-        """
-        url = model_details.get('download_url')
-        local_path = model_details.get('local_path')
-        
-        if not url or not local_path:
-            self.logger.error("Missing URL or local path for model download")
-            raise ValueError("Missing URL or local path for model download")
-        
-        self.logger.info(f"Downloading model from {url} to {local_path}")
-        
-        # In a real implementation, this would actually download the model
-        # For this scaffold, we'll just log the operation
-        
-        # Create the directory
-        os.makedirs(os.path.dirname(local_path), exist_ok=True)
-        
-        # For testing, create an empty file to simulate download
-        with open(f"{local_path}_downloaded.txt", 'w') as f:
-            f.write(f"Mock download of {model_details.get('base_model')}")
-            
-        self.logger.info(f"Model download simulated for {model_details.get('base_model')}")
-    
-    def _load_model(self, model_details: Dict[str, Any]) -> Any:
-        """
-        Load a model from local storage.
-        
-        Args:
-            model_details: Dict containing model details
-            
-        Returns:
-            Loaded model instance
-            
-        Raises:
-            RuntimeError: If model loading fails
-        """
-        model_path = model_details.get('local_path')
-        model_type = model_details.get('base_model', '')
-        quantization = model_details.get('quantization', None)
-        
-        self.logger.info(f"Loading model {model_type} with quantization {quantization}")
-        
-        # In a real implementation, this would use the appropriate backend
-        # For this scaffold, we'll return a mock model
-        
-        class MockModel:
-            """Mock model class for simulation"""
-            def __init__(self, name, quantization, context_window):
-                self.name = name
-                self.quantization = quantization
-                self.context_window = context_window
-                
-            def generate(self, prompt, max_tokens=100, temperature=0.7):
-                """Mock generation method"""
-                return f"[Generated content for '{prompt[:20]}...']"
-        
-        # Create a mock model instance
-        model = MockModel(
-            name=model_type,
-            quantization=quantization,
-            context_window=model_details.get('context_window', 2048)
-        )
-        
-        self.logger.info(f"Model {model_type} loaded (simulation)")
-        return model
-    
-    def _apply_optimizations(self, model: Any, model_details: Dict[str, Any]) -> Any:
-        """
-        Apply optimizations to the loaded model.
-        
-        Args:
-            model: Loaded model instance
-            model_details: Dict containing model details and optimizations
-            
-        Returns:
-            Optimized model instance
-        """
-        optimization = model_details.get('optimization', {})
-        
-        self.logger.info(f"Applying optimizations: {optimization}")
-        
-        # In a real implementation, this would apply various optimizations
-        # For this scaffold, we'll just log the operations
-        
-        if optimization.get('kv_cache', False):
-            self.logger.info("Applied KV cache optimization")
-            
-        if optimization.get('flash_attention', False):
-            self.logger.info("Applied flash attention optimization")
-            
-        # Return the (mock) optimized model
-        return model
         
     def unload_model(self, model_id: str) -> None:
         """
         Unload a model from memory.
+        
+        For LM Studio integration, this simply removes the cached metadata.
         
         Args:
             model_id: Identifier for the model to unload

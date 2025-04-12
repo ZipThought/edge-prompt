@@ -6,9 +6,11 @@ numpy>=1.22.0
 pandas>=1.4.0
 pyyaml>=6.0
 tqdm>=4.64.0
+python-dotenv>=1.0.0  # Required for loading env variables
 
 # System monitoring
 psutil>=5.9.0
+pynvml>=11.5.0  # Optional, for NVIDIA GPU monitoring
 
 # Plotting and visualization
 matplotlib>=3.5.0
@@ -22,9 +24,9 @@ transformers>=4.24.0
 bitsandbytes>=0.41.0
 sentencepiece>=0.1.97
 
-# LLM APIs (commented out as they require API keys)
-# openai>=1.0.0
-# anthropic>=0.7.0
+# LLM APIs (required for LM Studio and evaluation proxy)
+openai>=1.0.0  # Required for LM Studio integration
+anthropic>=0.20.0  # Required for Claude evaluation proxy
 # google-generativeai>=0.3.0
 
 # API server for validation endpoints

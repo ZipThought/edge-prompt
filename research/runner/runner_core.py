@@ -36,7 +36,9 @@ class RunnerCore:
     8. Logging data for analysis
     """
     
-    def __init__(self, config_path: str, output_dir: str, log_level: str = "INFO"):
+    def __init__(self, config_path: str, output_dir: str, log_level: str = "INFO",
+                lm_studio_url: Optional[str] = None, mock_models: bool = False,
+                anthropic_api_key: Optional[str] = None):
         """
         Initialize the RunnerCore with configuration.
         
@@ -44,22 +46,37 @@ class RunnerCore:
             config_path: Path to the test suite configuration
             output_dir: Directory for storing results
             log_level: Logging verbosity level
+            lm_studio_url: Base URL for LM Studio server (e.g., http://localhost:1234)
+            mock_models: Whether to use mock models instead of real LLMs
+            anthropic_api_key: API key for Anthropic Claude (for evaluation proxy)
         """
         self.logger = self._setup_logging(log_level)
         self.logger.info(f"Initializing RunnerCore with config: {config_path}")
         
         self.config_path = config_path
         self.output_dir = output_dir
+        self.mock_models = mock_models
+        
+        # Log configuration
+        if lm_studio_url:
+            self.logger.info(f"Using LM Studio at: {lm_studio_url}")
+        if mock_models:
+            self.logger.info("Running with mock models (simulation mode)")
+        if anthropic_api_key:
+            self.logger.info("Anthropic API key provided for evaluation proxy")
         
         # Initialize component managers
         self.config_loader = ConfigLoader(config_path)
-        self.model_manager = ModelManager()
+        self.model_manager = ModelManager(lm_studio_url=lm_studio_url)
         self.template_engine = TemplateEngine()
         self.environment_manager = EnvironmentManager()
-        self.test_executor = TestExecutor()
+        self.test_executor = TestExecutor(lm_studio_url=lm_studio_url)
         self.metrics_collector = MetricsCollector()
-        self.evaluation_engine = EvaluationEngine()
+        self.evaluation_engine = EvaluationEngine(anthropic_api_key=anthropic_api_key)
         self.result_logger = ResultLogger(output_dir)
+        
+        # Create timestamp for this run
+        self.timestamp_str = time.strftime("%Y%m%d_%H%M%S")
         
         self.logger.info("RunnerCore initialization complete")
     

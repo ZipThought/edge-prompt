@@ -555,37 +555,37 @@ These suites define the specific experiments for Phase 1 validation.
 ```json
 [
   {
-    "model_id": "llama-3-8b-instruct-q4", // Example, adjust based on available quantized models
-    "base_model_family": "Llama-3",
-    "size_b": 8,
-    "quantization": "Q4_K_M", // Common llama.cpp quantization
-    "framework": "llama.cpp", // Or Transformers, MLX etc.
-    "context_window": 8192,
-    "download_source": "HuggingFace", // Or specify URL/path
-    "optimization": {}, // Phase 1 uses default framework opts
-    "notes": "Primary model aligned with paper context."
-  },
-  {
-    "model_id": "gemma-2b-it-q4", // Example small model
+    "model_id": "gemma-3-12b-edge",
     "base_model_family": "Gemma",
-    "size_b": 2,
-    "quantization": "Q4_K_M",
+    "size_b": 12,
+    "quantization": "GGUF",
     "framework": "llama.cpp",
     "context_window": 8192,
-    "download_source": "HuggingFace",
+    "download_source": "lmstudio-community",
     "optimization": {},
-    "notes": "Smaller model for low-resource comparison."
+    "notes": "Gemma 3 12B model from LM Studio, good balance of capabilities and resource usage."
   },
   {
-    "model_id": "gemma-7b-it-q4", // Example comparison model
+    "model_id": "gemma-3-4b-edge",
     "base_model_family": "Gemma",
-    "size_b": 7,
-    "quantization": "Q4_K_M",
+    "size_b": 4,
+    "quantization": "GGUF",
     "framework": "llama.cpp",
     "context_window": 8192,
-    "download_source": "HuggingFace",
+    "download_source": "lmstudio-community",
     "optimization": {},
-    "notes": "Comparative model around Llama-3 8B size."
+    "notes": "Smaller Gemma 3 4B model for low-resource comparison."
+  },
+  {
+    "model_id": "llama-3.2-3b-edge",
+    "base_model_family": "Llama",
+    "size_b": 3,
+    "quantization": "Q8_0",
+    "framework": "llama.cpp",
+    "context_window": 8192,
+    "download_source": "hugging-quants",
+    "optimization": {},
+    "notes": "Compact Llama 3.2 model, optimized for edge deployment."
   }
   // Add float16/non-quantized versions if needed for baseline comparison
 ]
@@ -598,7 +598,7 @@ These suites define the specific experiments for Phase 1 validation.
   "test_suite_id": "structured_prompting_guardrails",
   "description": "Validates the effectiveness of EdgePrompt's structured prompts (Tc, As) vs. unstructured prompts for safety and content validity, aligning with Paper Sec 2.1.1 metrics.",
   "templates": ["direct_constraint_template"], // Reference specific template IDs from Sec 5
-  "models": ["llama-3-8b-instruct-q4", "gemma-2b-it-q4"], // Subset of models
+  "models": ["gemma-3-12b-edge", "gemma-3-4b-edge", "llama-3.2-3b-edge"], // LM Studio models
   "hardware_profiles": ["jetson_nano_sim", "jetson_orin_nano_sim", "unconstrained_baseline"], // Representative profiles
   "test_cases": [
     {
@@ -683,7 +683,7 @@ These suites define the specific experiments for Phase 1 validation.
   "test_suite_id": "multi_stage_validation_effectiveness",
   "description": "Validates the efficacy and efficiency of the multi-stage validation approach ({v1..vn}) compared to baselines, aligning with Paper Sec 2.1.1 & 3.3.",
   "templates": ["basic_validation_sequence"], // Reference specific validation sequence ID from Sec 5
-  "models": ["llama-3-8b-instruct-q4"], // Use primary model for validation task
+  "models": ["gemma-3-12b-edge", "llama-3.2-3b-edge"], // Primary models for validation task
   "hardware_profiles": ["jetson_nano_sim", "unconstrained_baseline"], // Low resource vs baseline
   "test_cases": [
     // Test cases provide sample Q&A pairs of varying quality
@@ -765,7 +765,7 @@ These suites define the specific experiments for Phase 1 validation.
   "test_suite_id": "resource_optimization_feasibility",
   "description": "Evaluates the performance (latency, throughput, resource usage) of the EdgePrompt pipeline (generation + validation) under different simulated hardware constraints, aligning with Paper Sec 2.1.1 & 3.3.",
   "templates": ["direct_constraint_template", "basic_validation_sequence"], // Use a standard generation and validation task
-  "models": ["llama-3-8b-instruct-q4", "gemma-2b-it-q4"], // Compare different model sizes
+  "models": ["gemma-3-12b-edge", "gemma-3-4b-edge", "llama-3.2-3b-edge"], // Compare different model sizes
   "hardware_profiles": ["jetson_nano_sim", "jetson_orin_nano_sim", "generic_edge_cpu_sim", "unconstrained_baseline"], // Test across constraints
   "test_cases": [
     {
@@ -913,8 +913,8 @@ These suites define the specific experiments for Phase 1 validation.
 All raw test results should be stored in JSON Lines (JSONL) format for efficient processing and analysis. Each line represents a single test case execution run.
 
 ```jsonl
-{"run_id": "run_001", "timestamp": "2025-04-15T10:30:00Z", "test_suite_id": "structured_prompting_guardrails", "test_case_id": "basic_content_gen_structured", "model_id": "llama-3-8b-instruct-q4", "hardware_id": "jetson_nano_sim", "variables": {"content_type": "paragraph", "..."}, "generation_result": {"generated_text": "The water cycle is...", "input_tokens": 50, "output_tokens": 65, "metrics": {"duration_s": 5.2, "peak_memory_mb": 1500, ...}, "tokens_per_sec": 12.5}, "validation_result": null, "evaluation_proxy_result": {"overall_score": 0.9, "is_safe": true, ...}}
-{"run_id": "run_002", "timestamp": "2025-04-15T10:35:00Z", "test_suite_id": "multi_stage_validation_effectiveness", "test_case_id": "irrelevant_answer", "model_id": "llama-3-8b-instruct-q4", "hardware_id": "jetson_nano_sim", "variables": {"question": "...", "answer": "..."}, "generation_result": null, "validation_result": {"isValid": false, "finalScore": 0.1, "stageResults": [{"stageId": "safety_check", "passed": true, ...}, {"stageId": "length_check", "passed": true, ...}, {"stageId": "relevance_check", "passed": false, ...}], ...}, "evaluation_proxy_result": null}
+{"run_id": "run_001", "timestamp": "2025-04-15T10:30:00Z", "test_suite_id": "structured_prompting_guardrails", "test_case_id": "basic_content_gen_structured", "model_id": "gemma-3-12b-edge", "hardware_id": "jetson_nano_sim", "variables": {"content_type": "paragraph", "..."}, "generation_result": {"generated_text": "The water cycle is...", "input_tokens": 50, "output_tokens": 65, "metrics": {"duration_s": 5.2, "peak_memory_mb": 1500, ...}, "tokens_per_sec": 12.5}, "validation_result": null, "evaluation_proxy_result": {"overall_score": 0.9, "is_safe": true, ...}}
+{"run_id": "run_002", "timestamp": "2025-04-15T10:35:00Z", "test_suite_id": "multi_stage_validation_effectiveness", "test_case_id": "irrelevant_answer", "model_id": "gemma-3-4b-edge", "hardware_id": "jetson_nano_sim", "variables": {"question": "...", "answer": "..."}, "generation_result": null, "validation_result": {"isValid": false, "finalScore": 0.1, "stageResults": [{"stageId": "safety_check", "passed": true, ...}, {"stageId": "length_check", "passed": true, ...}, {"stageId": "relevance_check", "passed": false, ...}], ...}, "evaluation_proxy_result": null}
 ```
 
 #### 6.2 Implementation Strategy (Phase 1)

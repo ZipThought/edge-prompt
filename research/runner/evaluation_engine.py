@@ -2,13 +2,21 @@
 EvaluationEngine - Handles evaluation of model outputs.
 
 This module provides functionality for evaluating model outputs
-against expected results and validation criteria.
+against expected results and validation criteria, using both
+edge LLMs (via multi-stage validation) and external LLMs (Anthropic Claude).
 """
 
 import logging
 import json
 import time
-from typing import Dict, Any, List, Optional, Union
+import re
+from typing import Dict, Any, List, Optional, Union, Callable
+
+try:
+    import anthropic
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    ANTHROPIC_AVAILABLE = False
 
 class EvaluationEngine:
     """
@@ -16,49 +24,108 @@ class EvaluationEngine:
     
     This class implements the MultiStageValidation algorithm from the EdgePrompt
     methodology, handling:
-    - Multi-stage validation sequences
-    - Result scoring
-    - Validation feedback collection
+    - Multi-stage validation sequences using edge LLMs
+    - Proxy evaluation using Anthropic Claude
+    - Result scoring and feedback collection
+    - Structured output parsing
     """
     
-    def __init__(self):
-        """Initialize the EvaluationEngine"""
+    def __init__(self, anthropic_api_key: Optional[str] = None):
+        """
+        Initialize the EvaluationEngine.
+        
+        Args:
+            anthropic_api_key: API key for Anthropic Claude (for evaluation_with_llm_proxy)
+        """
         self.logger = logging.getLogger("edgeprompt.runner.evaluation")
+        self.anthropic_api_key = anthropic_api_key
+        
+        if not ANTHROPIC_AVAILABLE:
+            self.logger.warning("Anthropic package not available - Install with 'pip install anthropic>=0.20.0'")
+        
         self.logger.info("EvaluationEngine initialized")
     
-    def validate_result(self, question: str, result: Dict[str, Any], 
-                       validation_sequence: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def validate_result(self, question: str, answer: str, 
+                       validation_sequence: List[Dict[str, Any]],
+                       edge_llm_engine_func: Callable) -> Dict[str, Any]:
         """
-        Apply a validation sequence to a model result.
+        Apply a validation sequence to a model result using edge LLM.
         
         Args:
             question: The original question
-            result: The model result to validate
+            answer: The model-generated answer to validate
             validation_sequence: List of validation stages to apply
+            edge_llm_engine_func: Function to call the edge LLM for validation
             
         Returns:
             Dict containing validation results
         """
         self.logger.info(f"Validating result with {len(validation_sequence)} validation stages")
         
-        answer = result.get("output", "")
-        
         # Initialize validation result
         validation_result = {
             "isValid": True,
             "score": 0,
-            "stageResults": []
+            "stageResults": [],
+            "aggregateFeedback": ""
         }
         
+        # Sort stages by priority (highest first)
+        sorted_stages = sorted(validation_sequence, 
+                              key=lambda s: s.get("priority", 0), 
+                              reverse=True)
+        
         # Apply each validation stage in sequence
-        for stage in sorted(validation_sequence, key=lambda s: s.get("priority", 0), reverse=True):
+        for stage in sorted_stages:
             stage_id = stage.get("id", "unknown")
             self.logger.info(f"Applying validation stage: {stage_id}")
             
-            # Apply the stage
-            stage_result = self._apply_validation_stage(
-                stage, question, answer
-            )
+            # Prepare variables for this stage
+            stage_vars = {
+                "question": question,
+                "answer": answer
+            }
+            
+            # Get template for this stage
+            template = stage.get("template", "")
+            
+            # Construct validation prompt
+            # In a real implementation, this would use TemplateEngine.process_template
+            validation_prompt = template.replace("[question]", question).replace("[answer]", answer)
+            
+            # Execute validation using the provided LLM function
+            try:
+                # Generate parameters focused on deterministic output
+                generation_params = {
+                    "temperature": 0.1,  # Low temperature for consistent validation
+                    "max_tokens": 500    # Enough for structured output
+                }
+                
+                # Call the edge LLM
+                start_time = time.time()
+                validation_response = edge_llm_engine_func(
+                    validation_prompt, 
+                    generation_params
+                )
+                execution_time_ms = int((time.time() - start_time) * 1000)
+                
+                # Extract output text
+                output = validation_response.get("output", "")
+                
+                # Parse JSON from the output
+                stage_result = self._parse_json_from_llm_output(output)
+                
+                # Add execution time
+                stage_result["executionTime"] = execution_time_ms
+                
+            except Exception as e:
+                self.logger.error(f"Error in validation stage {stage_id}: {str(e)}", exc_info=True)
+                stage_result = {
+                    "passed": False,
+                    "score": 0,
+                    "feedback": f"Validation error: {str(e)}",
+                    "executionTime": 0
+                }
             
             # Record stage result
             validation_result["stageResults"].append({
@@ -68,6 +135,10 @@ class EvaluationEngine:
                 "feedback": stage_result.get("feedback", ""),
                 "executionTime": stage_result.get("executionTime", 0)
             })
+            
+            # Add to aggregate feedback
+            if "feedback" in stage_result and stage_result["feedback"]:
+                validation_result["aggregateFeedback"] += f"{stage_id}: {stage_result['feedback']}\n"
             
             # Update overall score
             scoring_impact = stage.get("scoringImpact", 0.0)
@@ -87,118 +158,177 @@ class EvaluationEngine:
         
         return validation_result
     
-    def _apply_validation_stage(self, stage: Dict[str, Any], question: str, answer: str) -> Dict[str, Any]:
+    def _parse_json_from_llm_output(self, text: str) -> Dict[str, Any]:
         """
-        Apply a single validation stage.
+        Attempt to extract and parse JSON from LLM output text.
         
         Args:
-            stage: The validation stage configuration
-            question: The original question
-            answer: The answer to validate
+            text: Raw LLM output text
             
         Returns:
-            Dict containing the stage result
+            Parsed JSON as dict or default error dict
         """
-        start_time = time.time()
-        
-        # In a real implementation, this would:
-        # 1. Format the stage-specific prompt
-        # 2. Execute an LLM to perform the validation
-        # 3. Parse the response to extract validation results
-        
-        # For this scaffold, we'll simulate validation
-        template = stage.get("template", "")
-        threshold = stage.get("threshold", 0.5)
-        
-        # Simulate validation based on simple heuristics
-        
-        # Length check - simulate checking if answer is long enough
-        if "length" in stage.get("id", "").lower():
-            word_count = len(answer.split())
-            passed = 5 <= word_count <= 200
-            score = min(10, max(0, word_count / 20))
-            feedback = f"Answer has {word_count} words. " + \
-                      ("This is within acceptable range." if passed else "This is outside acceptable range.")
-        
-        # Vocabulary check - simulate checking grade-appropriate vocabulary
-        elif "vocabulary" in stage.get("id", "").lower():
-            # Simple simulation - check for very short words as proxy for simplicity
-            short_words = sum(1 for word in answer.split() if len(word) < 4)
-            word_count = len(answer.split())
-            short_word_ratio = short_words / max(1, word_count)
-            
-            # Lower score if too many short words (simple vocab) or too few (complex vocab)
-            passed = 0.2 <= short_word_ratio <= 0.6
-            score = 10 - abs(short_word_ratio - 0.4) * 20  # Optimal at 0.4
-            score = min(10, max(0, score))
-            
-            feedback = f"Answer has {short_word_ratio:.1%} short words. " + \
-                      ("This is grade-appropriate." if passed else "This may not be grade-appropriate.")
-        
-        # Content check - simulate checking relevance to question
-        elif "content" in stage.get("id", "").lower() or "relevance" in stage.get("id", "").lower():
-            # Check if any keywords from question appear in answer
-            question_words = set(w.lower() for w in question.split() if len(w) > 4)
-            answer_words = set(w.lower() for w in answer.split() if len(w) > 4)
-            common_words = question_words.intersection(answer_words)
-            
-            relevance_score = len(common_words) / max(1, len(question_words))
-            passed = relevance_score >= 0.3
-            score = relevance_score * 10
-            
-            feedback = f"Answer contains {len(common_words)} key terms from the question. " + \
-                      ("This is sufficiently relevant." if passed else "This may not be sufficiently relevant.")
-        
-        # Default/fallback validation
-        else:
-            passed = True
-            score = 7.0
-            feedback = "Default validation stage passed."
-        
-        # Calculate execution time
-        execution_time_ms = int((time.time() - start_time) * 1000)
-        
-        # Prepare stage result
-        stage_result = {
-            "passed": passed,
-            "score": score,
-            "feedback": feedback,
-            "executionTime": execution_time_ms
+        # Default values if parsing fails
+        default_result = {
+            "passed": False,
+            "score": 0,
+            "feedback": "Failed to parse validation result"
         }
         
-        self.logger.info(f"Stage {stage.get('id', 'unknown')} completed in {execution_time_ms}ms: passed={passed}, score={score}")
-        
-        return stage_result
+        if not text:
+            return default_result
+            
+        try:
+            # First, try direct JSON parsing (if the entire output is JSON)
+            return json.loads(text)
+        except json.JSONDecodeError:
+            # If direct parse fails, try to extract JSON using regex
+            try:
+                # Look for JSON objects within markdown code blocks
+                json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
+                if json_match:
+                    return json.loads(json_match.group(1))
+                    
+                # Look for JSON objects not in code blocks
+                json_match = re.search(r'\{(?:[^{}]|(?:\{[^{}]*\}))*\}', text, re.DOTALL)
+                if json_match:
+                    return json.loads(json_match.group(0))
+                    
+                # If no JSON detected, try simpler patterns
+                passed_match = re.search(r'passed["\s:]+\s*(true|false)', text, re.IGNORECASE)
+                score_match = re.search(r'score["\s:]+\s*([0-9.]+)', text)
+                feedback_match = re.search(r'feedback["\s:]+\s*"([^"]*)"', text)
+                
+                result = default_result.copy()
+                if passed_match:
+                    result["passed"] = passed_match.group(1).lower() == 'true'
+                if score_match:
+                    result["score"] = float(score_match.group(1))
+                if feedback_match:
+                    result["feedback"] = feedback_match.group(1)
+                    
+                return result
+                
+            except Exception as e:
+                self.logger.error(f"Error parsing validation result: {str(e)}")
+                return default_result
     
-    def evaluate_with_llm(self, prompt: str, model_id: str = "gpt-4") -> Dict[str, Any]:
+    def evaluate_with_llm_proxy(self, content_to_evaluate: str, 
+                              reference_criteria: str,
+                              evaluation_role: str = "expert teacher",
+                              evaluation_llm_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Evaluate using a state-of-the-art LLM (GPT-4, Claude, etc).
+        Evaluate content using Anthropic Claude as a proxy for human evaluation.
         
         This implements the StateOfTheArtEvaluation algorithm from the
         EdgePrompt methodology.
         
         Args:
-            prompt: The evaluation prompt
-            model_id: Identifier for the model to use
+            content_to_evaluate: The content to evaluate (e.g., generated answer)
+            reference_criteria: Criteria or rubric for evaluation
+            evaluation_role: Role definition for the evaluator (e.g., "Grade 5 teacher")
+            evaluation_llm_config: Configuration options including API key
             
         Returns:
-            Dict containing evaluation results
+            Dict containing structured evaluation results
         """
-        self.logger.info(f"Evaluating with external LLM: {model_id}")
+        self.logger.info("Evaluating with external LLM (Anthropic Claude)")
         
-        # In a real implementation, this would call the OpenAI/Anthropic/Google API
+        # Get API key from config or instance
+        api_key = None
+        if evaluation_llm_config and "anthropic_api_key" in evaluation_llm_config:
+            api_key = evaluation_llm_config.get("anthropic_api_key")
+        else:
+            api_key = self.anthropic_api_key
+            
+        if not api_key:
+            error_msg = "Missing Anthropic API key for evaluation"
+            self.logger.error(error_msg)
+            return {"error": error_msg}
+            
+        if not ANTHROPIC_AVAILABLE:
+            error_msg = "Anthropic package not available"
+            self.logger.error(error_msg)
+            return {"error": error_msg}
+            
+        # Get model from config or use default
+        model = "claude-3-5-sonnet-latest"  # Default model
+        if evaluation_llm_config and "model" in evaluation_llm_config:
+            model = evaluation_llm_config.get("model")
+            
+        # Start timing
+        start_time = time.time()
         
-        # For this scaffold, we'll simulate an API response
-        time.sleep(1.0)  # Simulate API latency
-        
-        # Simulate evaluation response
-        evaluation = {
-            "score": 7.5,
-            "feedback": "This response is well-structured and addresses the key points from the question. It uses age-appropriate vocabulary and provides accurate information. Some additional detail would improve it further.",
-            "strengths": ["Relevance", "Accuracy", "Appropriate tone"],
-            "areas_for_improvement": ["Could provide more specific examples", "Consider adding a conclusion"]
-        }
-        
-        self.logger.info(f"External evaluation complete with score: {evaluation['score']}")
-        
-        return evaluation 
+        try:
+            # Initialize Anthropic client
+            client = anthropic.Anthropic(api_key=api_key)
+            
+            # Construct system prompt with role
+            system_prompt = f"""You are an {evaluation_role} evaluating educational content.
+Analyze the content based on the provided criteria.
+Provide your assessment as a detailed JSON object with these fields:
+- overall_score: numeric score from 0-10 (where 10 is perfect)
+- criteria_scores: object mapping individual criteria to scores
+- feedback: string with specific, constructive feedback
+- strengths: array of content strengths  
+- areas_for_improvement: array of suggested improvements
+- is_valid: boolean indicating if content meets minimum requirements
+
+YOUR RESPONSE MUST BE VALID JSON WITH NO ADDITIONAL TEXT BEFORE OR AFTER."""
+            
+            # Construct user prompt with content and criteria
+            user_prompt = f"""CONTENT TO EVALUATE:
+```
+{content_to_evaluate}
+```
+
+EVALUATION CRITERIA:
+```
+{reference_criteria}
+```
+
+Please provide your evaluation as a JSON object."""
+            
+            # Make the API call
+            self.logger.info(f"Calling Anthropic API with model {model}")
+            response = client.messages.create(
+                model=model,
+                system=system_prompt,
+                messages=[
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.1,  # Low temperature for consistent evaluation
+                max_tokens=2000
+            )
+            
+            # Extract response content
+            response_text = response.content[0].text
+            
+            # Parse JSON from the response
+            try:
+                evaluation = self._parse_json_from_llm_output(response_text)
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Failed to parse Anthropic response as JSON: {str(e)}")
+                self.logger.debug(f"Raw response: {response_text}")
+                evaluation = {
+                    "error": "Failed to parse response",
+                    "raw_response": response_text
+                }
+                
+            # Calculate execution time
+            execution_time_ms = int((time.time() - start_time) * 1000)
+            evaluation["execution_time_ms"] = execution_time_ms
+            
+            self.logger.info(f"External evaluation complete in {execution_time_ms}ms")
+            
+            return evaluation
+            
+        except Exception as e:
+            error_time_ms = int((time.time() - start_time) * 1000)
+            error_msg = f"Error in external evaluation: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
+            
+            return {
+                "error": error_msg,
+                "execution_time_ms": error_time_ms
+            } 

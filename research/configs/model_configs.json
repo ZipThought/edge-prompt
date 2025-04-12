@@ -1,10 +1,11 @@
 [
   {
-    "model_id": "gemma-3-1b-edge",
-    "base_model": "gemma-3-1b",
-    "quantization": "int8",
-    "context_window": 32768,
-    "download_url": "https://huggingface.co/google/gemma-3-1b-it/resolve/main/model.safetensors",
+    "model_id": "gemma-3-12b-edge",
+    "base_model": "gemma-3-12b",
+    "quantization": "GGUF",
+    "context_window": 128000,
+    "download_url": "https://model.lmstudio.ai/download/lmstudio-community/gemma-3-12b-it-GGUF",
+    "api_identifier": "gemma-3-12b-it",
     "optimization": {
       "kv_cache": true,
       "flash_attention": true,
@@ -15,9 +16,10 @@
   {
     "model_id": "gemma-3-4b-edge",
     "base_model": "gemma-3-4b",
-    "quantization": "int8",
+    "quantization": "GGUF",
     "context_window": 128000,
-    "download_url": "https://huggingface.co/google/gemma-3-4b-it/resolve/main/model.safetensors",
+    "download_url": "https://model.lmstudio.ai/download/lmstudio-community/gemma-3-4b-it-GGUF",
+    "api_identifier": "gemma-3-4b-it",
     "optimization": {
       "kv_cache": true,
       "flash_attention": true,
@@ -26,11 +28,12 @@
     }
   },
   {
-    "model_id": "llama-3-3b-edge",
-    "base_model": "llama-3-3b",
-    "quantization": "int8",
+    "model_id": "llama-3.2-3b-edge",
+    "base_model": "llama-3.2-3b",
+    "quantization": "Q8_0",
     "context_window": 128000,
-    "download_url": "https://huggingface.co/meta-llama/Llama-3-3b-hf/resolve/main/model.safetensors",
+    "download_url": "https://model.lmstudio.ai/download/hugging-quants/Llama-3.2-3B-Instruct-Q8_0-GGUF",
+    "api_identifier": "llama-3.2-3b-instruct",
     "optimization": {
       "kv_cache": true,
       "flash_attention": true,
