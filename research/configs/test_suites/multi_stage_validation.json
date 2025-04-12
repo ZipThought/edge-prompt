@@ -2,7 +2,7 @@
   "test_suite_id": "multi_stage_validation",
   "description": "Validates the multi-stage validation approach from the EdgePrompt paper",
   "templates": ["validation_template"],
-  "models": ["gemma-3-1b-edge"],
+  "models": ["gemma-3-4b-it", "gemma-3-12b-it"],
   "hardware_profiles": ["jetson_nano_sim"],
   "test_cases": [
     {

@@ -78,6 +78,39 @@ For external evaluation using state-of-the-art models, the framework can use Ant
 2. Add your key to the `.env` file as `ANTHROPIC_API_KEY`
 3. Use test cases with `evaluation_criteria` defined to trigger proxy evaluation
 
+## Data Cleanup
+
+To keep the research data organized and clean, you can use the `cleanup_data.py` script:
+
+```bash
+# Run with default settings
+python scripts/cleanup_data.py
+
+# Specify a custom data directory
+python scripts/cleanup_data.py --data-dir /path/to/data
+
+# Skip archiving old runs
+python scripts/cleanup_data.py --skip-archive
+
+# Skip removing duplicate files
+python scripts/cleanup_data.py --skip-duplicates
+
+# Set logging level
+python scripts/cleanup_data.py --log-level DEBUG
+```
+
+The script performs the following tasks:
+
+1. **Removes duplicate test results:** When multiple test runs generate results for the same test case and model, only the most recent version is kept.
+
+2. **Archives old runs:** Previous test runs are moved to an archive directory, organized by timestamp.
+
+3. **Consolidates results:** Extracts key metrics from test results and saves them in a standardized format in the processed directory.
+
+4. **Removes temporary files:** Cleans up any temporary or backup files in the data directory.
+
+This helps maintain a clean and organized data directory structure while preserving the history of test runs.
+
 ## Contributing
 
 Please follow the implementation guidance in `docs/implementation/RESEARCH_PIPELINE.md` when making changes to this module.

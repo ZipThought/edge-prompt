@@ -17,7 +17,7 @@ class MockModel:
         self.quantization = quantization
         self.context_window = context_window
         
-    def generate(self, prompt, max_tokens=100, temperature=0.7, **kwargs):
+    def generate(self, prompt, max_tokens=2048, temperature=0.7, **kwargs):
         """Mock generation method"""
         output = f"[Mock output for prompt: {prompt[:30]}...]"
         return {
@@ -180,7 +180,7 @@ class ModelManager:
         # In a real implementation, this would load from a configuration source
         # For this scaffold, we'll use hardcoded examples
         model_configs = {
-            "gemma-3-12b-edge": {
+            "gemma-3-12b-it": {
                 "base_model": "gemma-3-12b",
                 "quantization": "GGUF",
                 "context_window": 128000,
@@ -194,7 +194,7 @@ class ModelManager:
                     "execution_provider": "CUDA"
                 }
             },
-            "gemma-3-4b-edge": {
+            "gemma-3-4b-it": {
                 "base_model": "gemma-3-4b",
                 "quantization": "GGUF",
                 "context_window": 128000,
@@ -208,7 +208,7 @@ class ModelManager:
                     "execution_provider": "CUDA"
                 }
             },
-            "llama-3.2-3b-edge": {
+            "llama-3.2-3b-instruct": {
                 "base_model": "llama-3.2-3b",
                 "quantization": "Q8_0",
                 "context_window": 128000,

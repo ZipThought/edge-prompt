@@ -70,10 +70,9 @@ class TestExecutor:
         # Default generation parameters
         if generation_params is None:
             generation_params = {
-                "max_tokens": 100,
                 "temperature": 0.7,
-                "top_p": 0.9,
-                "top_k": 40
+                "max_tokens": 2048,
+                "top_p": 0.95,
             }
             
         # Log basic info
@@ -89,8 +88,9 @@ class TestExecutor:
         
         try:
             # Initialize OpenAI client with LM Studio base URL
+            # LM Studio API expects /v1 in the path
             client = OpenAI(
-                base_url=self.lm_studio_url,
+                base_url=f"{self.lm_studio_url}/v1" if not self.lm_studio_url.endswith('/v1') else self.lm_studio_url,
                 api_key="lm-studio"  # LM Studio doesn't validate the key
             )
             
@@ -102,11 +102,12 @@ class TestExecutor:
             
             # Prepare generation parameters
             chat_params = {
-                "model": api_identifier,
+                "model": "local-model",  # LM Studio will use whatever model is loaded
                 "messages": messages,
-                "max_tokens": generation_params.get("max_tokens", 100),
+                "max_tokens": generation_params.get("max_tokens", 2048),
                 "temperature": generation_params.get("temperature", 0.7),
-                "top_p": generation_params.get("top_p", 0.9)
+                "top_p": generation_params.get("top_p", 0.95),
+                "stream": False
             }
             
             # Add other parameters if present
@@ -120,15 +121,27 @@ class TestExecutor:
                 chat_params["frequency_penalty"] = generation_params["frequency_penalty"]
             
             # Make the API call
-            self.logger.info(f"Calling LM Studio API with model {api_identifier}")
+            self.logger.info(f"Calling LM Studio API with prompt: {prompt[:50]}...")
+            self.logger.debug(f"LM Studio URL: {self.lm_studio_url}")
+            self.logger.debug(f"Chat parameters: {chat_params}")
+            
             completion = client.chat.completions.create(**chat_params)
+            self.logger.debug(f"LM Studio response: {completion}")
             
-            # Extract content from response
-            output_text = completion.choices[0].message.content
+            # Extract content from response - add defensive checks
+            if hasattr(completion, 'choices') and completion.choices and len(completion.choices) > 0:
+                if hasattr(completion.choices[0], 'message') and completion.choices[0].message:
+                    output_text = completion.choices[0].message.content
+                else:
+                    self.logger.warning("API response missing message content structure")
+                    output_text = str(completion.choices[0])
+            else:
+                self.logger.warning(f"Unexpected API response structure: {completion}")
+                output_text = "API response missing expected structure"
             
-            # Extract token counts
-            input_tokens = completion.usage.prompt_tokens
-            output_tokens = completion.usage.completion_tokens
+            # Extract token counts with defensive checks
+            input_tokens = getattr(completion.usage, 'prompt_tokens', 0) if hasattr(completion, 'usage') else len(prompt.split())
+            output_tokens = getattr(completion.usage, 'completion_tokens', 0) if hasattr(completion, 'usage') else len(output_text.split())
             
             # Calculate execution time
             execution_time_ms = int((time.time() - start_time) * 1000)

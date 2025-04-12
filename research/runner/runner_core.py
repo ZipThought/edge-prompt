@@ -153,10 +153,16 @@ class RunnerCore:
                         
                         # g. If validation test - execute validation
                         if 'validation' in test_suite.get('test_suite_id', ''):
+                            # Create a lambda to call the test executor as required by validate_result
+                            edge_llm_func = lambda prompt, params: self.test_executor.execute_test(
+                                model, prompt, params
+                            )
+                            
                             validation_result = self.evaluation_engine.validate_result(
                                 test_case.get('question', ''),
-                                generation_result,
-                                test_suite.get('validation_sequence', [])
+                                generation_result.get('output', ''),  # Pass just the output text, not the whole result
+                                test_suite.get('validation_sequence', []),
+                                edge_llm_func  # Pass the lambda function as the callback
                             )
                             self.logger.info(f"Validation result: {validation_result.get('isValid')}")
                         else:

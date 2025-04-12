@@ -98,7 +98,7 @@ class EvaluationEngine:
                 # Generate parameters focused on deterministic output
                 generation_params = {
                     "temperature": 0.1,  # Low temperature for consistent validation
-                    "max_tokens": 500    # Enough for structured output
+                    "max_tokens": 2048   # Increase to 2048 to avoid truncation
                 }
                 
                 # Call the edge LLM
@@ -177,6 +177,8 @@ class EvaluationEngine:
         
         if not text:
             return default_result
+        
+        self.logger.debug(f"Parsing output for JSON: {text[:100]}...")
             
         try:
             # First, try direct JSON parsing (if the entire output is JSON)
@@ -184,17 +186,22 @@ class EvaluationEngine:
         except json.JSONDecodeError:
             # If direct parse fails, try to extract JSON using regex
             try:
-                # Look for JSON objects within markdown code blocks
+                # Look for JSON objects within markdown code blocks (common in LM Studio responses)
                 json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
                 if json_match:
-                    return json.loads(json_match.group(1))
-                    
-                # Look for JSON objects not in code blocks
+                    json_text = json_match.group(1)
+                    self.logger.debug(f"Found JSON in markdown: {json_text[:100]}...")
+                    return json.loads(json_text)
+                
+                # Look for JSON objects without code blocks
                 json_match = re.search(r'\{(?:[^{}]|(?:\{[^{}]*\}))*\}', text, re.DOTALL)
                 if json_match:
-                    return json.loads(json_match.group(0))
-                    
-                # If no JSON detected, try simpler patterns
+                    json_text = json_match.group(0)
+                    self.logger.debug(f"Found JSON object: {json_text[:100]}...")
+                    return json.loads(json_text)
+                
+                # If no JSON detected, try simpler patterns for key fields
+                self.logger.warning(f"No valid JSON object found in response, trying to extract fields.")
                 passed_match = re.search(r'passed["\s:]+\s*(true|false)', text, re.IGNORECASE)
                 score_match = re.search(r'score["\s:]+\s*([0-9.]+)', text)
                 feedback_match = re.search(r'feedback["\s:]+\s*"([^"]*)"', text)
@@ -206,7 +213,8 @@ class EvaluationEngine:
                     result["score"] = float(score_match.group(1))
                 if feedback_match:
                     result["feedback"] = feedback_match.group(1)
-                    
+                
+                self.logger.debug(f"Extracted fields: passed={result.get('passed')}, score={result.get('score')}")
                 return result
                 
             except Exception as e:
