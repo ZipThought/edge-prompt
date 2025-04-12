@@ -2,11 +2,11 @@
 """
 EdgePrompt Data Cleanup Script
 
-This script cleans up and organizes the data directory by:
-1. Removing duplicate test results
-2. Archiving old test runs
-3. Consolidating results into a clean format
-4. Removing any temporary files
+This script organizes the data directory by:
+1. Creating backups of all important files 
+2. Properly processing JSONL files (the primary experimental data format)
+3. Removing only clearly identified duplicates and temporary files
+4. Consolidating metrics in a simple, deterministic way
 """
 
 import os
@@ -16,7 +16,7 @@ import shutil
 import argparse
 import logging
 from datetime import datetime
-from typing import Dict, List, Any, Set
+from typing import Dict, List, Any, Set, Tuple
 import glob
 
 # Add parent directory to path to enable imports
@@ -42,16 +42,16 @@ def setup_logging(log_level: str = "INFO") -> logging.Logger:
     logger = logging.getLogger('edgeprompt.cleanup')
     return logger
 
-def collect_test_suites(data_dir: str, logger: logging.Logger) -> Dict[str, List[str]]:
+def collect_test_suites(data_dir: str, logger: logging.Logger) -> Dict[str, Dict[str, List[str]]]:
     """
-    Collect all test suites and their result files.
+    Collect all test suites and their result files, categorizing them by type.
     
     Args:
         data_dir: Base data directory
         logger: Logger instance
         
     Returns:
-        Dictionary mapping test suite names to lists of result file paths
+        Dictionary mapping test suite names to dictionaries of file types and paths
     """
     raw_dir = os.path.join(data_dir, 'raw')
     if not os.path.exists(raw_dir):
@@ -63,97 +63,99 @@ def collect_test_suites(data_dir: str, logger: logging.Logger) -> Dict[str, List
     for item in os.listdir(raw_dir):
         suite_dir = os.path.join(raw_dir, item)
         if os.path.isdir(suite_dir):
-            # Find all JSON files in this test suite
-            result_files = glob.glob(os.path.join(suite_dir, '*.json'))
-            test_suites[item] = result_files
-            logger.info(f"Found test suite '{item}' with {len(result_files)} result files")
+            # Find all result files by type
+            json_files = glob.glob(os.path.join(suite_dir, '*.json'))
+            jsonl_files = glob.glob(os.path.join(suite_dir, '*.jsonl'))
+            summary_files = [f for f in json_files if os.path.basename(f).startswith('results_')]
+            individual_json_files = [f for f in json_files if not os.path.basename(f).startswith('results_')]
+            
+            test_suites[item] = {
+                'jsonl': jsonl_files,
+                'summary': summary_files,
+                'individual': individual_json_files
+            }
+            
+            logger.info(f"Found test suite '{item}' with {len(jsonl_files)} JSONL files, "
+                       f"{len(summary_files)} summary files, and {len(individual_json_files)} individual result files")
             
     return test_suites
 
-def find_duplicates(result_files: List[str], logger: logging.Logger) -> Dict[str, List[str]]:
+def backup_all_data(test_suites: Dict[str, Dict[str, List[str]]], data_dir: str, logger: logging.Logger) -> None:
     """
-    Find duplicate test case results based on test_case_id, model_id, and timestamp.
-    Group them by test_case_id+model_id.
+    Create backups of all data files before processing.
     
     Args:
-        result_files: List of result file paths
-        logger: Logger instance
-        
-    Returns:
-        Dictionary mapping test identifiers to lists of duplicate file paths
-    """
-    # Group results by test case ID and model ID
-    grouped_results = {}
-    
-    for file_path in result_files:
-        try:
-            # Skip results summary files (they start with 'results_')
-            if os.path.basename(file_path).startswith('results_'):
-                continue
-                
-            with open(file_path, 'r') as f:
-                data = json.load(f)
-                
-            # Extract identifiers
-            test_case_id = data.get('test_case_id', '')
-            model_id = data.get('model_id', '')
-            
-            if not test_case_id or not model_id:
-                logger.warning(f"Missing test_case_id or model_id in file: {file_path}")
-                continue
-                
-            # Create a group key
-            group_key = f"{test_case_id}_{model_id}"
-            
-            if group_key not in grouped_results:
-                grouped_results[group_key] = []
-                
-            grouped_results[group_key].append(file_path)
-                
-        except (json.JSONDecodeError, KeyError) as e:
-            logger.warning(f"Error processing file {file_path}: {str(e)}")
-            continue
-    
-    # Filter to only groups with duplicates
-    duplicates = {k: v for k, v in grouped_results.items() if len(v) > 1}
-    
-    for group, files in duplicates.items():
-        logger.info(f"Found {len(files)} duplicate results for {group}")
-        
-    return duplicates
-
-def get_most_recent_files(duplicates: Dict[str, List[str]], logger: logging.Logger) -> Dict[str, str]:
-    """
-    For each group of duplicates, determine the most recent file to keep.
-    
-    Args:
-        duplicates: Dictionary mapping test identifiers to lists of duplicate file paths
-        logger: Logger instance
-        
-    Returns:
-        Dictionary mapping test identifiers to the path of the file to keep
-    """
-    files_to_keep = {}
-    
-    for group, file_paths in duplicates.items():
-        # Sort by file modification time (most recent first)
-        sorted_files = sorted(file_paths, key=os.path.getmtime, reverse=True)
-        
-        # Keep the most recent file
-        files_to_keep[group] = sorted_files[0]
-        logger.info(f"Keeping most recent file for {group}: {os.path.basename(sorted_files[0])}")
-        
-    return files_to_keep
-
-def archive_old_runs(data_dir: str, logger: logging.Logger) -> None:
-    """
-    Archive old runs by moving them to an 'archive' directory.
-    
-    Args:
+        test_suites: Dictionary mapping test suite names to dictionaries of file types and paths
         data_dir: Base data directory
         logger: Logger instance
     """
-    raw_dir = os.path.join(data_dir, 'raw')
+    backup_dir = os.path.join(data_dir, 'backup_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
+    
+    # Create backup directory
+    os.makedirs(backup_dir, exist_ok=True)
+    logger.info(f"Created backup directory: {backup_dir}")
+    
+    # Backup each test suite
+    for suite_name, files in test_suites.items():
+        suite_backup = os.path.join(backup_dir, suite_name)
+        os.makedirs(suite_backup, exist_ok=True)
+        
+        # Backup all files
+        all_files = files['jsonl'] + files['summary'] + files['individual']
+        for file_path in all_files:
+            dest_file = os.path.join(suite_backup, os.path.basename(file_path))
+            try:
+                shutil.copy2(file_path, dest_file)
+                logger.debug(f"Backed up: {file_path} -> {dest_file}")
+            except Exception as e:
+                logger.error(f"Error backing up {file_path}: {str(e)}")
+    
+    logger.info(f"All data backed up to: {backup_dir}")
+    return backup_dir
+
+def extract_jsonl_data(jsonl_files: List[str], logger: logging.Logger) -> List[Dict[str, Any]]:
+    """
+    Extract data from JSONL files with simple deterministic logic.
+    
+    Args:
+        jsonl_files: List of JSONL file paths
+        logger: Logger instance
+        
+    Returns:
+        List of extracted records
+    """
+    all_records = []
+    
+    # Process each JSONL file
+    for file_path in jsonl_files:
+        record_count = 0
+        try:
+            with open(file_path, 'r') as f:
+                for line in f:
+                    try:
+                        record = json.loads(line.strip())
+                        record['_source_file'] = file_path  # Add source tracking
+                        all_records.append(record)
+                        record_count += 1
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Skipping invalid JSON line in {file_path}: {e}")
+                        continue
+            
+            logger.info(f"Extracted {record_count} records from JSONL file: {file_path}")
+        except Exception as e:
+            logger.error(f"Error processing JSONL file {file_path}: {str(e)}")
+    
+    return all_records
+
+def archive_old_runs(test_suites: Dict[str, Dict[str, List[str]]], data_dir: str, logger: logging.Logger) -> None:
+    """
+    Archive old runs by copying them to an 'archive' directory.
+    
+    Args:
+        test_suites: Dictionary mapping test suite names to dictionaries of file types and paths
+        data_dir: Base data directory
+        logger: Logger instance
+    """
     archive_dir = os.path.join(data_dir, 'archive')
     
     # Create archive directory if it doesn't exist
@@ -161,45 +163,41 @@ def archive_old_runs(data_dir: str, logger: logging.Logger) -> None:
         os.makedirs(archive_dir)
         logger.info(f"Created archive directory: {archive_dir}")
     
-    # Get list of all result directories
-    for item in os.listdir(raw_dir):
-        suite_dir = os.path.join(raw_dir, item)
-        if not os.path.isdir(suite_dir):
-            continue
-            
-        # Check summary files to find old runs
-        summary_files = glob.glob(os.path.join(suite_dir, 'results_*.json'))
+    # Process each test suite
+    for suite_name, files in test_suites.items():
+        logger.info(f"Archiving old runs for test suite: {suite_name}")
         
-        # If more than one summary file, archive all but the most recent
-        if len(summary_files) <= 1:
-            continue
-            
-        # Sort by file modification time (oldest first)
-        sorted_files = sorted(summary_files, key=os.path.getmtime)
+        # Create archive directory for this suite if it doesn't exist
+        suite_archive = os.path.join(archive_dir, suite_name)
+        os.makedirs(suite_archive, exist_ok=True)
         
-        # Keep the most recent, archive the rest
-        files_to_archive = sorted_files[:-1]
-        
-        for file_path in files_to_archive:
-            # Extract timestamp from filename
-            filename = os.path.basename(file_path)
-            timestamp = filename.replace('results_', '').replace('.json', '')
+        # Archive summary files except the most recent one (by timestamp)
+        if len(files['summary']) > 1:
+            # Sort by modification time (newest first)
+            sorted_summaries = sorted(files['summary'], key=os.path.getmtime, reverse=True)
             
-            # Create archive directory for this timestamp if it doesn't exist
-            timestamp_archive = os.path.join(archive_dir, item, timestamp)
-            os.makedirs(timestamp_archive, exist_ok=True)
+            # Keep the most recent, archive the rest
+            most_recent = sorted_summaries[0]
+            to_archive = sorted_summaries[1:]
             
-            # Find all files from this run (based on timestamp)
-            run_files = glob.glob(os.path.join(suite_dir, f'*{timestamp}*'))
+            logger.info(f"Keeping most recent summary: {os.path.basename(most_recent)}")
             
-            # Move files to archive
-            for run_file in run_files:
-                dest_file = os.path.join(timestamp_archive, os.path.basename(run_file))
+            # Archive older summaries
+            for file_path in to_archive:
+                filename = os.path.basename(file_path)
+                timestamp = filename.replace('results_', '').replace('.json', '')
+                
+                # Create timestamp directory
+                timestamp_dir = os.path.join(suite_archive, timestamp)
+                os.makedirs(timestamp_dir, exist_ok=True)
+                
+                # Copy to archive
+                dest_file = os.path.join(timestamp_dir, filename)
                 try:
-                    shutil.move(run_file, dest_file)
-                    logger.info(f"Archived: {run_file} -> {dest_file}")
+                    shutil.copy2(file_path, dest_file)
+                    logger.info(f"Archived summary: {filename}")
                 except Exception as e:
-                    logger.error(f"Error archiving {run_file}: {str(e)}")
+                    logger.error(f"Error archiving {file_path}: {str(e)}")
 
 def remove_temp_files(data_dir: str, logger: logging.Logger) -> None:
     """
@@ -229,102 +227,106 @@ def remove_temp_files(data_dir: str, logger: logging.Logger) -> None:
             except Exception as e:
                 logger.error(f"Error removing {file_path}: {str(e)}")
 
-def consolidate_results(data_dir: str, logger: logging.Logger) -> None:
+def consolidate_results(test_suites: Dict[str, Dict[str, List[str]]], data_dir: str, logger: logging.Logger) -> None:
     """
-    Consolidate and standardize result files.
+    Consolidate results into processed metrics files, using a deterministic approach.
     
     Args:
+        test_suites: Dictionary mapping test suite names to dictionaries of file types and paths
         data_dir: Base data directory
         logger: Logger instance
     """
-    raw_dir = os.path.join(data_dir, 'raw')
     processed_dir = os.path.join(data_dir, 'processed')
     
     # Ensure processed directory exists
     os.makedirs(processed_dir, exist_ok=True)
     
     # Process each test suite
-    for item in os.listdir(raw_dir):
-        suite_dir = os.path.join(raw_dir, item)
-        if not os.path.isdir(suite_dir):
-            continue
-            
-        # Find the most recent summary file
-        summary_files = glob.glob(os.path.join(suite_dir, 'results_*.json'))
-        if not summary_files:
-            logger.warning(f"No summary files found for test suite: {item}")
-            continue
-            
-        # Sort by file modification time (most recent first)
-        latest_summary = sorted(summary_files, key=os.path.getmtime, reverse=True)[0]
+    for suite_name, files in test_suites.items():
+        logger.info(f"Consolidating results for test suite: {suite_name}")
         
-        try:
-            # Load the summary file
-            with open(latest_summary, 'r') as f:
-                summary_data = json.load(f)
+        # Process JSONL files (primary source of truth)
+        if files['jsonl']:
+            # Extract all records from JSONL files
+            all_records = extract_jsonl_data(files['jsonl'], logger)
+            
+            if all_records:
+                # Group by model for consolidated metrics
+                results_by_model = {}
                 
-            # Extract and standardize metrics
-            results_by_model = {}
-            for result in summary_data.get('raw_results', []):
-                model_id = result.get('model_id', 'unknown')
-                test_case_id = result.get('test_case_id', 'unknown')
-                
-                if model_id not in results_by_model:
-                    results_by_model[model_id] = []
+                for record in all_records:
+                    model_id = record.get('model_id', 'unknown')
                     
-                # Extract key metrics
-                metrics = {
-                    'test_case_id': test_case_id,
-                    'hardware_profile': result.get('hardware_profile', 'unknown'),
-                    'execution_time_ms': result.get('metrics', {}).get('execution_time_ms', 0),
-                    'memory_usage_mb': result.get('metrics', {}).get('memory_usage_mb', 0),
-                    'is_valid': result.get('validation_result', {}).get('isValid', False),
-                    'validation_score': result.get('validation_result', {}).get('score', 0)
-                }
+                    if model_id not in results_by_model:
+                        results_by_model[model_id] = []
+                    
+                    # Extract basic metrics
+                    test_case_id = record.get('test_case_id', 'unknown') 
+                    metrics = {
+                        'test_case_id': test_case_id,
+                        'hardware_profile': record.get('hardware_profile', 'unknown'),
+                        'execution_time_ms': record.get('metrics', {}).get('execution_time_ms', 0),
+                        'memory_usage_mb': record.get('metrics', {}).get('memory_usage_mb', 0),
+                        'is_valid': record.get('validation_result', {}).get('isValid', False),
+                        'validation_score': record.get('validation_result', {}).get('score', 0),
+                        'has_error': 'error' in record,
+                        'timestamp': record.get('timestamp', ''),
+                        'source': 'jsonl'
+                    }
+                    
+                    results_by_model[model_id].append(metrics)
                 
-                results_by_model[model_id].append(metrics)
+                # Save metrics by model
+                for model_id, metrics in results_by_model.items():
+                    output_file = os.path.join(processed_dir, f'{suite_name}_{model_id}_metrics.json')
+                    with open(output_file, 'w') as f:
+                        json.dump(metrics, f, indent=2)
+                    logger.info(f"Saved {len(metrics)} metrics for {model_id} to: {output_file}")
+        
+        # If no JSONL, try using summary file as fallback
+        elif files['summary'] and not files['jsonl']:
+            # Take the most recent summary
+            latest_summary = sorted(files['summary'], key=os.path.getmtime, reverse=True)[0]
+            logger.info(f"No JSONL files for {suite_name}, using summary: {os.path.basename(latest_summary)}")
             
-            # Save standardized results for each model
-            for model_id, results in results_by_model.items():
-                output_file = os.path.join(processed_dir, f'{item}_{model_id}_metrics.json')
-                with open(output_file, 'w') as f:
-                    json.dump(results, f, indent=2)
-                logger.info(f"Consolidated metrics saved to: {output_file}")
+            try:
+                with open(latest_summary, 'r') as f:
+                    summary_data = json.load(f)
                 
-        except Exception as e:
-            logger.error(f"Error processing summary file {latest_summary}: {str(e)}")
-
-def cleanup_duplicates(test_suites: Dict[str, List[str]], logger: logging.Logger) -> None:
-    """
-    Clean up duplicate test case results by keeping only the most recent version.
-    
-    Args:
-        test_suites: Dictionary mapping test suite names to lists of result file paths
-        logger: Logger instance
-    """
-    for suite_name, result_files in test_suites.items():
-        logger.info(f"Checking for duplicates in test suite: {suite_name}")
-        
-        # Find duplicate result files
-        duplicates = find_duplicates(result_files, logger)
-        
-        if not duplicates:
-            logger.info(f"No duplicates found in test suite: {suite_name}")
-            continue
+                # Extract and group by model
+                results_by_model = {}
+                
+                for result in summary_data.get('raw_results', []):
+                    model_id = result.get('model_id', 'unknown')
+                    
+                    if model_id not in results_by_model:
+                        results_by_model[model_id] = []
+                    
+                    # Extract basic metrics
+                    metrics = {
+                        'test_case_id': result.get('test_case_id', 'unknown'),
+                        'hardware_profile': result.get('hardware_profile', 'unknown'),
+                        'execution_time_ms': result.get('metrics', {}).get('execution_time_ms', 0),
+                        'memory_usage_mb': result.get('metrics', {}).get('memory_usage_mb', 0),
+                        'is_valid': result.get('validation_result', {}).get('isValid', False),
+                        'validation_score': result.get('validation_result', {}).get('score', 0),
+                        'timestamp': result.get('timestamp', ''),
+                        'source': 'summary'
+                    }
+                    
+                    results_by_model[model_id].append(metrics)
+                
+                # Save metrics by model
+                for model_id, metrics in results_by_model.items():
+                    output_file = os.path.join(processed_dir, f'{suite_name}_{model_id}_metrics.json')
+                    with open(output_file, 'w') as f:
+                        json.dump(metrics, f, indent=2)
+                    logger.info(f"Saved {len(metrics)} metrics for {model_id} to: {output_file}")
             
-        # Determine which files to keep
-        files_to_keep = get_most_recent_files(duplicates, logger)
-        
-        # Delete older duplicates
-        for group, duplicate_files in duplicates.items():
-            keep_file = files_to_keep[group]
-            for file_path in duplicate_files:
-                if file_path != keep_file:
-                    try:
-                        os.remove(file_path)
-                        logger.info(f"Removed duplicate: {file_path}")
-                    except Exception as e:
-                        logger.error(f"Error removing {file_path}: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error processing summary file {latest_summary}: {str(e)}")
+        else:
+            logger.warning(f"No JSONL or summary files found for suite: {suite_name}")
 
 def parse_args():
     """Parse command line arguments"""
@@ -354,9 +356,9 @@ def parse_args():
     )
     
     parser.add_argument(
-        '--skip-duplicates',
+        '--skip-backup',
         action='store_true',
-        help='Skip removing duplicate files'
+        help='Skip creating backup (use with caution)'
     )
     
     return parser.parse_args()
@@ -377,15 +379,16 @@ def main():
         logger.error("No test suites found. Nothing to clean up.")
         return 1
     
-    # Clean up duplicate files
-    if not args.skip_duplicates:
-        logger.info("Cleaning up duplicate files...")
-        cleanup_duplicates(test_suites, logger)
+    # Create backup before any modifications
+    if not args.skip_backup:
+        logger.info("Creating backup of all data...")
+        backup_dir = backup_all_data(test_suites, args.data_dir, logger)
+        logger.info(f"Backup created at: {backup_dir}")
     
     # Archive old runs
     if not args.skip_archive:
         logger.info("Archiving old runs...")
-        archive_old_runs(args.data_dir, logger)
+        archive_old_runs(test_suites, args.data_dir, logger)
     
     # Remove temporary files
     logger.info("Removing temporary files...")
@@ -393,7 +396,7 @@ def main():
     
     # Consolidate results
     logger.info("Consolidating results...")
-    consolidate_results(args.data_dir, logger)
+    consolidate_results(test_suites, args.data_dir, logger)
     
     logger.info("Data cleanup completed successfully")
     
