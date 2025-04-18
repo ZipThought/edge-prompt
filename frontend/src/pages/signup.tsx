@@ -13,13 +13,14 @@ const SignUpPage: React.FC = () => {
     email: "",
     password: "",
     dob: "",
+    role: ""
   });
 
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   const [message, setMessage] = useState('');
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -38,7 +39,12 @@ const SignUpPage: React.FC = () => {
         password: DOMPurify.sanitize(formData.password),
         dob: DOMPurify.sanitize(formData.dob),
       }
-      await api.signup(signupData);
+      const response = await api.signup(signupData);
+      if (response && response.token) {
+        //  Assuming the backend sends a 'token' property
+        localStorage.setItem("authToken", response.token); //  Securely store the token
+        navigate("/"); // Navigate to the home page
+      }
       setMessage('Account created successfully!');
       setFormData({
         firstname: "",
@@ -46,8 +52,8 @@ const SignUpPage: React.FC = () => {
         email: "",
         password: "",
         dob: "",
+        role: ""
       });
-      navigate("/");
     } catch (error: any) {
       setMessage(`Signup failed: ${error.response?.data?.error || error.message}`);
     }
@@ -143,6 +149,24 @@ const SignUpPage: React.FC = () => {
               onChange={handleInputChange}
               required
             />
+          </div>
+
+          {/* New Role Selection Section */}
+          <div className="mb-3">
+            <label htmlFor="role" className="form-label">
+              Role
+            </label>
+            <select
+              className="form-select"
+              id="role"
+              name="role"
+              value={formData.role}
+              onChange={handleInputChange}
+              required
+            >
+              <option value="student">Student</option>
+              <option value="teacher">Teacher</option>
+            </select>
           </div>
 
           <button type="submit" className="btn btn-primary w-100">

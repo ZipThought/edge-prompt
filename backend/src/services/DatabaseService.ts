@@ -592,6 +592,7 @@ export class DatabaseService {
     );
   }
 
+  //DatabseService functino to accomodate sign in and update database
   async registerUser(user: Omit<User, 'created_at'>): Promise<void> {
     const stmt = await this.db.prepare(`
       INSERT INTO users (id, firstname, lastname, email, passwordhash, dob)
@@ -599,6 +600,8 @@ export class DatabaseService {
     `);
       stmt.run(user.id, user.firstname, user.lastname, user.email, user.passwordhash, user.dob);
   }
+
+  // Function to delete a user by email
   async deleteUserByEmail(email: string): Promise<void> {
     try {
       const stmt = await this.db.prepare(`
@@ -612,6 +615,7 @@ export class DatabaseService {
     }
   }
   
+  // Function to get a user by email
   async getUserByEmail(email: string): Promise<User | null> { // Changed return type
     try {
       const stmt = await this.db.prepare(`
@@ -626,4 +630,72 @@ export class DatabaseService {
       throw error; // Propagate the error to the caller
     }
   }
+
+  //From here on, we are adding the role and permission management functions
+
+  //Function to create new role
+  async createRole(role: { id: string; name: string; description?: string }): Promise<void> {
+    const stmt = this.prepareStatement(`
+        INSERT INTO roles (id, name, description) VALUES (?, ?, ?)
+    `);
+    await stmt.run(role.id, role.name, role.description);
+  }
+
+  //Functino to get role by role name
+  async getRoleByName(roleName: string): Promise<{ id: string } | undefined> {
+    const stmt = this.prepareStatement(`SELECT id FROM roles WHERE name = ?`);
+    return stmt.get(roleName) as { id: string } | undefined;
+  }
+
+  //Function to assign role to user
+  async assignRoleToUser(userId: string, roleId: string): Promise<void> {
+      const stmt = this.prepareStatement(`
+          INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)
+      `);
+      await stmt.run(userId, roleId);
+  }
+
+  //Function to get user role by user.id
+  async getUserRoles(userId: string): Promise<string[]> {
+    const stmt = this.prepareStatement(`
+        SELECT r.name FROM user_roles ur
+        JOIN roles r ON ur.role_id = r.id
+        WHERE ur.user_id = ?
+    `);
+    const result = await stmt.all(userId) as any[];
+    return result.map(row => row.name);
+  }
+
+  //Function to achieve user permissions
+  async getUserPermissions(userId: string): Promise<string[]> {
+      const stmt = this.prepareStatement(`
+          SELECT p.name 
+          FROM users u
+          JOIN user_roles ur ON u.id = ur.user_id
+          JOIN roles r ON ur.role_id = r.id
+          JOIN role_permissions rp ON r.id = rp.role_id
+          JOIN permissions p ON rp.permission_id = p.id
+          WHERE u.id = ?
+      `);
+      const result = await stmt.all(userId);
+      return result.map((row: any) => row.name);
+  }
+
+  //Function to achieve role permissions
+  async getRolePermissions(roleId: string): Promise<string[]> {
+      const stmt = this.prepareStatement(`
+          SELECT p.name
+          FROM roles r
+          JOIN role_permissions rp ON r.id = rp.role_id
+          JOIN permissions p ON rp.permission_id = p.id
+          WHERE r.id = ?
+      `);
+      const result = await stmt.all(roleId);
+      return result.map((row: any) => row.name);
+  }
+
+  close() {
+    this.db.close();
+  }
+  
 } 

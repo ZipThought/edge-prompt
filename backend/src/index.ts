@@ -15,7 +15,7 @@ import { StorageService } from './services/StorageService.js';
 import { v4 as uuid } from 'uuid';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { authMiddleware } from './middleware/authMiddleware.js';
+import { authMiddleware, jwtSecret } from './middleware/authMiddleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -49,23 +49,51 @@ const upload = multer({ storage: storageMulter });
 
 // Signup Endpoint - connected to DatabaseService.ts
 app.post('/api/signup', async (req, res) => {
-  const { firstname, lastname, email, password, dob } = req.body;
-  const id = uuid();
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const { firstname, lastname, email, password, dob, roleName } = req.body;
 
+  // 1. Input Validation
+  if (!firstname || !lastname || !email || !password || !dob || !roleName) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
+  // 2. Hash the password
+  const password_hash = await bcrypt.hash(password, 10);
+  
+  // 3. Generate a unique user ID
+  const id = uuid();
+
+  // 4. Create a user object
   const user: User = {
     id: id,
     firstname: firstname,
     lastname: lastname,
     email: email,
-    passwordhash: hashedPassword,
+    passwordhash: password_hash,
     dob: dob,
   };
 
   try {
+    //5. Create user in databse
     await db.registerUser(user);
-    const token = jwt.sign({id, email}, 'your-secret-key', { expiresIn: '1h' });
-    res.status(201).json({ token, message: 'User created successfully'});
+
+    //6.. Assign role to user
+    const role = await db.getRoleByName(roleName);
+      if (!role) {
+          return res.status(400).json({ message: `Role '${roleName}' does not exist` });
+      }
+    await db.assignRoleToUser(id, role.id);
+
+
+    // 6. Generate a JWT
+    const token = jwt.sign(
+        { userId: id, email: email, role: roleName }, // Use roleName in payload
+        jwtSecret,
+        { expiresIn: '1h' }
+    );
+
+    // 7. Respond with success and the token
+    res.status(201).json({ message: 'User created successfully', token });
+
   } catch (err) {
     res.status(500).json({ error: 'User creation failed', details: err.message });
   }
@@ -77,23 +105,33 @@ app.post('/api/signin', async (req, res) => {
 
   try {
 
+    // 1. Input Validation (Basic)
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
+    // 2. Get the user by email
     const user = await db.getUserByEmail(email);
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordhash);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-    else {
-      const token = jwt.sign({ id: user.id, email: user.email }, 'your-secret-key', { expiresIn: '1h' });
-      res.json({ token, user });
-    }
+    // 3. Check if user exists and password is correct
+        if (!user || !await bcrypt.compare(password, user.passwordhash)) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+    // 4. Get user roles
+    const roles = await db.getUserRoles(user.id);
+    const userRole = roles[0];
+
+    // 5. Generate JWT
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: userRole }, // Use role in payload
+      jwtSecret,
+      { expiresIn: '1h' }
+    );
+
+    // 6. Respond with token
+    res.json({ token });
+
   } catch (err) {
     res.status(500).json({ error: 'Login failed', details: err.message });
   }
