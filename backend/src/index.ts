@@ -137,6 +137,25 @@ app.post('/api/signin', async (req, res) => {
   }
 });
 
+app.get('/api/health', async (_req, res): Promise<void> => {
+  try {
+    const isLMStudioAvailable = await lmStudio.isAvailable();
+    res.json({ 
+      status: 'ok',
+      lmStudio: isLMStudioAvailable 
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({ 
+      status: 'error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Apply authMiddleware to all *other* routes
+app.use('/api', authMiddleware); // Apply to all /api routes
+
 app.post('/api/validate', async (req, res): Promise<void> => {
   try {
     const { questionId, answer } = req.body;
@@ -270,22 +289,6 @@ app.post('/api/generate', async (req, res): Promise<void> => {
     console.error('Generation error:', error);
     res.status(500).json({ 
       error: 'Failed to generate question',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-app.get('/api/health', async (_req, res): Promise<void> => {
-  try {
-    const isLMStudioAvailable = await lmStudio.isAvailable();
-    res.json({ 
-      status: 'ok',
-      lmStudio: isLMStudioAvailable 
-    });
-  } catch (error) {
-    console.error('Health check error:', error);
-    res.status(500).json({ 
-      status: 'error',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }

@@ -56,6 +56,8 @@ class ApiClient {
     });
   }
 
+  // Apply authMiddleware to all *other* routes
+  app.use('/api', authMiddleware); // Apply to all /api routes
   // Project endpoints
   async getProjects() {
     return this.request<Project[]>('/projects');
