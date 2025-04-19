@@ -1,0 +1,39 @@
+{
+  "id": "basic_validation_sequence",
+  "type": "validation_sequence",
+  "description": "A simple validation sequence for checking the content, accuracy, and safety of student answers",
+  "stages": [
+    {
+      "id": "content_validation",
+      "template_id": "validation_template",
+      "description": "Check if the answer addresses the question directly and has sufficient detail",
+      "validation_criteria": {
+        "focus": "content",
+        "passing_score": 6
+      },
+      "weight": 1.0
+    },
+    {
+      "id": "accuracy_validation",
+      "template_id": "validation_template",
+      "description": "Check if the information in the answer is accurate",
+      "validation_criteria": {
+        "focus": "accuracy",
+        "passing_score": 5
+      },
+      "weight": 1.5
+    },
+    {
+      "id": "vocabulary_validation",
+      "template_id": "validation_template",
+      "description": "Check if the vocabulary used is appropriate for the grade level",
+      "validation_criteria": {
+        "focus": "vocabulary",
+        "passing_score": 5
+      },
+      "weight": 0.5
+    }
+  ],
+  "aggregation_method": "weighted_average",
+  "passing_threshold": 6.0
+} 

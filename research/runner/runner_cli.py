@@ -217,7 +217,15 @@ def main():
         duration = (end_time - start_time).total_seconds()
         logger.info(f"Test suite execution completed in {duration:.2f} seconds")
         
-        return 0
+        # --- Added check for errors reported by RunnerCore ---
+        error_count = results.get("error_count", 0) if isinstance(results, dict) else 1
+        if error_count > 0:
+             logger.error(f"{error_count} errors occurred during the test suite execution. Check logs for details.")
+             return 1 # Indicate failure
+        else:
+             logger.info("Test suite completed successfully with 0 errors.")
+             return 0 # Indicate success
+        # --- End error check ---
     
     except Exception as e:
         logger.error(f"Error executing test suite: {str(e)}", exc_info=True)

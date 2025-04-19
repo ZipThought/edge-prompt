@@ -1,0 +1,42 @@
+{
+  "test_suite_id": "ab_comparison_phase1",
+  "description": "Phase 1 A/B Comparison: EdgePrompt vs Baseline.",
+  "templates": [
+    "teacher_request_persona",
+    "student_question_persona",
+    "student_answer_persona",
+    "validation_persona",
+    "teacher_review_persona",
+    "baseline_eval_persona"
+  ],
+  "models": {
+    "llm_l": "gpt-4o",
+    "llm_s": [
+        "gemma-3-4b-it"
+        ]
+  },
+  "hardware_profiles": [
+    "sim_unconstrained"
+  ],
+  "test_cases": [
+    {
+      "id": "simple_math_question",
+      "variables": {
+         "topic": "basic algebra",
+         "difficulty": "easy",
+         "context": "Solve for x: 2x + 5 = 11"
+      },
+       "constraints": {
+         "max_words": 100,
+         "min_words": 5,
+         "prohibited_keywords": ["unsafe", "inappropriate"],
+         "required_topics": ["algebra", "solution"]
+       },
+       "evaluation_criteria": {
+            "completeness": 0.4,
+            "accuracy": 0.6,
+            "expected_answer_pattern": "x\\s*=\\s*3"
+       }
+    }
+  ]
+} 

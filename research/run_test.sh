@@ -62,7 +62,7 @@ echo "================================================================="
 
 # Run the actual test suite - runner_cli will use environment variables
 python -m runner.runner_cli \
-    --config configs/test_suites/structured_prompting_guardrails.json \
+    --config configs/test_suites/ab_test_suite.json \
     --output data/validation_test \
     --log-level $LOG_LEVEL
 

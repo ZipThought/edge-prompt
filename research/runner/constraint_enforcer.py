@@ -5,20 +5,21 @@ This module provides functionality for enforcing constraints like word count lim
 prohibited keywords, and topic relevance for the EdgePrompt framework.
 """
 
-import re
 import logging
+import re
 from typing import Dict, Any, List, Optional, Union
 
 class ConstraintEnforcer:
     """
-    Enforces logical constraints on generated content.
-    
-    This class implements the ConstraintEnforcement algorithm from the
-    EdgePrompt methodology, checking content against defined constraints such as:
+    Enforces simple, logical constraints on generated content.
+
+    Implements the *lightweight* ConstraintEnforcement algorithm (Phase 1 Focus)
+    from PROMPT_ENGINEERING.md, Sec 2.1. Checks are designed to be fast and
+    deterministic, suitable for orchestration layers.
     - Word count limits
-    - Prohibited keywords/content
-    - Required topics/content
-    - Format requirements
+    - Prohibited keywords (case-insensitive, whole word)
+    - Required topics (basic keyword overlap heuristic)
+    - Basic format checks (e.g., JSON start/end markers)
     """
     
     def __init__(self):
@@ -28,16 +29,22 @@ class ConstraintEnforcer:
     
     def enforce_constraints(self, content: str, constraints: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Enforce constraints on content.
-        
+        Applies the configured lightweight constraints to the given content.
+
         Args:
-            content: String content to check
-            constraints: Dictionary of constraints to enforce
-            
+            content: The text content to check.
+            constraints: Dictionary defining the constraints to enforce, based on
+                         Phase 1 spec (e.g., {minWords: 50, maxWords: 100,
+                         prohibitedKeywords: ["badword"], requiredTopic: "roots"}).
+
         Returns:
-            Dict with enforcement results: {passed: bool, violations: list}
+            Dict containing results: {'passed': bool, 'violations': list[str]}
         """
-        self.logger.info(f"Enforcing constraints on content (length: {len(content)})")
+        if not isinstance(content, str):
+            self.logger.warning("ConstraintEnforcer received non-string content, cannot enforce.")
+            return {"passed": False, "violations": ["Input content was not a string."]}
+        
+        self.logger.debug(f"Enforcing constraints on content (length: {len(content)}). Constraints: {constraints.keys()}")
         
         # Initialize result
         enforcement_result = {
@@ -48,70 +55,69 @@ class ConstraintEnforcer:
         # Word count constraints
         if "minWords" in constraints or "maxWords" in constraints:
             word_count = self._count_words(content)
-            min_words = constraints.get("minWords", 0)
-            max_words = constraints.get("maxWords", float('inf'))
+            min_words = constraints.get("minWords") # Can be None
+            max_words = constraints.get("maxWords") # Can be None
             
-            if word_count < min_words:
+            if min_words is not None and word_count < min_words:
                 enforcement_result["passed"] = False
-                enforcement_result["violations"].append(
-                    f"Word count {word_count} below minimum {min_words}"
-                )
-                self.logger.info(f"Constraint violation: word count {word_count} below minimum {min_words}")
+                violation_msg = f"Word count {word_count} below minimum {min_words}"
+                enforcement_result["violations"].append(violation_msg)
+                self.logger.debug(f"Constraint violation: {violation_msg}")
                 
-            if word_count > max_words:
+            if max_words is not None and word_count > max_words:
                 enforcement_result["passed"] = False
-                enforcement_result["violations"].append(
-                    f"Word count {word_count} exceeds maximum {max_words}"
-                )
-                self.logger.info(f"Constraint violation: word count {word_count} exceeds maximum {max_words}")
+                violation_msg = f"Word count {word_count} exceeds maximum {max_words}"
+                enforcement_result["violations"].append(violation_msg)
+                self.logger.debug(f"Constraint violation: {violation_msg}")
         
         # Prohibited keywords check
-        if "prohibitedKeywords" in constraints:
-            prohibited_keywords = constraints["prohibitedKeywords"]
+        prohibited_keywords = constraints.get("prohibitedKeywords")
+        if isinstance(prohibited_keywords, list):
             for keyword in prohibited_keywords:
-                if self._contains_keyword(content, keyword):
+                if isinstance(keyword, str) and self._contains_keyword(content, keyword):
                     enforcement_result["passed"] = False
-                    enforcement_result["violations"].append(
-                        f"Prohibited keyword '{keyword}' found"
-                    )
-                    self.logger.info(f"Constraint violation: prohibited keyword '{keyword}' found")
-                    # Don't break - collect all violations
+                    violation_msg = f"Prohibited keyword '{keyword}' found"
+                    enforcement_result["violations"].append(violation_msg)
+                    self.logger.debug(f"Constraint violation: {violation_msg}")
+                    # Keep checking for other keywords
         
         # Required topic check (basic implementation)
-        if "requiredTopic" in constraints:
-            topic = constraints["requiredTopic"]
-            if not self._topic_is_present(content, topic):
+        required_topic = constraints.get("requiredTopic")
+        if isinstance(required_topic, str):
+            if not self._topic_is_present(content, required_topic):
                 enforcement_result["passed"] = False
-                enforcement_result["violations"].append(
-                    f"Content does not appear to address required topic '{topic}'"
-                )
-                self.logger.info(f"Constraint violation: required topic '{topic}' not addressed")
+                violation_msg = f"Content does not appear to address required topic '{required_topic}' (basic check)"
+                enforcement_result["violations"].append(violation_msg)
+                self.logger.debug(f"Constraint violation: {violation_msg}")
         
         # Format check (if specified)
-        if "format" in constraints:
-            required_format = constraints["format"]
+        required_format = constraints.get("format")
+        if isinstance(required_format, str):
             if required_format.lower() == "json":
-                # Basic JSON validation
-                if not (content.strip().startswith('{') and content.strip().endswith('}')):
+                # Basic JSON validation check
+                stripped_content = content.strip()
+                if not (stripped_content.startswith('{') and stripped_content.endswith('}')) and \
+                   not (stripped_content.startswith('[') and stripped_content.endswith(']')): # Allow JSON arrays too
                     enforcement_result["passed"] = False
-                    enforcement_result["violations"].append(
-                        f"Content does not appear to be in required JSON format"
-                    )
-                    self.logger.info("Constraint violation: JSON format required but not provided")
-        
+                    violation_msg = f"Content does not appear to be in required JSON format (basic check)"
+                    enforcement_result["violations"].append(violation_msg)
+                    self.logger.debug(f"Constraint violation: {violation_msg}")
+
         # Log summary
         if enforcement_result["passed"]:
-            self.logger.info("All constraints passed")
+            self.logger.debug("All constraints passed")
         else:
-            self.logger.info(f"Constraint enforcement failed with {len(enforcement_result['violations'])} violations")
+            self.logger.info(f"Constraint enforcement failed with {len(enforcement_result['violations'])} violations: {enforcement_result['violations']}")
             
         return enforcement_result
     
     def _count_words(self, text: str) -> int:
-        """Count words in text"""
+        """Counts words using regex for word boundaries."""
+        if not isinstance(text, str): return 0
         return len(re.findall(r'\b\w+\b', text))
     
     def _contains_keyword(self, text: str, keyword: str) -> bool:
+        """Checks if text contains keyword (case-insensitive, whole word only)."""
         """Check if text contains keyword (case-insensitive)"""
         return re.search(r'\b' + re.escape(keyword) + r'\b', text, re.IGNORECASE) is not None
     

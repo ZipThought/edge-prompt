@@ -111,6 +111,7 @@ The EdgePrompt validation architecture is a critical component that ensures cont
    - Provides proxy evaluation using larger models when needed (LLM-L)
    - Extracts structured results from unstructured LLM outputs
    - Calculates validation scores and aggregates feedback
+   - **Implements strict error handling** that immediately crashes on validation errors rather than silently continuing
 
 3. **RunnerCore** (`runner_core.py`):
    - Orchestrates the end-to-end validation process
@@ -136,8 +137,10 @@ The EdgePrompt validation architecture is a critical component that ensures cont
 The system includes robust JSON processing to handle various LLM output formats:
 - JSON within markdown code blocks (````json {...} ````)
 - Plain JSON objects
-- Text with extractable validation fields
+- Text with extractable validation fields (bullet-point / YAML format)
 - Alternative field names (e.g., "valid" instead of "passed")
+
+The validation system is designed to fail fast with clear error messages rather than continuing silently with invalid data, ensuring data integrity throughout the evaluation process.
 
 ### Verifying the Validation Architecture
 

@@ -11,6 +11,9 @@ import os
 import json
 from typing import Dict, Any, Optional, List, Tuple
 
+# Local application imports
+from .config_loader import ConfigLoader # Assuming ConfigLoader is in the same directory
+
 class TemplateEngine:
     """
     Processes templates with variable substitution and constraint encoding.
@@ -23,198 +26,214 @@ class TemplateEngine:
     - Token efficiency optimization
     """
     
-    def __init__(self, template_dir: Optional[str] = None):
+    # Regex updated slightly to include numbers, matching spec example
+    VAR_PATTERN = re.compile(r'\[([a-zA-Z0-9_]+)\]')
+
+    def __init__(self, config_loader: ConfigLoader):
         """
         Initialize the TemplateEngine.
         
         Args:
-            template_dir: Directory containing template definitions (optional)
+            config_loader: Instance of ConfigLoader used to load templates.
         """
         self.logger = logging.getLogger("edgeprompt.runner.template")
-        self.template_dir = template_dir
+        self.config_loader = config_loader # Store ConfigLoader instance
         self.logger.info("TemplateEngine initialized")
-        
-        # Regular expression for extracting variables from templates
-        self.var_pattern = re.compile(r'\[([a-zA-Z_]+)\]')
     
-    def load_template(self, template_name: str) -> Dict[str, Any]:
+    def process_template(self, template_name: str, variables: Dict[str, Any]) -> Tuple[Optional[str], Dict[str, Any]]:
         """
-        Load a template from file.
-        
+        Loads and processes a template according to the TemplateProcessing algorithm.
+
         Args:
-            template_name: Name or path of the template
-            
+            template_name: The name of the template to load (without .json extension).
+            variables: Dictionary of values to substitute into the template pattern.
+
         Returns:
-            Dict containing the template configuration
-            
-        Raises:
-            FileNotFoundError: If template cannot be found
+            A tuple containing:
+            - processed_prompt (str | None): The fully processed prompt ready for LLM, or None on error.
+            - metadata (Dict[str, Any]): Information about the processing (e.g., template_id, variables used).
         """
-        # Handle both direct paths and template names
-        if os.path.isfile(template_name):
-            template_path = template_name
-        elif self.template_dir and os.path.isfile(os.path.join(self.template_dir, f"{template_name}.json")):
-            template_path = os.path.join(self.template_dir, f"{template_name}.json")
-        else:
-            # Try common locations
-            locations = [
-                f"{template_name}.json",
-                f"configs/templates/{template_name}.json",
-                f"../configs/templates/{template_name}.json"
-            ]
-            for loc in locations:
-                if os.path.isfile(loc):
-                    template_path = loc
-                    break
-            else:
-                raise FileNotFoundError(f"Template not found: {template_name}")
-        
-        self.logger.info(f"Loading template from: {template_path}")
+        metadata = {"template_name": template_name, "variables_provided": list(variables.keys()), "processing_success": False}
+        self.logger.debug(f"Processing template: {template_name} with variables: {list(variables.keys())}")
+
+        # Load template using ConfigLoader
+        template = self.config_loader.load_template(template_name)
+        if not template:
+            self.logger.error(f"Failed to load template: {template_name}")
+            metadata["error"] = f"Template '{template_name}' not loaded."
+            return None, metadata
+
+        template_id = template.get('id', template_name)
+        metadata["template_id"] = template_id
+
+        # === TemplateProcessing Algorithm Steps ===
+
+        # 1. Validate template_instance against template_schema (Basic validation)
+        # TODO: Add full schema validation once ConfigLoader supports loading schemas.
+        if not all(k in template for k in ['id', 'pattern', 'type']):
+            error_msg = f"Template {template_id} missing required keys (id, pattern, type)."
+            self.logger.error(error_msg)
+            metadata["error"] = error_msg
+            return None, metadata
+
+        pattern = template["pattern"]
+        template_type = template["type"]
+        processed_prompt = pattern
+
+        # 2-4. Variable Extraction & Substitution
+        required_vars = template.get("variables", {}) # Spec suggests a 'variables' definition
+        provided_vars = set(variables.keys())
+        found_vars_in_pattern = set(self.VAR_PATTERN.findall(pattern))
+        metadata["variables_in_pattern"] = list(found_vars_in_pattern)
+
+        missing_required = []
+        for var_name in found_vars_in_pattern:
+            if var_name not in provided_vars:
+                 # Check if the template schema defines this variable as required (future enhancement)
+                 # For now, we'll warn but attempt to proceed, replacing with empty string.
+                 self.logger.warning(f"Variable '{var_name}' found in template '{template_id}' pattern but not provided. Substituting empty string.")
+                 variables[var_name] = "" # Substitute missing optional vars with empty
+                 # If schemas defined requirements: if required_vars.get(var_name, {}).get('required', False):
+                 #    missing_required.append(var_name)
+
+        # Raise error if explicitly required variables are missing (based on schema - future)
+        if missing_required:
+            error_msg = f"Template {template_id} missing required variables: {missing_required}"
+            self.logger.error(error_msg)
+            metadata["error"] = error_msg
+            return None, metadata
+
+        # Perform substitution
         try:
-            with open(template_path, 'r') as f:
-                template = json.load(f)
-            
-            # Basic schema validation
-            required_fields = ['id', 'type', 'pattern']
-            missing = [field for field in required_fields if field not in template]
-            if missing:
-                self.logger.error(f"Template missing required fields: {', '.join(missing)}")
-                raise ValueError(f"Invalid template format: missing {', '.join(missing)}")
-                
-            return template
-            
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Invalid JSON in template file: {str(e)}")
-            raise
-        except Exception as e:
-            self.logger.error(f"Error loading template: {str(e)}")
-            raise
-    
-    def process_template(self, template: Dict[str, Any], variables: Dict[str, Any]) -> str:
-        """
-        Process a template by substituting variables.
-        
-        Args:
-            template: The template to process (expects a 'pattern' key)
-            variables: Variables to substitute into the template
-            
-        Returns:
-            Processed template content
-        """
-        self.logger.debug(f"Processing template: {template.get('id', 'unknown')}")
-        
-        if not template or "pattern" not in template:
-            self.logger.error("Invalid template structure or missing 'pattern' key")
-            return ""
-        
-        pattern = template.get("pattern", "")
-        
-        # Convert all variables to strings to avoid type errors
-        str_variables = {}
-        for k, v in variables.items():
-            if v is not None:
-                str_variables[k] = str(v)
-            else:
-                str_variables[k] = ""
-        
-        # Simple variable substitution (format-style) using the pattern
-        processed_content = pattern
-        try:
-            for var_name, var_value in str_variables.items():
+            for var_name in found_vars_in_pattern:
+                value_str = str(variables.get(var_name, "")) # Default to empty string if somehow still missing
                 placeholder = f"[{var_name}]"
-                processed_content = processed_content.replace(placeholder, var_value)
-            
-            return processed_content
+                processed_prompt = processed_prompt.replace(placeholder, value_str)
         except Exception as e:
-            self.logger.error(f"Error processing template pattern: {str(e)}")
-            return f"ERROR: {str(e)}"
+            error_msg = f"Error during variable substitution for template {template_id}: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
+            metadata["error"] = error_msg
+            return None, metadata
+
+        # 5. Apply explicit constraint encoding
+        #    (Using data from `constraints` or `answerSpace` fields in the template)
+        constraints_list = template.get("constraints", [])
+        answer_space = template.get("answerSpace", {})
+        # Combine high-level constraints with specific answerSpace details
+        constraint_data = {
+            "explicit_list": constraints_list,
+            **answer_space # Merge answerSpace dict into constraint data
+        }
+        formatted_constraint_text = self._format_constraints(constraint_data, template_type)
+        processed_prompt = self._apply_constraints(processed_prompt, formatted_constraint_text, template_type)
+
+        # 6. Perform basic token efficiency optimization
+        processed_prompt = self._optimize_tokens(processed_prompt)
+
+        # 7. Record metadata (already partially done)
+        metadata["processing_success"] = True
+        metadata["final_prompt_length_chars"] = len(processed_prompt)
+        self.logger.debug(f"Template {template_id} processed successfully.")
+
+        # 8. Return processed prompt and metadata
+        return processed_prompt, metadata
     
-    def _format_constraints(self, constraints: List[str], template_type: str) -> str:
+    def _format_constraints(self, constraint_data: Dict[str, Any], template_type: str) -> str:
         """
-        Format constraints according to template type.
-        
+        Format constraints based on data from `constraints` list and `answerSpace` object.
+
         Args:
-            constraints: List of constraint strings
-            template_type: The type of template (affects formatting)
-            
+            constraint_data: Dictionary containing 'explicit_list' and answerSpace key-values.
+            template_type: The type of template (affects formatting).
+
         Returns:
-            Formatted constraint string
+            A formatted string representing the constraints for the prompt.
         """
-        if not constraints:
+        lines = []
+        # Add explicit constraints first
+        explicit_list = constraint_data.get("explicit_list", [])
+        if explicit_list:
+             lines.extend(explicit_list)
+
+        # Add specific constraints from answerSpace
+        if constraint_data.get("minWords") is not None and constraint_data.get("maxWords") is not None:
+             lines.append(f"Content length must be between {constraint_data['minWords']} and {constraint_data['maxWords']} words.")
+        elif constraint_data.get("maxWords") is not None:
+             lines.append(f"Content length must be maximum {constraint_data['maxWords']} words.")
+
+        if constraint_data.get("vocabulary"):
+             lines.append(f"Vocabulary must be suitable for: {constraint_data['vocabulary']}.")
+        if constraint_data.get("structure"):
+             lines.append(f"Use structure: {constraint_data['structure']}.")
+        if constraint_data.get("prohibitedContent"):
+             prohibited_str = ", ".join(constraint_data["prohibitedContent"])
+             lines.append(f"Avoid prohibited content types/topics: {prohibited_str}.")
+
+        # Add any other key-value pairs from answerSpace.other or top-level
+        other_constraints = constraint_data.get("other", {})
+        for key, value in other_constraints.items():
+             lines.append(f"{key.replace('_', ' ').capitalize()}: {value}")
+
+        if not lines:
             return ""
-            
-        if template_type == "question_generation":
-            return "CONSTRAINTS:\n- " + "\n- ".join(constraints)
-        elif template_type == "validation":
-            return "Validation criteria:\n- " + "\n- ".join(constraints)
-        else:
-            return "Constraints:\n- " + "\n- ".join(constraints)
+
+        # Add prefix based on type
+        prefix = "CONSTRAINTS:"
+        if template_type == "validation":
+            prefix = "VALIDATION CRITERIA:"
+
+        # Combine lines with bullet points
+        formatted_lines = "\n- ".join(lines)
+        return f"{prefix}\n- {formatted_lines}"
     
     def _apply_constraints(self, processed: str, constraint_text: str, template_type: str) -> str:
         """
-        Apply constraints to the processed template in the appropriate location.
-        
+        Applies the formatted constraint text to the processed prompt.
+        Currently appends to the end, following spec example structure.
+
         Args:
-            processed: The processed template so far
-            constraint_text: Formatted constraint text
-            template_type: The type of template
-            
+            processed: The prompt processed so far.
+            constraint_text: The formatted string of constraints.
+            template_type: The type of template being processed.
+
         Returns:
-            Template with constraints applied
+            The prompt with constraints appended.
         """
         if not constraint_text:
             return processed
-            
-        # Different template types may have constraints in different locations
-        if template_type == "question_generation":
-            # For question generation, add constraints after the task description
-            if "TASK:" in processed:
-                parts = processed.split("TASK:", 1)
-                return f"{parts[0]}TASK:{parts[1]}\n\n{constraint_text}"
-            else:
-                return f"{processed}\n\n{constraint_text}"
-        elif template_type == "validation":
-            # For validation templates, add criteria at the end
-            return f"{processed}\n\n{constraint_text}"
-        else:
-            # Default: append constraints at the end
-            return f"{processed}\n\n{constraint_text}"
+
+        # Append constraints at the end, ensuring separation
+        # (Could be made more sophisticated based on template markers if needed)
+        return f"{processed.strip()}\n\n{constraint_text}\n" # Ensure newline at end
     
     def _optimize_tokens(self, text: str) -> str:
         """
-        Optimize the template for token efficiency.
-        
-        Args:
-            text: The processed template text
-            
-        Returns:
-            Optimized template text
+        Perform basic token optimization (whitespace reduction).
         """
-        # Basic optimizations
-        # 1. Eliminate redundant whitespace
-        optimized = re.sub(r'\n\s*\n', '\n\n', text)
-        optimized = re.sub(r' +', ' ', optimized)
-        
-        # 2. Consolidate similar constraints (future enhancement)
-        
-        # 3. Ensure proper spacing
-        optimized = optimized.strip()
-        
+        # 1. Eliminate redundant whitespace (multiple spaces/newlines)
+        optimized = re.sub(r'[ \t]+', ' ', text) # Replace multiple spaces/tabs with single space
+        optimized = re.sub(r'\n\s*\n', '\n\n', optimized) # Replace multiple newlines with double newline
+        optimized = optimized.strip() # Remove leading/trailing whitespace
         return optimized
-        
-    def extract_template_variables(self, template: Dict[str, Any]) -> List[str]:
-        """
-        Extract all variables from a template pattern.
-        
-        Args:
-            template: The template configuration
-            
-        Returns:
-            List of variable names found in the pattern
-        """
-        pattern = template.get('pattern', '')
-        return self.var_pattern.findall(pattern)
     
+    def extract_template_variables(self, template_name: str) -> List[str]:
+        """
+        Loads a template and extracts all variable placeholders (e.g., [variable_name]).
+
+        Args:
+            template_name: The name of the template to load.
+
+        Returns:
+            List of variable names found in the template's pattern, or empty list on error.
+        """
+        template = self.config_loader.load_template(template_name)
+        if not template or 'pattern' not in template:
+             self.logger.error(f"Cannot extract variables: Failed to load or invalid pattern for template {template_name}")
+             return []
+
+        pattern = template.get('pattern', '')
+        return self.VAR_PATTERN.findall(pattern)
+
     def get_template_schema(self, template_type: str) -> Dict[str, Any]:
         """
         Get the JSON schema for a template type.
