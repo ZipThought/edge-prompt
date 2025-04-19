@@ -406,3 +406,210 @@ Provide your evaluation in JSON format with the following keys:
 
         self.logger.info(f"LLM proxy evaluation complete. Passed: {result.get('passed')}, Score: {result.get('score')}")
         return result 
+
+    def validate_with_sequence(self, question: str, answer: str, 
+                            context: Optional[Dict[str, Any]],
+                            validation_sequence_id: str,
+                            llm_executor: Callable[[str, Optional[Dict[str, Any]]], Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Apply a validation sequence using an Edge LLM (LLM-S) by loading the sequence from its ID.
+        This is a wrapper around validate_result that first loads the validation sequence.
+        
+        Args:
+            question: The original question prompt content.
+            answer: The model-generated answer content to validate.
+            context: The context data (e.g., teacher request containing constraints/rubric).
+            validation_sequence_id: ID of the validation sequence to load.
+            llm_executor: Callable that executes the LLM model with a prompt and params.
+            
+        Returns:
+            Dict containing validation results: {isValid, finalScore, stageResults, aggregateFeedback, metrics}.
+        """
+        self.logger.info(f"Loading validation sequence: {validation_sequence_id}")
+        
+        # Load the validation sequence configuration
+        validation_sequence_config = self.template_engine.config_loader.load_validation_sequence(validation_sequence_id)
+        
+        if not validation_sequence_config:
+            error_msg = f"Could not load validation sequence: {validation_sequence_id}"
+            self.logger.error(error_msg)
+            return {"error": error_msg, "isValid": False, "finalScore": 0.0, "stageResults": [], "aggregateFeedback": error_msg}
+        
+        # Extract the stages from the configuration
+        validation_stages = validation_sequence_config.get("stages", [])
+        
+        if not validation_stages:
+            error_msg = f"Validation sequence '{validation_sequence_id}' has no stages"
+            self.logger.error(error_msg)
+            return {"error": error_msg, "isValid": False, "finalScore": 0.0, "stageResults": [], "aggregateFeedback": error_msg}
+        
+        self.logger.info(f"Loaded validation sequence '{validation_sequence_id}' with {len(validation_stages)} stages")
+        
+        # Collect metrics from all validation stages
+        all_metrics = []
+        
+        # Sort stages by priority (descending, higher first)
+        # Default priority to 0 if missing
+        sorted_stages = sorted(validation_stages, key=lambda s: s.get("priority", 0), reverse=True)
+        
+        # Initialize overall result structure
+        validation_result = {
+            "isValid": True,
+            "finalScore": 0.0,
+            "stageResults": [],
+            "aggregateFeedback": "",
+            "metrics": {}  # To store aggregated metrics
+        }
+        
+        # Process each validation stage
+        for stage in sorted_stages:
+            stage_id = stage.get("id", "unknown_stage")
+            self.logger.debug(f"Running validation stage: {stage_id}")
+            
+            # Prepare stage variables
+            stage_vars = {
+                'question': question, 
+                'answer': answer
+            }
+            
+            # Add context variables if available
+            if context:
+                stage_vars.update(context)
+            
+            # Get the template ID for this stage
+            template_id = stage.get("template_id")
+            if not template_id:
+                error_msg = f"Validation stage {stage_id} is missing 'template_id'"
+                self.logger.error(error_msg)
+                continue  # Skip this stage
+            
+            # Process the template
+            try:
+                # Fix: Process_template returns a tuple of (prompt, metadata)
+                prompt_tuple = self.template_engine.process_template(template_id, stage_vars)
+                
+                # Extract just the prompt from the tuple
+                if prompt_tuple is None or prompt_tuple[0] is None:
+                    # Handle case where template processing failed
+                    error_msg = f"Failed to process template '{template_id}' for stage {stage_id}: {prompt_tuple[1].get('error', 'Unknown error')}"
+                    self.logger.error(error_msg)
+                    validation_result["stageResults"].append({
+                        "stageId": stage_id,
+                        "passed": False,
+                        "error": error_msg,
+                        "feedback": f"Technical error: {error_msg}"
+                    })
+                    validation_result["aggregateFeedback"] += f"[{stage_id}] Technical error: {error_msg}\n"
+                    validation_result["isValid"] = False
+                    continue  # Skip this stage
+                
+                validation_prompt = prompt_tuple[0]
+                self.logger.debug(f"Processed template for stage {stage_id}, prompt length: {len(validation_prompt)}")
+            except Exception as e:
+                self.logger.error(f"Failed to process template '{template_id}' for stage {stage_id}: {e}")
+                validation_result["stageResults"].append({
+                    "stageId": stage_id,
+                    "passed": False,
+                    "error": str(e),
+                    "feedback": f"Technical error: {str(e)}"
+                })
+                validation_result["aggregateFeedback"] += f"[{stage_id}] Technical error: {str(e)}\n"
+                validation_result["isValid"] = False
+                continue  # Skip this stage
+            
+            # Execute LLM for validation
+            # Parameters for validation: low temp, ensure JSON output
+            params = {
+                "temperature": 0.1,
+                "max_tokens": 512,  # Allow enough tokens for JSON + feedback
+                "response_format": {"type": "json_object"}  # Request JSON output
+            }
+            
+            try:
+                # Call the executor function
+                llm_result = llm_executor(validation_prompt, params)
+                
+                # Extract metrics
+                stage_metrics = llm_result.get("metrics", {})
+                all_metrics.append(stage_metrics)
+                
+                # Parse the result
+                generated_text = llm_result.get("generated_text", "")
+                parsed_result = self._parse_json_from_llm_output(generated_text)
+                
+                # Check if parsing succeeded
+                if not parsed_result:
+                    error_msg = f"Failed to parse JSON result from stage {stage_id}"
+                    self.logger.error(error_msg)
+                    validation_result["stageResults"].append({
+                        "stageId": stage_id,
+                        "passed": False,
+                        "error": error_msg,
+                        "feedback": f"Technical error: {error_msg}"
+                    })
+                    validation_result["aggregateFeedback"] += f"[{stage_id}] Technical error: {error_msg}\n"
+                    validation_result["isValid"] = False
+                    continue  # Skip this stage
+                
+                # Record stage result
+                stage_result = {
+                    "stageId": stage_id,
+                    "passed": parsed_result.get("passed", False),
+                    "score": parsed_result.get("score", 0.0),
+                    "feedback": parsed_result.get("feedback", ""),
+                    "metrics": stage_metrics
+                }
+                
+                validation_result["stageResults"].append(stage_result)
+                
+                # Add feedback to aggregate feedback
+                if stage_result["feedback"]:
+                    validation_result["aggregateFeedback"] += f"[{stage_id}] {stage_result['feedback']}\n"
+                
+                # Update overall validity and score
+                stage_weight = stage.get("weight", 1.0)
+                if not stage_result["passed"]:
+                    validation_result["isValid"] = False
+                    # Apply weight to score (0 for failed stages)
+                    validation_result["finalScore"] += 0.0
+                    
+                    # Check if we should abort on failure
+                    if validation_sequence_config.get("abortOnFailure", True):
+                        self.logger.warning(f"Validation failed at stage {stage_id} and abortOnFailure=True. Stopping sequence.")
+                        break
+                else:
+                    # Add weighted score
+                    validation_result["finalScore"] += (stage_result["score"] * stage_weight)
+            
+            except Exception as e:
+                self.logger.error(f"Error in validation stage {stage_id}: {e}", exc_info=True)
+                validation_result["isValid"] = False
+                validation_result["stageResults"].append({
+                    "stageId": stage_id,
+                    "passed": False,
+                    "error": str(e),
+                    "feedback": f"Technical error: {str(e)}"
+                })
+                
+                # Update aggregate feedback
+                validation_result["aggregateFeedback"] += f"[{stage_id}] Technical error: {str(e)}\n"
+                
+                # Check if we should abort on failure
+                if validation_sequence_config.get("abortOnFailure", True):
+                    break
+        
+        # Normalize the final score if needed
+        # Get total weight of all stages
+        total_weight = sum(stage.get("weight", 1.0) for stage in sorted_stages)
+        if total_weight > 0:
+            validation_result["finalScore"] = validation_result["finalScore"] / total_weight
+        
+        # Check if the score meets the passing threshold
+        passing_threshold = validation_sequence_config.get("passing_threshold", 0.6)
+        if validation_result["finalScore"] < passing_threshold:
+            validation_result["isValid"] = False
+        
+        # Merge all metrics
+        validation_result["metrics"] = self.metrics_collector.merge_metrics([m for m in all_metrics if m])
+        
+        return validation_result 

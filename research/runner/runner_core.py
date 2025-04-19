@@ -155,9 +155,13 @@ class RunnerCore:
         except Exception as e:
             return self._log_and_return_error(f"Failed to initialize LLM-L model {llm_l_model_id}", e)
 
-        # --- Algorithm Steps 3-10: Loop through Cases/Profiles/Models ---
+        # --- Algorithm Steps 3-10: Loop through Cases/Profiles/Models/Variants ---
         test_suite_results = []
         run_counter = 0
+
+        # Get scenario A variants or use a default if not defined
+        scenario_a_variants = test_suite.get('scenario_a_variants', [{"id": "default", "validation_sequence": "basic_validation_sequence"}])
+        self.logger.info(f"Found {len(scenario_a_variants)} Scenario A variants to test")
 
         for test_case in test_suite.get('test_cases', []):
             test_case_id = test_case.get('id', f'unknown_case_{run_counter}')
@@ -169,48 +173,56 @@ class RunnerCore:
 
                  for llm_s_model_id in llm_s_model_ids:
                      self.logger.info(f"--- Using LLM-S model: {llm_s_model_id} ---")
-                     run_counter += 1
-                     # Create unique run ID including suite, case, model, profile, counter
-                     run_id = f"{suite_id}_{test_case_id}_{llm_s_model_id}_{hardware_profile}_{run_counter}"
-                     run_id = re.sub(r'[^a-zA-Z0-9_\-]', '_', run_id) # Sanitize ID
+                     
+                     # Run each scenario A variant
+                     for scenario_a_variant in scenario_a_variants:
+                         variant_id = scenario_a_variant.get('id', 'unknown_variant')
+                         self.logger.info(f"--- Testing Scenario A Variant: {variant_id} ---")
+                         
+                         run_counter += 1
+                         # Create unique run ID including suite, case, model, profile, variant, counter
+                         run_id = f"{suite_id}_{test_case_id}_{llm_s_model_id}_{hardware_profile}_{variant_id}_{run_counter}"
+                         run_id = re.sub(r'[^a-zA-Z0-9_\-]', '_', run_id) # Sanitize ID
 
-                     # Initialize LLM-S for this specific run configuration
-                     try:
-                         llm_s_model_data = self.model_manager.initialize_llm_s(
-                             llm_s_model_id, mock_mode=self.mock_models
-                         )
-                     except Exception as e:
-                         self.logger.error(f"Failed to initialize LLM-S model {llm_s_model_id} for run {run_id}", exc_info=True)
+                         # Initialize LLM-S for this specific run configuration
+                         try:
+                             llm_s_model_data = self.model_manager.initialize_llm_s(
+                                 llm_s_model_id, mock_mode=self.mock_models
+                             )
+                         except Exception as e:
+                             self.logger.error(f"Failed to initialize LLM-S model {llm_s_model_id} for run {run_id}", exc_info=True)
+                             run_data = self._create_run_data_struct(run_id, test_case_id, llm_l_model_id, llm_s_model_id, hardware_profile)
+                             run_data["variant_id"] = variant_id
+                             run_data["error"] = f"LLM-S Initialization Failed: {e}"
+                             test_suite_results.append(run_data)
+                             self.result_logger.log_result(run_data)
+                             continue # Skip to next LLM-S model
+
+                         # Prepare run data structure
                          run_data = self._create_run_data_struct(run_id, test_case_id, llm_l_model_id, llm_s_model_id, hardware_profile)
-                         run_data["error"] = f"LLM-S Initialization Failed: {e}"
-                         test_suite_results.append(run_data)
-                         self.result_logger.log_result(run_data)
-                         continue # Skip to next LLM-S model
+                         run_data["variant_id"] = variant_id
 
-                     # Prepare run data structure
-                     run_data = self._create_run_data_struct(run_id, test_case_id, llm_l_model_id, llm_s_model_id, hardware_profile)
+                         try:
+                             # --- Steps 6-8: Execute Scenario A (EdgePrompt) ---
+                             self.logger.info(f"[Run {run_id}] Executing Scenario A variant '{variant_id}'...")
+                             run_data["scenario_A"] = self._run_scenario_a(
+                                 test_suite, test_case, llm_l_model_data, llm_s_model_data, scenario_a_variant
+                             )
 
-                     try:
-                         # --- Steps 6-8: Execute Scenario A (EdgePrompt) ---
-                         self.logger.info(f"[Run {run_id}] Executing Scenario A...")
-                         run_data["scenario_A"] = self._run_scenario_a(
-                             test_suite, test_case, llm_l_model_data, llm_s_model_data
-                         )
+                             # --- Step 9: Execute Scenario B (Baseline) ---
+                             self.logger.info(f"[Run {run_id}] Executing Scenario B...")
+                             run_data["scenario_B"] = self._run_scenario_b(
+                                 test_suite, test_case, llm_l_model_data, llm_s_model_data
+                             )
 
-                         # --- Step 9: Execute Scenario B (Baseline) ---
-                         self.logger.info(f"[Run {run_id}] Executing Scenario B...")
-                         run_data["scenario_B"] = self._run_scenario_b(
-                             test_suite, test_case, llm_l_model_data, llm_s_model_data
-                         )
-
-                     except Exception as e:
-                         self.logger.error(f"Critical error during scenario execution for run {run_id}", exc_info=True)
-                         run_data["error"] = f"Scenario Execution Failed: {e}"
-                     finally:
-                          # --- Step 10: Log Result ---
-                          test_suite_results.append(run_data)
-                          self.result_logger.log_result(run_data)
-                          self.logger.info(f"[Run {run_id}] Completed and logged.")
+                         except Exception as e:
+                             self.logger.error(f"Critical error during scenario execution for run {run_id}", exc_info=True)
+                             run_data["error"] = f"Scenario Execution Failed: {e}"
+                         finally:
+                              # --- Step 10: Log Result ---
+                              test_suite_results.append(run_data)
+                              self.result_logger.log_result(run_data)
+                              self.logger.info(f"[Run {run_id}] Completed and logged.")
 
         # --- Cleanup: Unload models (optional) ---
         self.model_manager.unload_model(llm_l_model_id, model_type="llm_l")
@@ -231,13 +243,25 @@ class RunnerCore:
     # --- Scenario Execution Methods ---
 
     def _run_scenario_a(self, test_suite: Dict[str, Any], test_case: Dict[str, Any],
-                       llm_l_model_data: Dict[str, Any], llm_s_model_data: Dict[str, Any]) -> Dict[str, Any]:
+                       llm_l_model_data: Dict[str, Any], llm_s_model_data: Dict[str, Any],
+                       scenario_a_variant: Dict[str, Any]) -> Dict[str, Any]:
         """
         Executes Scenario A (EdgePrompt) steps based on TestOrchestrationPhase1MultiLLM (Sec 2.7).
         Uses helper methods for clarity. Returns results including aggregated metrics.
+        
+        Args:
+            test_suite: The test suite configuration
+            test_case: The specific test case to run
+            llm_l_model_data: Configuration for the LLM-L model
+            llm_s_model_data: Configuration for the LLM-S model
+            scenario_a_variant: The specific Scenario A variant configuration to use
         """
         scenario_A_results = {"status": "started", "steps": {}}
         all_metrics = [] # Collect metrics dict from each step
+        
+        # Include variant info in results
+        scenario_A_results["variant_id"] = scenario_a_variant.get("id", "unknown")
+        scenario_A_results["variant_description"] = scenario_a_variant.get("description", "")
 
         try:
             # Step 8a: Simulate Teacher Request (LLM-L)
@@ -261,51 +285,59 @@ class RunnerCore:
             scenario_A_results["steps"]["student_answer"] = student_answer_result
             all_metrics.append(student_answer_result.get("metrics"))
             if student_answer_result.get("error"): raise RuntimeError(f"Student Answer failed: {student_answer_result['error']}")
-            student_answer_text = student_answer_result.get("llm_output")
-            if not student_answer_text: raise ValueError("Simulated student answer text is empty.")
+            
+            # Fix the field name disconnect - LLM-L interactions use llm_output instead of generated_text
+            answer_text = student_answer_result.get("llm_output")
+            if not answer_text: raise ValueError("Generated answer text is empty.")
 
-
-            # Step 8d: Multi-Stage Validation (LLM-S)
-            multi_stage_validation_result = self._step_a_multistage_validation(question_text, student_answer_text, teacher_request_content, llm_s_model_data)
-            scenario_A_results["steps"]["multi_stage_validation"] = multi_stage_validation_result
-            # Metrics are aggregated *within* multi_stage_validation_result["total_validation_metrics"]
-            all_metrics.append(multi_stage_validation_result.get("total_validation_metrics"))
-            if multi_stage_validation_result.get("error"): raise RuntimeError(f"Multi-Stage Validation failed: {multi_stage_validation_result['error']}")
-
-
-            # Step 8e: Constraint Enforcement (Orchestrator)
-            constraint_result = self._step_a_constraint_enforcement(student_answer_text, teacher_request_content)
-            scenario_A_results["steps"]["constraint_enforcement"] = constraint_result
-
-            # Step 8f: Simulate Teacher Review (LLM-L, Optional)
-            teacher_review_result = self._step_a_teacher_review(
-                multi_stage_validation_result, constraint_result,
-                question_text, student_answer_text, llm_l_model_data
+            # Step 8d: Perform Multi-Stage Validation
+            # Get the validation sequence from the variant
+            validation_sequence_id = scenario_a_variant.get("validation_sequence", "basic_validation_sequence")
+            self.logger.info(f"Using validation sequence '{validation_sequence_id}' for variant '{scenario_a_variant.get('id')}'")
+            
+            multi_stage_validation_result = self._step_a_multistage_validation(
+                question_text, answer_text, teacher_request_content, llm_s_model_data, validation_sequence_id
             )
-            scenario_A_results["steps"]["teacher_review"] = teacher_review_result
-            if teacher_review_result and teacher_review_result.get("metrics"): # Review is optional
-                 all_metrics.append(teacher_review_result.get("metrics"))
-            # Handle potential error from review step if it occurred
-            if teacher_review_result and teacher_review_result.get("error"):
-                self.logger.warning(f"Teacher Review step encountered an error: {teacher_review_result['error']}")
-                # Decide if this should halt scenario A? For now, just log.
+            
+            scenario_A_results["steps"]["multi_stage_validation"] = multi_stage_validation_result
+            all_metrics.append(multi_stage_validation_result.get("metrics"))
+            if multi_stage_validation_result.get("error"): 
+                raise RuntimeError(f"Multi-stage Validation failed: {multi_stage_validation_result['error']}")
+            
+            # Step 8e: Constraint Enforcement
+            constraint_result = self._step_a_constraint_enforcement(answer_text, teacher_request_content)
+            scenario_A_results["steps"]["constraint_enforcement"] = constraint_result
+            # No metrics for constraint enforcement - local execution
 
-
-            # Step 8g: Store Final Results
+            # Step 8f: Teacher Review (if validation/constraint issues)
+            # For Phase 1, this is OPTIONAL and done by LLM-L
+            if (not multi_stage_validation_result.get("isValid", True) or 
+                not constraint_result.get("passed", True)):
+                teacher_review_result = self._step_a_teacher_review(
+                    multi_stage_validation_result, constraint_result, 
+                    question_text, answer_text, llm_l_model_data
+                )
+                scenario_A_results["steps"]["teacher_review"] = teacher_review_result
+                all_metrics.append(teacher_review_result.get("metrics"))
+            else:
+                scenario_A_results["steps"]["teacher_review"] = {"executed": False, "reason": "Validation and constraints passed"}
+            
+            # Create final decision including validation and constraint results
             scenario_A_results["final_decision"] = {
-                "passed_validation": multi_stage_validation_result.get("isValid"),
-                "passed_constraints": constraint_result.get("passed"),
-                "final_score": multi_stage_validation_result.get("finalScore")
+                "passed_validation": multi_stage_validation_result.get("isValid", False),
+                "passed_constraints": constraint_result.get("passed", False),
+                "final_score": multi_stage_validation_result.get("finalScore", 0.0),
+                "feedback": multi_stage_validation_result.get("aggregateFeedback", "")
             }
+            
             scenario_A_results["status"] = "completed"
-
+            
         except Exception as e:
-             self.logger.error(f"Error executing Scenario A steps: {e}", exc_info=True)
-             scenario_A_results["status"] = "failed"
-             scenario_A_results["error"] = f"Scenario A Failed: {e}"
-
-        # Aggregate all metrics collected during Scenario A
-        # Filter out None values in case a step failed before producing metrics
+            self.logger.error(f"Error in Scenario A execution: {e}", exc_info=True)
+            scenario_A_results["status"] = "failed"
+            scenario_A_results["error"] = f"Scenario A Failed: {e}"
+            
+        # Aggregate metrics for entire scenario
         scenario_A_results["total_metrics"] = self.metrics_collector.merge_metrics([m for m in all_metrics if m])
         return scenario_A_results
 
@@ -319,13 +351,13 @@ class RunnerCore:
         all_metrics = [] # Collect metrics dict from each step
 
         try:
-            # Step 9a: Generate Question (LLM-S, Unstructured)
+            # Step 9a: Generate Simple, Unstructured Question (LLM-S)
             question_result = self._step_b_generate_question(test_case, llm_s_model_data)
             scenario_B_results["steps"]["generated_question"] = question_result
             all_metrics.append(question_result.get("metrics"))
             if question_result.get("error"): raise RuntimeError(f"Baseline Question Generation failed: {question_result['error']}")
             question_text = question_result.get("generated_text")
-            if not question_text: raise ValueError("Generated baseline question text is empty.")
+            if not question_text: raise ValueError("Baseline question text is empty.")
 
 
             # Step 9b: Simulate Student Answer (LLM-L)
@@ -333,41 +365,38 @@ class RunnerCore:
             scenario_B_results["steps"]["student_answer"] = student_answer_result
             all_metrics.append(student_answer_result.get("metrics"))
             if student_answer_result.get("error"): raise RuntimeError(f"Baseline Student Answer failed: {student_answer_result['error']}")
+            
+            # Fix the field name disconnect - LLM-L interactions use llm_output instead of generated_text
             student_answer_text = student_answer_result.get("llm_output")
-            if not student_answer_text: raise ValueError("Simulated baseline student answer text is empty.")
+            if not student_answer_text: raise ValueError("Baseline student answer text is empty.")
 
+            # Step 9c: Simple Baseline Evaluation (LLM-S)
+            baseline_evaluation_result = self._step_b_baseline_evaluation(
+                question_text, student_answer_text, test_suite, llm_s_model_data
+            )
+            scenario_B_results["steps"]["baseline_evaluation"] = baseline_evaluation_result
+            all_metrics.append(baseline_evaluation_result.get("metrics"))
 
-            # Step 9c: Perform Baseline Evaluation (LLM-S, Single Stage)
-            baseline_eval_result = self._step_b_baseline_evaluation(question_text, student_answer_text, test_suite, llm_s_model_data)
-            scenario_B_results["steps"]["baseline_evaluation"] = baseline_eval_result
-            all_metrics.append(baseline_eval_result.get("metrics"))
-            # Extract parsed data, handle potential errors during eval/parsing
-            parsed_eval = baseline_eval_result.get("parsed_evaluation", {"passed": False, "score": 0.0}) # Default if parsing failed
-            if baseline_eval_result.get("error"):
-                 self.logger.warning(f"Baseline evaluation step failed: {baseline_eval_result['error']}")
-                 # Overwrite parsed eval if the step itself failed
-                 parsed_eval = {"passed": False, "score": 0.0, "feedback": "Evaluation step failed"}
-
-
-            # Step 9d: Constraint Enforcement (Orchestrator)
+            # Step 9d: Constraint Enforcement (Same Mechanism as A)
             constraint_result = self._step_b_constraint_enforcement(student_answer_text, test_case)
             scenario_B_results["steps"]["constraint_enforcement"] = constraint_result
+            # No metrics for constraint enforcement - local execution
 
-            # Step 9e: Store Final Results
+            # Create final decision including evaluation and constraint results
             scenario_B_results["final_decision"] = {
-                # Use parsed evaluation result for baseline pass/fail
-                "passed_evaluation": parsed_eval.get("passed"),
-                "passed_constraints": constraint_result.get("passed"),
-                "final_score": parsed_eval.get("score") # Use baseline eval score
+                "passed_evaluation": baseline_evaluation_result.get("parsed_evaluation", {}).get("passed", False),
+                "passed_constraints": constraint_result.get("passed", False),
+                "final_score": baseline_evaluation_result.get("parsed_evaluation", {}).get("score", 0.0)
             }
+            
             scenario_B_results["status"] = "completed"
-
+            
         except Exception as e:
-             self.logger.error(f"Error executing Scenario B steps: {e}", exc_info=True)
-             scenario_B_results["status"] = "failed"
-             scenario_B_results["error"] = f"Scenario B Failed: {e}"
-
-        # Aggregate all metrics collected during Scenario B
+            self.logger.error(f"Error in Scenario B execution: {e}", exc_info=True)
+            scenario_B_results["status"] = "failed"
+            scenario_B_results["error"] = f"Scenario B Failed: {e}"
+            
+        # Aggregate metrics for entire scenario
         scenario_B_results["total_metrics"] = self.metrics_collector.merge_metrics([m for m in all_metrics if m])
         return scenario_B_results
 
@@ -453,39 +482,51 @@ class RunnerCore:
         self.logger.debug(f"Simulated student answer (first 50): {result.get('llm_output', '')[:50]}...")
         return result
 
-    def _step_a_multistage_validation(self, question: Optional[str], answer: Optional[str], teacher_request: Optional[Dict[str, Any]], llm_s_model_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Scenario A, Step 8d: Perform Multi-Stage Validation (LLM-S)."""
-        self.logger.debug("[A:8d] Performing Multi-Stage Validation...")
-        default_error_result = {"error": "Missing input", "isValid": False, "finalScore": 0.0, "stageResults": [], "aggregateFeedback": "", "total_validation_metrics": {}}
-        if not question or not answer: return {**default_error_result, "error": "Missing question or answer text."}
-        if not teacher_request: teacher_request = {} # Handle missing teacher request gracefully
-
-        # Determine validation sequence: from teacher request or default
-        validation_sequence_name = teacher_request.get("validation_sequence_id", "basic_validation_sequence")
-
-        # Load the sequence definition using the dedicated load_validation_sequence method
-        validation_sequence_config = self.config_loader.load_validation_sequence(validation_sequence_name)
-        if not validation_sequence_config or "stages" not in validation_sequence_config:
-             error_msg = f"Failed to load or invalid validation sequence: {validation_sequence_name}"
-             self.logger.error(error_msg)
-             return {**default_error_result, "error": error_msg, "aggregateFeedback": error_msg}
-
-        validation_stages = validation_sequence_config.get("stages", [])
-
-        # Delegate to EvaluationEngine using a wrapper for the LLM-S execution function
-        def llm_s_executor_wrapper(prompt: str, params: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-            # This inner function calls the actual ModelManager method
-            return self.model_manager.execute_llm_s(llm_s_model_data, prompt, params)
-
-        result = self.evaluation_engine.validate_result(
-             question=question,
-             answer=answer,
-             validation_sequence=validation_stages,
-             edge_llm_execute_func=llm_s_executor_wrapper,
-             llm_s_model_data=llm_s_model_data # Pass model context
-        )
-        self.logger.debug(f"Multi-stage validation complete. Valid: {result.get('isValid')}, Score: {result.get('finalScore')}")
-        return result
+    def _step_a_multistage_validation(self, question: Optional[str], answer: Optional[str], 
+                                      teacher_request: Optional[Dict[str, Any]], 
+                                      llm_s_model_data: Dict[str, Any],
+                                      validation_sequence_id: str = "basic_validation_sequence") -> Dict[str, Any]:
+        """
+        Performs multi-stage validation (Step 8d of TestOrchestrationPhase1MultiLLM).
+        Uses the EvaluationEngine for the actual validation.
+        
+        Args:
+            question: The generated question
+            answer: The student's answer
+            teacher_request: Teacher request details containing constraints/rubric
+            llm_s_model_data: Configuration for the LLM-S model
+            validation_sequence_id: The ID of the validation sequence to use
+            
+        Returns:
+            Dict with validation results, metrics
+        """
+        if not question or not answer:
+            return {"error": "Missing question or answer for validation", "isValid": False}
+        
+        try:
+            self.logger.debug(f"Starting multi-stage validation with sequence '{validation_sequence_id}'")
+            
+            # Use the EvaluationEngine to handle the validation
+            # The engine will load the validation sequence, run each stage
+            # create executor wrapper to interact with LLM-S via ModelManager
+            def llm_s_executor_wrapper(prompt: str, params: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+                # This inner function calls the actual ModelManager method
+                return self._execute_llm_s(llm_s_model_data, prompt, params)
+            
+            # Execute the validation through the evaluation engine
+            validation_result = self.evaluation_engine.validate_with_sequence(
+                question=question,
+                answer=answer,
+                context=teacher_request,  # Contains constraints and rubric
+                validation_sequence_id=validation_sequence_id,
+                llm_executor=llm_s_executor_wrapper
+            )
+            
+            return validation_result
+        
+        except Exception as e:
+            self.logger.error(f"Multi-stage validation error: {e}", exc_info=True)
+            return {"error": f"Validation failed: {str(e)}", "isValid": False}
 
     def _step_a_constraint_enforcement(self, student_answer: Optional[str], teacher_request: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Scenario A, Step 8e: Constraint Enforcement (Orchestrator)."""

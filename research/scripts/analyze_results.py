@@ -153,7 +153,7 @@ def analyze_scenario_comparison(df: pd.DataFrame, output_dir: str, logger: loggi
          except Exception as e:
              logger.error(f"Error normalizing nested scenario data: {e}", exc_info=True)
              return
-        else:
+    else:
          logger.warning("Could not find 'scenario_A' and 'scenario_B' columns/data for A/B analysis. Skipping.")
          return
 
@@ -163,6 +163,15 @@ def analyze_scenario_comparison(df: pd.DataFrame, output_dir: str, logger: loggi
         
     logger.info(f"Processing {len(ab_df)} A/B comparison results entries.")
 
+    # Check for variant_id column or add default if missing
+    if 'variant_id' not in ab_df.columns:
+        logger.info("No 'variant_id' column found. Adding default 'standard' variant ID.")
+        ab_df['variant_id'] = 'standard'
+    
+    # Get unique variants
+    variants = ab_df['variant_id'].unique()
+    logger.info(f"Found {len(variants)} Scenario A variants: {variants}")
+
     # --- Extract Key Metrics Per Run --- 
     # Initialize list to store extracted data for each run
     detailed_comparison_records = []
@@ -171,10 +180,11 @@ def analyze_scenario_comparison(df: pd.DataFrame, output_dir: str, logger: loggi
         record = {
             # Identifiers
             'run_id': row.get('id', 'unknown'),
-                'test_case_id': row.get('test_case_id', 'unknown'),
+            'test_case_id': row.get('test_case_id', 'unknown'),
             'llm_l_model_id': row.get('llm_l_model_id', 'unknown'),
             'llm_s_model_id': row.get('llm_s_model_id', 'unknown'),
-                'hardware_profile': row.get('hardware_profile', 'unknown'),
+            'hardware_profile': row.get('hardware_profile', 'unknown'),
+            'variant_id': row.get('variant_id', 'standard')
         }
 
         # --- Scenario A Metrics --- 
@@ -229,12 +239,12 @@ def analyze_scenario_comparison(df: pd.DataFrame, output_dir: str, logger: loggi
     logger.info(f"Saved detailed A/B comparison results to {detailed_file}")
 
     # --- Aggregate Results for Visualization --- 
-    # Group by relevant factors (e.g., llm_s_model, hardware_profile)
-    grouping_factors = ['llm_s_model_id', 'hardware_profile']
+    # Group by relevant factors (e.g., llm_s_model, hardware_profile, variant_id)
+    grouping_factors = ['llm_s_model_id', 'hardware_profile', 'variant_id']
     # Check if factors exist
     valid_grouping_factors = [f for f in grouping_factors if f in detailed_df.columns]
     if not valid_grouping_factors:
-        logger.warning("Cannot group results: Missing 'llm_s_model_id' or 'hardware_profile' columns. Aggregating overall.")
+        logger.warning("Cannot group results: Missing grouping columns. Aggregating overall.")
         # Aggregate overall if grouping factors are missing
         agg_df = detailed_df[numeric_cols].agg(['mean', 'sum', 'count']).T # Added sum for counts
         # Need to restructure agg_df slightly if aggregated overall
@@ -302,40 +312,68 @@ def analyze_scenario_comparison(df: pd.DataFrame, output_dir: str, logger: loggi
     except Exception as e:
         logger.error(f"Error generating constraint_comparison.csv: {e}", exc_info=True)
 
-
-    # Token Usage Comparison
+    # Token Usage Comparison (Relative Efficiency)
     try:
         token_df = agg_df[valid_grouping_factors].copy()
         token_df['avg_tokens_A'] = agg_df['total_tokens_A_mean']
         token_df['avg_tokens_B'] = agg_df['total_tokens_B_mean']
+        token_df['token_usage_ratio'] = token_df['avg_tokens_A'] / token_df['avg_tokens_B']
         token_df['token_difference'] = token_df['avg_tokens_A'] - token_df['avg_tokens_B']
-        # Calculate ratio, handle division by zero
-        token_df['token_ratio_A_vs_B'] = (token_df['avg_tokens_A'] / token_df['avg_tokens_B']).replace([np.inf, -np.inf], np.nan)
         token_file = os.path.join(output_dir, 'token_usage_comparison.csv')
-        token_df.to_csv(token_file, index=False, float_format='%.1f')
+        token_df.to_csv(token_file, index=False, float_format='%.2f')
         logger.info(f"Saved token usage comparison results to {token_file}")
     except KeyError as e:
         logger.warning(f"Could not generate token_usage_comparison.csv. Missing column: {e}")
     except Exception as e:
         logger.error(f"Error generating token_usage_comparison.csv: {e}", exc_info=True)
 
-    # Latency Comparison
+    # Latency Comparison 
     try:
         latency_df = agg_df[valid_grouping_factors].copy()
-        latency_df['avg_latency_ms_A'] = agg_df['latency_ms_A_mean']
-        latency_df['avg_latency_ms_B'] = agg_df['latency_ms_B_mean']
-        latency_df['latency_difference_ms'] = latency_df['avg_latency_ms_A'] - latency_df['avg_latency_ms_B']
-        # Calculate ratio, handle division by zero
-        latency_df['latency_ratio_A_vs_B'] = (latency_df['avg_latency_ms_A'] / latency_df['avg_latency_ms_B']).replace([np.inf, -np.inf], np.nan)
+        latency_df['avg_latency_A'] = agg_df['latency_ms_A_mean']
+        latency_df['avg_latency_B'] = agg_df['latency_ms_B_mean']
+        latency_df['latency_ratio'] = latency_df['avg_latency_A'] / latency_df['avg_latency_B']
+        latency_df['latency_difference'] = latency_df['avg_latency_A'] - latency_df['avg_latency_B']
         latency_file = os.path.join(output_dir, 'latency_comparison.csv')
-        latency_df.to_csv(latency_file, index=False, float_format='%.1f')
+        latency_df.to_csv(latency_file, index=False, float_format='%.2f')
         logger.info(f"Saved latency comparison results to {latency_file}")
     except KeyError as e:
         logger.warning(f"Could not generate latency_comparison.csv. Missing column: {e}")
     except Exception as e:
         logger.error(f"Error generating latency_comparison.csv: {e}", exc_info=True)
-
-    logger.info("Finished A/B Comparison Analysis.")
+        
+    # Save aggregated results (all metrics) 
+    aggregated_file = os.path.join(output_dir, 'ab_comparison_aggregated.csv')
+    agg_df.to_csv(aggregated_file, index=False)
+    logger.info(f"Saved aggregated A/B comparison results to {aggregated_file}")
+    
+    # Generate variant comparison summary
+    try:
+        variant_df = agg_df.groupby(['variant_id']).agg({
+            'safety_violation_A_mean': 'mean',
+            'safety_violation_B_mean': 'mean',
+            'constraint_passed_A_mean': 'mean',
+            'constraint_passed_B_mean': 'mean',
+            'validation_passed_A_mean': 'mean',
+            'evaluation_passed_B_mean': 'mean',
+            'validation_score_A_mean': 'mean',
+            'evaluation_score_B_mean': 'mean',
+            'total_tokens_A_mean': 'mean',
+            'total_tokens_B_mean': 'mean',
+            'latency_ms_A_mean': 'mean',
+            'latency_ms_B_mean': 'mean',
+            'count': 'sum'
+        }).reset_index()
+        
+        variant_df['token_usage_ratio'] = variant_df['total_tokens_A_mean'] / variant_df['total_tokens_B_mean']
+        variant_df['latency_ratio'] = variant_df['latency_ms_A_mean'] / variant_df['latency_ms_B_mean']
+        variant_df['validation_score_diff'] = variant_df['validation_score_A_mean'] - variant_df['evaluation_score_B_mean']
+        
+        variant_file = os.path.join(output_dir, 'variant_comparison.csv')
+        variant_df.to_csv(variant_file, index=False, float_format='%.4f')
+        logger.info(f"Saved variant comparison summary to {variant_file}")
+    except Exception as e:
+        logger.error(f"Error generating variant_comparison.csv: {e}", exc_info=True)
 
 # Placeholder for other analysis functions (Phase 2 or specific tests)
 def analyze_multi_stage_validation(df: pd.DataFrame, output_dir: str, logger: logging.Logger) -> None:

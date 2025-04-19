@@ -1,0 +1,19 @@
+{
+  "id": "simplified_validation_sequence",
+  "type": "validation_sequence",
+  "description": "A simplified validation sequence with fewer stages for resource-constrained environments",
+  "stages": [
+    {
+      "id": "combined_validation",
+      "template_id": "validation_template",
+      "description": "Combined validation check for content quality and accuracy",
+      "validation_criteria": {
+        "focus": "combined",
+        "passing_score": 6
+      },
+      "weight": 1.0
+    }
+  ],
+  "aggregation_method": "direct",
+  "passing_threshold": 6.0
+} 

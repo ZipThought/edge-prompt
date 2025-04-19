@@ -15,6 +15,18 @@
         "gemma-3-4b-it"
         ]
   },
+  "scenario_a_variants": [
+    {
+      "id": "standard",
+      "description": "Standard EdgePrompt approach with full multi-stage validation",
+      "validation_sequence": "basic_validation_sequence"
+    },
+    {
+      "id": "simplified",
+      "description": "Simplified EdgePrompt approach with reduced validation stages",
+      "validation_sequence": "simplified_validation_sequence"
+    }
+  ],
   "hardware_profiles": [
     "sim_unconstrained"
   ],
