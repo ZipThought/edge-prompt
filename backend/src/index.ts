@@ -15,7 +15,7 @@ import { StorageService } from './services/StorageService.js';
 import { v4 as uuid } from 'uuid';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { authMiddleware } from './middleware/authMiddleware.js';
+import { authMiddleware, jwtSecret} from './middleware/authMiddleware.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -52,23 +52,65 @@ const upload = multer({ storage: storageMulter });
 
 // Signup Endpoint - connected to DatabaseService.ts
 app.post('/api/signup', async (req, res) => {
-  const { firstname, lastname, email, password, dob } = req.body;
-  const id = uuid();
-  const hashedPassword = await bcrypt.hash(password, 10);
+  console.log("Received signup request:", req.body);
+  const { firstname, lastname, email, password, dob, roleName } = req.body;
+  console.log("Parsed signup data:", { firstname, lastname, email, password, dob, roleName });
 
+  // 1. Input Validation
+  if (!firstname || !lastname || !email || !password || !dob || !roleName) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
+  // 2. Hash the password
+  const password_hash = await bcrypt.hash(password, 10);
+
+  // 3. Generate a unique user ID
+  const id = uuid();
+
+  // 4. Create a user object
   const user: User = {
     id: id,
     firstname: firstname,
     lastname: lastname,
     email: email,
-    passwordhash: hashedPassword,
+    passwordhash: password_hash,
     dob: dob,
   };
 
+  console.log("User object created:", user);
+
+  
   try {
-    await db.registerUser(user);
-    const token = jwt.sign({id, email}, 'your-secret-key', { expiresIn: '1h' });
-    res.status(201).json({ token, message: 'User created successfully'});
+    //5. Create user in databse
+    const regUser = await db.registerUser(user);
+    console.log("User created in database:", regUser);
+
+    //6.. Assign role to user
+    const role = await db.getRoleByName(roleName);
+    console.log("Role found:", role);
+      if (!role) {
+          return res.status(400).json({ message: `Role '${roleName}' does not exist` });
+      }
+    await db.assignRoleToUser(id, role.id);
+
+    // 6. Generate a JWT
+    const token = jwt.sign(
+        { userId: id, email: email, role: roleName }, // Use roleName in payload
+        jwtSecret, // Replace with your secret key
+        { expiresIn: '1h' }
+    );
+    console.log("JWT generated:", token);
+    // // 7. Set the cookie in the response headers
+    // res.cookie('authToken', token, {
+    //   httpOnly: true,  //  Crucial for XSS protection
+    //   secure: process.env.NODE_ENV === 'production', //  Only send over HTTPS in production
+    //   sameSite: 'strict', //  Recommended for CSRF protection
+    //   maxAge: 60 * 60 * 1000, //  1 hour (in milliseconds) - match JWT expiration
+    //   path: '/', //  Cookie is valid for the entire domain
+    // });
+
+    // 8. Respond with success and the token
+    res.status(201).json({ message: 'User created successfully', token });
   } catch (err) {
     res.status(500).json({ error: 'User creation failed', details: err.message });
   }
@@ -77,28 +119,67 @@ app.post('/api/signup', async (req, res) => {
 // signin Endpoint - connected to DatabaseService.ts
 app.post('/api/signin', async (req, res) => {
   const { email, password } = req.body;
+  console.log("Received signin request:", req.body);
 
   try {
-
+    // 1. Input Validation (Basic)
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
+    console.log("Parsed signin data:", { email, password });
 
+    // 2. Get the user by email
     const user = await db.getUserByEmail(email);
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    console.log("User found:", user);
+
+    // 3. Check if user exists and password is correct
+    if (!user || !await bcrypt.compare(password, user.passwordhash)) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordhash);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-    else {
-      const token = jwt.sign({ id: user.id, email: user.email }, 'your-secret-key', { expiresIn: '1h' });
-      res.json({ token, user });
-    }
+    // 4. Get user roles
+    const roles = await db.getUserRoles(user.id);
+    console.log("User roles found:", roles);
+    const userRole = roles[0];
+
+    // 5. Generate JWT
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: userRole }, // Use role in payload
+      jwtSecret,
+      { expiresIn: '1h' }
+    );
+    console.log("JWT generated:", token);
+
+    // // 6. Set the cookie in the response headers
+    // res.cookie('authToken', token, {
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === 'production',
+    //   sameSite: 'strict',
+    //   maxAge: 60 * 60 * 1000,
+    //   path: '/',
+    // });
+
+    // 7. Respond with token
+    res.json({ message: 'Signin successful', token });
+
   } catch (err) {
     res.status(500).json({ error: 'Login failed', details: err.message });
+  }
+});
+
+app.get('/api/health', async (_req, res): Promise<void> => {
+  try {
+    const isLMStudioAvailable = await lmStudio.isAvailable();
+    res.json({ 
+      status: 'ok',
+      lmStudio: isLMStudioAvailable 
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({ 
+      status: 'error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
@@ -235,22 +316,6 @@ app.post('/api/generate', async (req, res): Promise<void> => {
     console.error('Generation error:', error);
     res.status(500).json({ 
       error: 'Failed to generate question',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-app.get('/api/health', async (_req, res): Promise<void> => {
-  try {
-    const isLMStudioAvailable = await lmStudio.isAvailable();
-    res.json({ 
-      status: 'ok',
-      lmStudio: isLMStudioAvailable 
-    });
-  } catch (error) {
-    console.error('Health check error:', error);
-    res.status(500).json({ 
-      status: 'error',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }

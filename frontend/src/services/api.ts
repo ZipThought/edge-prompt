@@ -15,6 +15,7 @@ export interface SignupData {
   email: string;
   password: string;
   dob: string;
+  roleName: string;
 }
 
 export interface SigninData {
@@ -49,7 +50,7 @@ class ApiClient {
 
   // Signup and authentication endpoints - connected to backend index.ts
   async signup(data: SignupData) {
-    return this.request<{ message: string }>('/signup', {
+    return this.request<{ token: string }>('/signup', {
       method: 'POST',
       body: JSON.stringify(data),
     });

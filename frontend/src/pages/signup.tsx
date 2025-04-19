@@ -12,13 +12,14 @@ const SignUpPage: React.FC = () => {
     email: "",
     password: "",
     dob: "",
+    roleName: "student" // Default role
   });
 
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   const [message, setMessage] = useState('');
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -36,7 +37,9 @@ const SignUpPage: React.FC = () => {
         email: DOMPurify.sanitize(formData.email),
         password: DOMPurify.sanitize(formData.password),
         dob: DOMPurify.sanitize(formData.dob),
+        roleName: formData.roleName
       }
+      
       await api.signup(signupData);
       setMessage('Account created successfully!');
       setFormData({
@@ -45,6 +48,7 @@ const SignUpPage: React.FC = () => {
         email: "",
         password: "",
         dob: "",
+        roleName:""
       });
       navigate("/");
     } catch (error: any) {
@@ -143,6 +147,25 @@ const SignUpPage: React.FC = () => {
               required
             />
           </div>
+
+          {/* New Role Selection Section */}
+          <div className="mb-3">
+            <label htmlFor="role" className="form-label">
+              Role
+            </label>
+            <select
+              className="form-select"
+              id="role"
+              name="roleName"
+              value={formData.roleName}
+              onChange={handleInputChange}
+              required
+            >
+              <option value="student">Student</option>
+              <option value="teacher">Teacher</option>
+            </select>
+          </div>
+
 
           <button type="submit" className="btn btn-primary w-100">
             Sign Up
