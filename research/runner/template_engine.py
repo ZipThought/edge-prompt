@@ -90,54 +90,44 @@ class TemplateEngine:
             self.logger.error(f"Error loading template: {str(e)}")
             raise
     
-    def process_template(self, template: Dict[str, Any], variables: Dict[str, str]) -> str:
+    def process_template(self, template: Dict[str, Any], variables: Dict[str, Any]) -> str:
         """
-        Process a template by substituting variables and encoding constraints.
+        Process a template by substituting variables.
         
         Args:
-            template: The template configuration
-            variables: Dictionary of variable values to substitute
+            template: The template to process (expects a 'pattern' key)
+            variables: Variables to substitute into the template
             
         Returns:
-            Processed template string ready for model input
-            
-        Raises:
-            ValueError: If required variables are missing
+            Processed template content
         """
-        self.logger.info(f"Processing template: {template.get('id', 'unknown')}")
+        self.logger.debug(f"Processing template: {template.get('id', 'unknown')}")
         
-        # 1. Extract template pattern and validate
-        pattern = template.get('pattern', '')
-        if not pattern:
-            raise ValueError("Template has no pattern")
+        if not template or "pattern" not in template:
+            self.logger.error("Invalid template structure or missing 'pattern' key")
+            return ""
+        
+        pattern = template.get("pattern", "")
+        
+        # Convert all variables to strings to avoid type errors
+        str_variables = {}
+        for k, v in variables.items():
+            if v is not None:
+                str_variables[k] = str(v)
+            else:
+                str_variables[k] = ""
+        
+        # Simple variable substitution (format-style) using the pattern
+        processed_content = pattern
+        try:
+            for var_name, var_value in str_variables.items():
+                placeholder = f"[{var_name}]"
+                processed_content = processed_content.replace(placeholder, var_value)
             
-        # 2. Extract all variables from pattern
-        template_vars = self.var_pattern.findall(pattern)
-        self.logger.debug(f"Found variables in template: {template_vars}")
-        
-        # 3. Check for missing variables
-        missing_vars = [var for var in template_vars if var not in variables]
-        if missing_vars:
-            self.logger.error(f"Missing variables for template: {missing_vars}")
-            raise ValueError(f"Missing required variables: {', '.join(missing_vars)}")
-        
-        # 4. Substitute variables
-        processed = pattern
-        for var in template_vars:
-            if var in variables:
-                processed = processed.replace(f"[{var}]", variables[var])
-        
-        # 5. Apply constraint encoding
-        constraints = template.get('constraints', [])
-        if constraints:
-            constraint_text = self._format_constraints(constraints, template.get('type', 'generic'))
-            processed = self._apply_constraints(processed, constraint_text, template.get('type', 'generic'))
-        
-        # 6. Optimize for token efficiency
-        processed = self._optimize_tokens(processed)
-        
-        self.logger.info(f"Template processing complete: {len(processed)} characters")
-        return processed
+            return processed_content
+        except Exception as e:
+            self.logger.error(f"Error processing template pattern: {str(e)}")
+            return f"ERROR: {str(e)}"
     
     def _format_constraints(self, constraints: List[str], template_type: str) -> str:
         """

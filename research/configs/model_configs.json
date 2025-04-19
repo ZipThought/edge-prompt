@@ -1,44 +1,66 @@
-[
-  {
-    "model_id": "gemma-3-12b-it",
-    "base_model": "gemma-3-12b",
-    "quantization": "GGUF",
-    "context_window": 128000,
-    "download_url": "https://model.lmstudio.ai/download/lmstudio-community/gemma-3-12b-it-GGUF",
-    "api_identifier": "gemma-3-12b-it",
-    "optimization": {
-      "kv_cache": true,
-      "flash_attention": true,
-      "tensor_parallelism": false,
-      "execution_provider": "CUDA"
+{
+  "llm_l_models": [
+    {
+      "model_id": "gpt-4o",
+      "provider": "openai",
+      "api_identifier": "gpt-4o",
+      "notes": "High capability model for persona simulation and review"
+    },
+    {
+      "model_id": "claude-3-7-sonnet",
+      "provider": "anthropic",
+      "api_identifier": "claude-3-7-sonnet-latest",
+      "notes": "Alternative high-capability model for simulation"
     }
-  },
-  {
-    "model_id": "gemma-3-4b-it",
-    "base_model": "gemma-3-4b",
-    "quantization": "GGUF",
-    "context_window": 128000,
-    "download_url": "https://model.lmstudio.ai/download/lmstudio-community/gemma-3-4b-it-GGUF",
-    "api_identifier": "gemma-3-4b-it",
-    "optimization": {
-      "kv_cache": true,
-      "flash_attention": true,
-      "tensor_parallelism": false,
-      "execution_provider": "CUDA"
+  ],
+  "llm_s_models": [
+    {
+      "model_id": "gemma-3-12b-it",
+      "base_model": "gemma-3-12b",
+      "quantization": "GGUF",
+      "context_window": 128000,
+      "download_url": "https://model.lmstudio.ai/download/lmstudio-community/gemma-3-12b-it-GGUF",
+      "api_identifier": "gemma-3-12b-it",
+      "client_type": "local_gguf",
+      "optimization": {
+        "kv_cache": true,
+        "flash_attention": true,
+        "tensor_parallelism": false,
+        "execution_provider": "CUDA"
+      },
+      "notes": "Simulates higher-end edge capability" 
+    },
+    {
+      "model_id": "gemma-3-4b-it",
+      "base_model": "gemma-3-4b",
+      "quantization": "GGUF",
+      "context_window": 128000,
+      "download_url": "https://model.lmstudio.ai/download/lmstudio-community/gemma-3-4b-it-GGUF",
+      "api_identifier": "gemma-3-4b-it",
+      "client_type": "local_gguf",
+      "optimization": {
+        "kv_cache": true,
+        "flash_attention": true,
+        "tensor_parallelism": false,
+        "execution_provider": "CUDA"
+      },
+      "notes": "Simulates mid-range edge capability"
+    },
+    {
+      "model_id": "llama-3.2-3b-instruct",
+      "base_model": "llama-3.2-3b",
+      "quantization": "Q8_0",
+      "context_window": 128000,
+      "download_url": "https://model.lmstudio.ai/download/hugging-quants/Llama-3.2-3B-Instruct-Q8_0-GGUF",
+      "api_identifier": "llama-3.2-3b-instruct",
+      "client_type": "local_gguf",
+      "optimization": {
+        "kv_cache": true,
+        "flash_attention": true,
+        "tensor_parallelism": false,
+        "execution_provider": "CUDA"
+      },
+      "notes": "Simulates low-end edge capability"
     }
-  },
-  {
-    "model_id": "llama-3.2-3b-instruct",
-    "base_model": "llama-3.2-3b",
-    "quantization": "Q8_0",
-    "context_window": 128000,
-    "download_url": "https://model.lmstudio.ai/download/hugging-quants/Llama-3.2-3B-Instruct-Q8_0-GGUF",
-    "api_identifier": "llama-3.2-3b-instruct",
-    "optimization": {
-      "kv_cache": true,
-      "flash_attention": true,
-      "tensor_parallelism": false,
-      "execution_provider": "CUDA"
-    }
-  }
-] 
+  ]
+} 

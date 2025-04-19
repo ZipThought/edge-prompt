@@ -160,66 +160,90 @@ class EvaluationEngine:
     
     def _parse_json_from_llm_output(self, text: str) -> Dict[str, Any]:
         """
-        Attempt to extract and parse JSON from LLM output text.
+        Attempt to extract and parse JSON from LLM output text, strictly adhering
+        to the expected format {passed: bool, score: float, feedback: str}.
         
         Args:
             text: Raw LLM output text
             
         Returns:
-            Parsed JSON as dict or default error dict
+            Parsed JSON as dict or default error dict if parsing fails or format is incorrect.
         """
         # Default values if parsing fails
         default_result = {
             "passed": False,
             "score": 0,
-            "feedback": "Failed to parse validation result"
+            "feedback": "Failed to parse validation result or format incorrect"
         }
         
         if not text:
             return default_result
         
         self.logger.debug(f"Parsing output for JSON: {text[:100]}...")
-            
+        
+        parsed_json = None
         try:
-            # First, try direct JSON parsing (if the entire output is JSON)
-            return json.loads(text)
+            # First, try direct JSON parsing
+            parsed_json = json.loads(text)
+            
         except json.JSONDecodeError:
-            # If direct parse fails, try to extract JSON using regex
+            # If direct parsing fails, try extracting from markdown code blocks
             try:
-                # Look for JSON objects within markdown code blocks (common in LM Studio responses)
+                # Look for JSON objects within markdown code blocks (```json ... ```)
                 json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
                 if json_match:
                     json_text = json_match.group(1)
                     self.logger.debug(f"Found JSON in markdown: {json_text[:100]}...")
-                    return json.loads(json_text)
-                
-                # Look for JSON objects without code blocks
-                json_match = re.search(r'\{(?:[^{}]|(?:\{[^{}]*\}))*\}', text, re.DOTALL)
-                if json_match:
-                    json_text = json_match.group(0)
-                    self.logger.debug(f"Found JSON object: {json_text[:100]}...")
-                    return json.loads(json_text)
-                
-                # If no JSON detected, try simpler patterns for key fields
-                self.logger.warning(f"No valid JSON object found in response, trying to extract fields.")
-                passed_match = re.search(r'passed["\s:]+\s*(true|false)', text, re.IGNORECASE)
-                score_match = re.search(r'score["\s:]+\s*([0-9.]+)', text)
-                feedback_match = re.search(r'feedback["\s:]+\s*"([^"]*)"', text)
-                
-                result = default_result.copy()
-                if passed_match:
-                    result["passed"] = passed_match.group(1).lower() == 'true'
-                if score_match:
-                    result["score"] = float(score_match.group(1))
-                if feedback_match:
-                    result["feedback"] = feedback_match.group(1)
-                
-                self.logger.debug(f"Extracted fields: passed={result.get('passed')}, score={result.get('score')}")
-                return result
-                
+                    parsed_json = json.loads(json_text)
+                else:
+                    # Look for JSON objects in triple backticks without language specified
+                    json_match = re.search(r'```\s*(\{.*?\})\s*```', text, re.DOTALL)
+                    if json_match:
+                        json_text = json_match.group(1)
+                        self.logger.debug(f"Found JSON in triple backticks: {json_text[:100]}...")
+                        parsed_json = json.loads(json_text)
+                    else:
+                        # Look for JSON objects with single backticks
+                        json_match = re.search(r'`(\{.*?\})`', text, re.DOTALL)
+                        if json_match:
+                            json_text = json_match.group(1)
+                            self.logger.debug(f"Found JSON in single backticks: {json_text[:100]}...")
+                            parsed_json = json.loads(json_text)
+                        else:
+                            # Look for JSON objects without code blocks - most permissive pattern last
+                            json_match = re.search(r'\{(?:[^{}]|(?:\{[^{}]*\}))*\}', text, re.DOTALL)
+                            if json_match:
+                                json_text = json_match.group(0)
+                                self.logger.debug(f"Found JSON object: {json_text[:100]}...")
+                                parsed_json = json.loads(json_text)
+                                
+                if not parsed_json:
+                     self.logger.warning(f"No valid JSON object found in response.")
+                     return default_result
+                     
             except Exception as e:
-                self.logger.error(f"Error parsing validation result: {str(e)}")
+                self.logger.error(f"Error during JSON extraction: {str(e)}")
                 return default_result
+            
+        # Now, strictly validate the parsed JSON format
+        if parsed_json and isinstance(parsed_json, dict):
+            required_keys = {"passed", "score", "feedback"}
+            if required_keys.issubset(parsed_json.keys()):
+                # Optionally check types, though less critical if parsing worked
+                if isinstance(parsed_json["passed"], bool) and \
+                   isinstance(parsed_json["score"], (int, float)) and \
+                   isinstance(parsed_json["feedback"], str):
+                    self.logger.debug("Successfully parsed JSON with correct format.")
+                    return parsed_json
+                else:
+                     self.logger.warning(f"Parsed JSON has incorrect field types: {parsed_json}")
+                     return default_result
+            else:
+                self.logger.warning(f"Parsed JSON missing required keys: {required_keys - set(parsed_json.keys())}")
+                return default_result
+        else:
+            self.logger.warning(f"Could not parse a valid JSON object or result is not a dictionary.")
+            return default_result
     
     def evaluate_with_llm_proxy(self, content_to_evaluate: str, 
                               reference_criteria: str,

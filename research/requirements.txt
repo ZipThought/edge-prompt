@@ -1,5 +1,5 @@
 # EdgePrompt Research Requirements
-# Core requirements for running the EdgePrompt research module
+# Core requirements for running the EdgePrompt research module (Phase 1)
 
 # General utilities
 numpy>=1.22.0
@@ -8,26 +8,26 @@ pyyaml>=6.0
 tqdm>=4.64.0
 python-dotenv>=1.0.0  # Required for loading env variables
 
-# System monitoring
-psutil>=5.9.0
-pynvml>=11.5.0  # Optional, for NVIDIA GPU monitoring
+# System monitoring (Optional for Phase 2 - real hardware testing)
+# psutil>=5.9.0  # Uncomment for Phase 2 (real hardware monitoring)
+# pynvml>=11.5.0  # Uncomment for Phase 2 (NVIDIA GPU monitoring)
 
 # Plotting and visualization
 matplotlib>=3.5.0
 seaborn>=0.12.0
 
-# Machine learning essentials (for small models or embedding)
+# Machine learning essentials (for local inference if used)
 torch>=2.0.0
 transformers>=4.24.0
 
-# Optimization and quantization
+# Optimization and quantization (for local models if used)
 bitsandbytes>=0.41.0
 sentencepiece>=0.1.97
 
-# LLM APIs (required for LM Studio and evaluation proxy)
-openai>=1.0.0  # Required for LM Studio integration
-anthropic>=0.20.0  # Required for Claude evaluation proxy
-# google-generativeai>=0.3.0
+# LLM APIs (required for Phase 1 two-tier approach)
+openai>=1.0.0      # Required for OpenAI LLM-L models and LM Studio integration
+anthropic>=0.2.0   # Required for Anthropic LLM-L models
+# google-generativeai>=0.3.0  # Uncomment if using Google AI models
 
 # API server for validation endpoints
 fastapi>=0.103.0

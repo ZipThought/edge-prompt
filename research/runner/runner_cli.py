@@ -2,7 +2,7 @@
 EdgePrompt Runner CLI - Command-line interface for running experiments
 
 This module provides a command-line entry point for executing
-EdgePrompt experiments using the RunnerCore class.
+EdgePrompt experiments using the RunnerCore class for Phase 1 (multi-LLM).
 """
 
 import argparse
@@ -81,7 +81,7 @@ def load_environment_variables():
 def parse_args():
     """Parse command-line arguments"""
     parser = argparse.ArgumentParser(
-        description='EdgePrompt Research Runner CLI'
+        description='EdgePrompt Research Runner CLI (Phase 1 - Multi-LLM)'
     )
     
     parser.add_argument(
@@ -115,13 +115,25 @@ def parse_args():
     parser.add_argument(
         '--lm-studio-url',
         type=str,
-        help='URL for LM Studio API (e.g., http://localhost:1234). Overrides LM_STUDIO_URL environment variable.'
+        help='URL for LM Studio API (for LLM-S models). Overrides LM_STUDIO_URL environment variable.'
     )
     
     parser.add_argument(
         '--mock-models',
         action='store_true',
         help='Use mock models instead of real LLMs'
+    )
+    
+    parser.add_argument(
+        '--openai-api-key',
+        type=str,
+        help='OpenAI API key (for LLM-L models). Overrides OPENAI_API_KEY environment variable.'
+    )
+    
+    parser.add_argument(
+        '--anthropic-api-key',
+        type=str,
+        help='Anthropic API key (for LLM-L models). Overrides ANTHROPIC_API_KEY environment variable.'
     )
     
     return parser.parse_args()
@@ -144,19 +156,26 @@ def main():
     if env_loaded:
         logger.info("Environment variables loaded from .env file")
     
-    # Get LM Studio URL from args or environment variable
+    # Get API configurations from args or environment variables
     lm_studio_url = args.lm_studio_url or os.environ.get('LM_STUDIO_URL')
-    if lm_studio_url:
-        logger.info(f"Using LM Studio URL: {lm_studio_url}")
-    else:
-        logger.warning("No LM Studio URL provided - will use mock mode or internal models")
+    openai_api_key = args.openai_api_key or os.environ.get('OPENAI_API_KEY')
+    anthropic_api_key = args.anthropic_api_key or os.environ.get('ANTHROPIC_API_KEY')
     
-    # Check for Anthropic API key
-    anthropic_api_key = os.environ.get('ANTHROPIC_API_KEY')
-    if anthropic_api_key:
-        logger.info("Anthropic API key found for evaluation")
+    # Log API configurations
+    if lm_studio_url:
+        logger.info(f"Using LM Studio URL for LLM-S models")
     else:
-        logger.warning("No Anthropic API key found - evaluation_with_llm_proxy will not work")
+        logger.warning("No LM Studio URL provided - will use mock mode or internal models for LLM-S")
+    
+    if openai_api_key:
+        logger.info("OpenAI API key found for LLM-L")
+    else:
+        logger.warning("No OpenAI API key found - OpenAI LLM-L models will not work")
+    
+    if anthropic_api_key:
+        logger.info("Anthropic API key found for LLM-L")
+    else:
+        logger.warning("No Anthropic API key found - Anthropic LLM-L models will not work")
     
     # Log mock mode status
     if args.mock_models:
@@ -175,6 +194,7 @@ def main():
             log_level=args.log_level,
             lm_studio_url=lm_studio_url,
             mock_models=args.mock_models,
+            openai_api_key=openai_api_key,
             anthropic_api_key=anthropic_api_key
         )
         
