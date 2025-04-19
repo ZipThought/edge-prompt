@@ -53,6 +53,332 @@ def setup_logging(log_level: str = "INFO") -> logging.Logger:
     logger = logging.getLogger('edgeprompt.figures')
     return logger
 
+def render_ab_safety_comparison(data_dir: str, output_dir: str, logger: logging.Logger) -> None:
+    """
+    Render Figure: Safety Effectiveness Comparison (A/B testing).
+    
+    Args:
+        data_dir: Directory containing processed data
+        output_dir: Directory to save figures
+        logger: Logger instance
+    """
+    input_file = os.path.join(data_dir, 'safety_comparison.csv')
+    
+    if not os.path.exists(input_file):
+        logger.warning(f"Safety comparison data not found: {input_file}")
+        return
+        
+    # Load data
+    df = pd.read_csv(input_file)
+    
+    if df.empty:
+        logger.warning("No safety comparison data available")
+        return
+        
+    logger.info("Rendering Figure: Safety Effectiveness Comparison (A/B testing)")
+    
+    # Set up the figure
+    fig, ax = plt.subplots(figsize=(12, 7))
+    
+    # Reshape data for grouped bar chart
+    melted_df = pd.melt(
+        df, 
+        id_vars=["hardware_profile", "llm_s_model_id"],
+        value_vars=["safety_violation_A", "safety_violation_B"],
+        var_name="scenario", 
+        value_name="violation_rate"
+    )
+    
+    # Replace scenario names for better labels
+    melted_df["scenario"] = melted_df["scenario"].replace({
+        "safety_violation_A": "EdgePrompt (A)",
+        "safety_violation_B": "Baseline (B)"
+    })
+    
+    # Create grouped bar chart
+    sns.barplot(
+        x="llm_s_model_id", 
+        y="violation_rate",
+        hue="scenario", 
+        data=melted_df,
+        ax=ax
+    )
+    
+    # Add labels and title
+    ax.set_xlabel("LLM-S Model")
+    ax.set_ylabel("Safety Violation Rate (%)")
+    ax.set_title("Safety Effectiveness: EdgePrompt vs. Baseline")
+    
+    # Add value labels on bars
+    for container in ax.containers:
+        ax.bar_label(container, fmt='%.1f%%', padding=3)
+    
+    # Add gridlines
+    ax.grid(True, axis='y', linestyle='--', alpha=0.7)
+    
+    # Adjust layout and save
+    plt.tight_layout()
+    output_file = os.path.join(output_dir, 'Figure_Paper_SafetyCompare.png')
+    plt.savefig(output_file)
+    logger.info(f"Saved safety comparison figure to {output_file}")
+    plt.close(fig)
+
+def render_ab_constraint_comparison(data_dir: str, output_dir: str, logger: logging.Logger) -> None:
+    """
+    Render Figure: Constraint Adherence Comparison (A/B testing).
+    
+    Args:
+        data_dir: Directory containing processed data
+        output_dir: Directory to save figures
+        logger: Logger instance
+    """
+    input_file = os.path.join(data_dir, 'constraint_comparison.csv')
+    
+    if not os.path.exists(input_file):
+        logger.warning(f"Constraint comparison data not found: {input_file}")
+        return
+        
+    # Load data
+    df = pd.read_csv(input_file)
+    
+    if df.empty:
+        logger.warning("No constraint comparison data available")
+        return
+        
+    logger.info("Rendering Figure: Constraint Adherence Comparison (A/B testing)")
+    
+    # Set up the figure
+    fig, ax = plt.subplots(figsize=(12, 7))
+    
+    # Reshape data for grouped bar chart
+    melted_df = pd.melt(
+        df, 
+        id_vars=["hardware_profile", "llm_s_model_id"],
+        value_vars=["constraint_adherence_A", "constraint_adherence_B"],
+        var_name="scenario", 
+        value_name="adherence_rate"
+    )
+    
+    # Replace scenario names for better labels
+    melted_df["scenario"] = melted_df["scenario"].replace({
+        "constraint_adherence_A": "EdgePrompt (A)",
+        "constraint_adherence_B": "Baseline (B)"
+    })
+    
+    # Create grouped bar chart
+    sns.barplot(
+        x="llm_s_model_id", 
+        y="adherence_rate",
+        hue="scenario", 
+        data=melted_df,
+        ax=ax
+    )
+    
+    # Add labels and title
+    ax.set_xlabel("LLM-S Model")
+    ax.set_ylabel("Constraint Adherence Rate (%)")
+    ax.set_title("Constraint Adherence: EdgePrompt vs. Baseline")
+    
+    # Add value labels on bars
+    for container in ax.containers:
+        ax.bar_label(container, fmt='%.1f%%', padding=3)
+    
+    # Add gridlines
+    ax.grid(True, axis='y', linestyle='--', alpha=0.7)
+    
+    # Adjust layout and save
+    plt.tight_layout()
+    output_file = os.path.join(output_dir, 'Figure_Paper_ConstraintCompare.png')
+    plt.savefig(output_file)
+    logger.info(f"Saved constraint adherence comparison figure to {output_file}")
+    plt.close(fig)
+
+def create_ab_token_usage_table(data_dir: str, output_dir: str, logger: logging.Logger) -> None:
+    """
+    Create Table: Token Usage Comparison (A/B testing).
+    
+    Args:
+        data_dir: Directory containing processed data
+        output_dir: Directory to save tables
+        logger: Logger instance
+    """
+    input_file = os.path.join(data_dir, 'token_comparison.csv')
+    
+    if not os.path.exists(input_file):
+        logger.warning(f"Token comparison data not found: {input_file}")
+        return
+        
+    # Load data
+    df = pd.read_csv(input_file)
+    
+    if df.empty:
+        logger.warning("No token comparison data available")
+        return
+        
+    logger.info("Creating Table: Token Usage Comparison (A/B testing)")
+    
+    # Format data for table
+    table_df = df.copy()
+    
+    # Rename columns for clarity
+    table_df.columns = [
+        'Hardware Profile',
+        'LLM-S Model',
+        'EdgePrompt Tokens',
+        'Baseline Tokens',
+        'Token Difference',
+        'Token Ratio (A/B)'
+    ]
+    
+    # Format numeric columns
+    table_df['EdgePrompt Tokens'] = table_df['EdgePrompt Tokens'].round(0).astype(int)
+    table_df['Baseline Tokens'] = table_df['Baseline Tokens'].round(0).astype(int)
+    table_df['Token Difference'] = table_df['Token Difference'].round(0).astype(int)
+    table_df['Token Ratio (A/B)'] = table_df['Token Ratio (A/B)'].round(2)
+    
+    # Save as CSV
+    output_file = os.path.join(output_dir, 'Table_Paper_TokenCompare.csv')
+    table_df.to_csv(output_file, index=False)
+    logger.info(f"Saved token usage comparison table to {output_file}")
+    
+    # Create a visual representation
+    fig, ax = plt.subplots(figsize=(12, 7))
+    
+    # Reshape data for grouped bar chart
+    melted_df = pd.melt(
+        df, 
+        id_vars=["hardware_profile", "llm_s_model_id"],
+        value_vars=["total_tokens_A", "total_tokens_B"],
+        var_name="scenario", 
+        value_name="tokens"
+    )
+    
+    # Replace scenario names for better labels
+    melted_df["scenario"] = melted_df["scenario"].replace({
+        "total_tokens_A": "EdgePrompt (A)",
+        "total_tokens_B": "Baseline (B)"
+    })
+    
+    # Create grouped bar chart
+    sns.barplot(
+        x="llm_s_model_id", 
+        y="tokens",
+        hue="scenario", 
+        data=melted_df,
+        ax=ax
+    )
+    
+    # Add labels and title
+    ax.set_xlabel("LLM-S Model")
+    ax.set_ylabel("Average Token Count")
+    ax.set_title("Token Usage: EdgePrompt vs. Baseline")
+    
+    # Add value labels on bars
+    for container in ax.containers:
+        ax.bar_label(container, fmt='%d', padding=3)
+    
+    # Add gridlines
+    ax.grid(True, axis='y', linestyle='--', alpha=0.7)
+    
+    # Adjust layout and save
+    plt.tight_layout()
+    vis_output_file = os.path.join(output_dir, 'Figure_TokenUsage.png')
+    plt.savefig(vis_output_file)
+    logger.info(f"Saved token usage visualization to {vis_output_file}")
+    plt.close(fig)
+
+def create_ab_latency_table(data_dir: str, output_dir: str, logger: logging.Logger) -> None:
+    """
+    Create Table: Latency Comparison (A/B testing).
+    
+    Args:
+        data_dir: Directory containing processed data
+        output_dir: Directory to save tables
+        logger: Logger instance
+    """
+    input_file = os.path.join(data_dir, 'latency_comparison.csv')
+    
+    if not os.path.exists(input_file):
+        logger.warning(f"Latency comparison data not found: {input_file}")
+        return
+        
+    # Load data
+    df = pd.read_csv(input_file)
+    
+    if df.empty:
+        logger.warning("No latency comparison data available")
+        return
+        
+    logger.info("Creating Table: Latency Comparison (A/B testing)")
+    
+    # Format data for table
+    table_df = df.copy()
+    
+    # Rename columns for clarity
+    table_df.columns = [
+        'Hardware Profile',
+        'LLM-S Model',
+        'EdgePrompt Latency (ms)',
+        'Baseline Latency (ms)',
+        'Latency Ratio (A/B)'
+    ]
+    
+    # Format numeric columns
+    table_df['EdgePrompt Latency (ms)'] = table_df['EdgePrompt Latency (ms)'].round(0).astype(int)
+    table_df['Baseline Latency (ms)'] = table_df['Baseline Latency (ms)'].round(0).astype(int)
+    table_df['Latency Ratio (A/B)'] = table_df['Latency Ratio (A/B)'].round(2)
+    
+    # Save as CSV
+    output_file = os.path.join(output_dir, 'Table_Paper_LatencyCompare.csv')
+    table_df.to_csv(output_file, index=False)
+    logger.info(f"Saved latency comparison table to {output_file}")
+    
+    # Create a visual representation
+    fig, ax = plt.subplots(figsize=(12, 7))
+    
+    # Reshape data for grouped bar chart
+    melted_df = pd.melt(
+        df, 
+        id_vars=["hardware_profile", "llm_s_model_id"],
+        value_vars=["latency_ms_A", "latency_ms_B"],
+        var_name="scenario", 
+        value_name="latency_ms"
+    )
+    
+    # Replace scenario names for better labels
+    melted_df["scenario"] = melted_df["scenario"].replace({
+        "latency_ms_A": "EdgePrompt (A)",
+        "latency_ms_B": "Baseline (B)"
+    })
+    
+    # Create grouped bar chart
+    sns.barplot(
+        x="llm_s_model_id", 
+        y="latency_ms",
+        hue="scenario", 
+        data=melted_df,
+        ax=ax
+    )
+    
+    # Add labels and title
+    ax.set_xlabel("LLM-S Model")
+    ax.set_ylabel("Average Latency (ms)")
+    ax.set_title("Latency: EdgePrompt vs. Baseline")
+    
+    # Add value labels on bars
+    for container in ax.containers:
+        ax.bar_label(container, fmt='%d', padding=3)
+    
+    # Add gridlines
+    ax.grid(True, axis='y', linestyle='--', alpha=0.7)
+    
+    # Adjust layout and save
+    plt.tight_layout()
+    vis_output_file = os.path.join(output_dir, 'Figure_Latency.png')
+    plt.savefig(vis_output_file)
+    logger.info(f"Saved latency visualization to {vis_output_file}")
+    plt.close(fig)
+
 def render_neural_symbolic_effectiveness(data_dir: str, output_dir: str, logger: logging.Logger) -> None:
     """
     Render Figure 1: Neural-Symbolic Effectiveness.
@@ -319,7 +645,13 @@ def main():
     
     logger.info(f"Starting figure generation from {args.data_dir}")
     
-    # Generate each figure
+    # Generate A/B comparison figures and tables (Phase 1)
+    render_ab_safety_comparison(args.data_dir, args.output_dir, logger)
+    render_ab_constraint_comparison(args.data_dir, args.output_dir, logger)
+    create_ab_token_usage_table(args.data_dir, args.output_dir, logger)
+    create_ab_latency_table(args.data_dir, args.output_dir, logger)
+    
+    # Generate previous experiment figures (for backward compatibility)
     render_neural_symbolic_effectiveness(args.data_dir, args.output_dir, logger)
     render_hardware_comparison(args.data_dir, args.output_dir, logger)
     render_validation_performance_table(args.data_dir, args.output_dir, logger)
