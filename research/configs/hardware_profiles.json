@@ -1,64 +1,17 @@
 [
   {
-    "profile_id": "jetson_nano_sim",
-    "description": "Simulated Jetson Nano (4GB RAM, 128-core Maxwell)",
-    "simulation_config": {
-      "max_memory_mb": 4000,
-      "max_cores": 4,
-      "max_gpu_memory_mb": 2000,
-      "max_power_draw_watts": 10,
-      "bandwidth_limit_mbps": 10
-    },
-    "implementation": {
-      "linux": "sudo cgcreate -g memory,cpu:jetson_nano_sim && echo 4000M > /sys/fs/cgroup/memory/jetson_nano_sim/memory.limit_in_bytes && echo 400000 > /sys/fs/cgroup/cpu/jetson_nano_sim/cpu.cfs_quota_us",
-      "docker": "docker run --memory=4g --cpus=4 --gpus=all --env CUDA_VISIBLE_DEVICES=0 --env PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128",
-      "kubernetes": "resources: {limits: {memory: 4Gi, cpu: 4, nvidia.com/gpu: 1}}"
-    }
+    "profile_id": "sim_edge_low_resource",
+    "description": "Simulates low-resource edge constraints for token limits and response validation",
+    "notes": "Orchestrator may apply stricter token limits and simplified validation for this profile."
   },
   {
-    "profile_id": "jetson_orin_sim",
-    "description": "Simulated Jetson Orin Nano (8GB RAM, 1024-core Ampere)",
-    "simulation_config": {
-      "max_memory_mb": 8000,
-      "max_cores": 6,
-      "max_gpu_memory_mb": 4000,
-      "max_power_draw_watts": 15,
-      "bandwidth_limit_mbps": 25
-    },
-    "implementation": {
-      "linux": "sudo cgcreate -g memory,cpu:jetson_orin_sim && echo 8000M > /sys/fs/cgroup/memory/jetson_orin_sim/memory.limit_in_bytes && echo 600000 > /sys/fs/cgroup/cpu/jetson_orin_sim/cpu.cfs_quota_us",
-      "docker": "docker run --memory=8g --cpus=6 --gpus=all --env CUDA_VISIBLE_DEVICES=0 --env PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:256",
-      "kubernetes": "resources: {limits: {memory: 8Gi, cpu: 6, nvidia.com/gpu: 1}}"
-    }
+    "profile_id": "sim_edge_mid_range",
+    "description": "Simulates mid-range edge device constraints",
+    "notes": "Moderate token limits and validation complexity can be applied by the Orchestrator."
   },
   {
-    "profile_id": "apple_m1_sim",
-    "description": "Simulated Apple M1 (16GB RAM, 8-core CPU, 8-core GPU)",
-    "simulation_config": {
-      "max_memory_mb": 14000,
-      "max_cores": 8,
-      "cpu_frequency_mhz": 3200,
-      "neural_engine_cores": 16,
-      "max_power_draw_watts": 20
-    },
-    "implementation": {
-      "macos": "sudo launchctl limit maxproc 1000 1500 && memory_pressure -l moderate",
-      "docker": "docker run --platform=linux/amd64 --memory=14g --cpus=8",
-      "resource_script": "limit_resources.py --memory=14000 --cores=8"
-    }
-  },
-  {
-    "profile_id": "tpu_edge_sim",
-    "description": "Simulated Edge TPU (4GB RAM, 4 TOPS)",
-    "simulation_config": {
-      "max_memory_mb": 4000,
-      "max_cores": 4,
-      "simulated_tops": 4,
-      "bandwidth_limit_mbps": 10
-    },
-    "implementation": {
-      "docker": "docker run --memory=4g --cpus=4 --device=/dev/accel0:/dev/accel0",
-      "cloud": "gcloud compute instances create tpu-edge-sim --machine-type=n1-standard-4 --accelerator=type=tpu-v4-8,count=1"
-    }
+    "profile_id": "sim_unconstrained",
+    "description": "Minimal constraints applied by Orchestrator, primarily for observing baseline performance",
+    "notes": "Use this profile to establish performance baselines without artificial constraints."
   }
 ] 
