@@ -14,6 +14,8 @@ from typing import Dict, Any, List, Optional
 import pandas as pd
 import numpy as np
 import matplotlib
+# Use non-interactive backend (doesn't require display)
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime

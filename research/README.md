@@ -34,14 +34,19 @@ Each test case runs two scenarios that are compared:
 
 1. Create a Python virtual environment:
    ```sh
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 2. Install dependencies:
    ```sh
    pip install -r requirements.txt
    ```
+   
+   The requirements.txt file includes all necessary dependencies, including:
+   - OpenAI Python SDK for GPT model access
+   - Core libraries like numpy, pandas, and matplotlib
+   - Other required packages for the EdgePrompt framework
 
 3. Configure environment:
    - Copy `.env.example` to `.env`
@@ -58,6 +63,21 @@ Run a test suite using the CLI:
 python -m runner.runner_cli --config configs/test_suites/structured_prompting_guardrails.json --output data
 ```
 
+For convenience, you can also use one of the provided bash scripts:
+
+```sh
+# Basic test with environment variables from .env file
+./run_validation_test.sh
+
+# More comprehensive test using .env, with auto venv and verification
+./run_test.sh
+```
+
+The `run_test.sh` script relies on your `.env` file for API keys and LM Studio URL and includes additional features:
+- Automatic virtual environment setup and dependency check
+- Runs verification checks before running the test suite
+- Detailed progress reporting and error handling
+
 Additional options:
 - `--log-level DEBUG`: Increase verbosity
 - `--mock-models`: Use mock models instead of real LLMs
@@ -73,13 +93,74 @@ Additional options:
 >   export PYTHONPATH=$PYTHONPATH:$(pwd)  # On Windows: set PYTHONPATH=%PYTHONPATH%;%CD%
 >   ```
 
-### Analyzing Results
+## Validation Architecture
+
+The EdgePrompt validation architecture is a critical component that ensures content quality and safety. It consists of several interrelated components:
+
+### Key Components:
+
+1. **ConstraintEnforcer** (`constraint_enforcer.py`):
+   - Applies logical constraints to generated content
+   - Checks for word count limits (min/max)
+   - Filters prohibited keywords
+   - Ensures required topics are addressed
+   - Returns boolean validation results with violation details
+
+2. **EvaluationEngine** (`evaluation_engine.py`):
+   - Performs multi-stage validation using edge LLMs (LLM-S)
+   - Provides proxy evaluation using larger models when needed (LLM-L)
+   - Extracts structured results from unstructured LLM outputs
+   - Calculates validation scores and aggregates feedback
+
+3. **RunnerCore** (`runner_core.py`):
+   - Orchestrates the end-to-end validation process
+   - Implements A/B testing with Scenario A (EdgePrompt) and Scenario B (Baseline)
+   - Manages the validation workflow including constraint enforcement and multi-stage validation
+   - Collects validation metrics for comparative analysis
+
+4. **TemplateEngine** (`template_engine.py`):
+   - Processes templates with variable substitution
+   - Handles various data types (strings, numbers, lists) safely
+   - Supports persona templates and validation prompt templates
+
+### Validation Workflow:
+
+1. **Content Generation**: A question or answer is generated using LLM-S or LLM-L
+2. **Constraint Enforcement**: Basic logical constraints are checked using `ConstraintEnforcer`
+3. **Multi-Stage Validation**: Sequential validation stages are applied using LLM-S
+4. **Teacher Review** (if validation fails): Content failing validation is reviewed by LLM-L 
+5. **Result Logging**: Validation results and metrics are logged for analysis
+
+### Robust JSON Processing:
+
+The system includes robust JSON processing to handle various LLM output formats:
+- JSON within markdown code blocks (````json {...} ````)
+- Plain JSON objects
+- Text with extractable validation fields
+- Alternative field names (e.g., "valid" instead of "passed")
+
+### Verifying the Validation Architecture
+
+To verify the validation architecture works correctly, use the included verification script:
+
+```sh
+./verify_validation.py
+```
+
+This script tests three critical components:
+1. JSON processing from LLM responses in various formats
+2. Template processing with mixed variable types
+3. Validation result extraction from different LLM outputs
+
+All verification checks must pass before running actual experiments.
+
+## Analyzing Results
 
 After running experiments, use the analysis scripts which now focus on A/B comparison:
 
 ```sh
-python scripts/analyze_results.py --input data/raw/suite_id_timestamp
-python scripts/render_figures.py --input data/processed/suite_id_timestamp
+python scripts/analyze_results.py --input data/validation_test/
+python scripts/render_figures.py --input data/processed/validation_test/
 ```
 
 The analysis outputs will include comparison metrics like:
@@ -127,6 +208,48 @@ python -m runner.runner_cli --config configs/test_suites/example_suite.json --mo
 ```
 
 This replaces both LLM-L and LLM-S calls with simulated responses, allowing you to test the framework without incurring API costs or requiring local models.
+
+## Troubleshooting
+
+### Common Issues:
+
+1. **JSON Parsing Errors**:
+   - **Symptom**: Error messages about invalid JSON from LLM responses
+   - **Solution**: The system now includes robust JSON extraction for various formats. If issues persist, check the LLM response format and consider updating the extraction patterns in `evaluation_engine.py`.
+
+2. **Template Processing Errors**:
+   - **Symptom**: Type errors in template processing, particularly with numeric variables
+   - **Solution**: The system automatically converts all variable types to strings. Ensure templates use `[variable_name]` format for placeholders.
+
+3. **Missing API Keys**:
+   - **Symptom**: Warnings about missing API keys or LM Studio URL
+   - **Solution**: Properly set environment variables either in `.env` file or directly on the command line.
+
+4. **Missing Dependencies**:
+   - **Symptom**: Errors like `ModuleNotFoundError: No module named 'openai'`
+   - **Solution**: Ensure all dependencies are installed from requirements.txt:
+     ```sh
+     pip install -r requirements.txt
+     ```
+   - The `run_test.sh` script will automatically check and install dependencies from requirements.txt.
+
+5. **Validation Failures**:
+   - **Symptom**: All validation stages fail with parsing errors
+   - **Solution**: Verify that your LLM-S models can understand and respond to the validation prompts. Consider simplifying validation prompts or using more capable models.
+
+6. **Import Errors**:
+   - **Symptom**: "ModuleNotFoundError" when running scripts
+   - **Solution**: Run all commands from the `research` directory and ensure your virtual environment is activated.
+
+### Verification:
+
+If you suspect issues with the validation architecture, run the verification script before real experiments:
+
+```sh
+./verify_validation.py
+```
+
+If any verification checks fail, review and fix the corresponding components before proceeding.
 
 ## Contributing
 

@@ -192,7 +192,7 @@ class RunnerCore:
                         self.result_logger.log_result(run_data)
                         
                     except Exception as e:
-                        self.logger.error(f"Error executing test: {str(e)}", exc_info=True)
+                        self.logger.error(f"Error executing test for {run_data['id']}: {str(e)}", exc_info=True)
                         run_data["error"] = str(e)
                         test_results.append(run_data)
                         self.result_logger.log_result(run_data)
@@ -239,22 +239,41 @@ class RunnerCore:
         
         # Extract the teacher request content (assumed to be JSON)
         try:
+            # First try direct parsing
             teacher_request_json = json.loads(teacher_request_result.get("output", "{}"))
-            
-            # Apply some validation/default values
-            if not teacher_request_json.get("constraints", {}).get("minWords"):
-                teacher_request_json.setdefault("constraints", {})["minWords"] = 30
-            if not teacher_request_json.get("constraints", {}).get("maxWords"):
-                teacher_request_json.setdefault("constraints", {})["maxWords"] = 150
-                
-        except Exception as e:
-            self.logger.error(f"Error parsing teacher request: {str(e)}")
-            teacher_request_json = {
-                "topic": "default topic",
-                "learning_objective": "default learning objective",
-                "content_type": "paragraph",
-                "constraints": {"minWords": 30, "maxWords": 150, "safety_rules": ["No inappropriate content"]}
-            }
+        except json.JSONDecodeError:
+            # If direct parsing fails, try to extract JSON from markdown code blocks
+            try:
+                output = teacher_request_result.get("output", "{}")
+                # Look for JSON in markdown code blocks (```json ... ```)
+                json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', output, re.DOTALL)
+                if json_match:
+                    json_text = json_match.group(1)
+                    self.logger.info(f"Found JSON in markdown code block")
+                    teacher_request_json = json.loads(json_text)
+                else:
+                    # Look for JSON objects without code blocks if not found in code blocks
+                    json_match = re.search(r'\{(?:[^{}]|(?:\{[^{}]*\}))*\}', output, re.DOTALL)
+                    if json_match:
+                        json_text = json_match.group(0)
+                        self.logger.info(f"Found JSON object in text")
+                        teacher_request_json = json.loads(json_text)
+                    else:
+                        raise Exception("No JSON found in output")
+            except Exception as e:
+                self.logger.error(f"Error parsing teacher request: {str(e)}")
+                teacher_request_json = {
+                    "topic": "default topic",
+                    "learning_objective": "default learning objective",
+                    "content_type": "paragraph",
+                    "constraints": {"minWords": 30, "maxWords": 150, "safety_rules": ["No inappropriate content"]}
+                }
+        
+        # Apply some validation/default values
+        if not teacher_request_json.get("constraints", {}).get("minWords"):
+            teacher_request_json.setdefault("constraints", {})["minWords"] = 30
+        if not teacher_request_json.get("constraints", {}).get("maxWords"):
+            teacher_request_json.setdefault("constraints", {})["maxWords"] = 150
         
         # 2. Generate Question using LLM-S with structured prompt
         question_generation_template = self.template_engine.load_template("direct_constraint_template")

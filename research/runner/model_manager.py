@@ -132,7 +132,7 @@ class ModelManager:
         self._anthropic_client = None
         
         self.logger.info(f"ModelManager initialized with {len(self.model_configs.get('llm_l_models', []))} LLM-L models and {len(self.model_configs.get('llm_s_models', []))} LLM-S models")
-            
+        
     def _ensure_cache_dir(self):
         """Ensures the model cache directory exists"""
         try:

@@ -118,8 +118,18 @@ def analyze_a_b_comparison(df: pd.DataFrame, output_dir: str, logger: logging.Lo
         output_dir: Directory to save processed results
         logger: Logger instance
     """
-    # Filter for structured_prompting_guardrails test suite (Phase 1 A/B testing)
-    ab_df = df[df['test_suite_id'] == 'structured_prompting_guardrails_multi_llm'].copy()
+    # Check if 'scenario_A' is a column or a nested field in the DataFrame
+    if 'scenario_A' in df.columns and 'scenario_B' in df.columns:
+        # Both scenarios exist directly as columns
+        logger.info("Found scenario_A and scenario_B as direct columns")
+        ab_df = df.copy()
+    elif 'test_suite_id' in df.columns:
+        # Filter for structured_prompting_guardrails test suite (Phase 1 A/B testing)
+        ab_df = df[df['test_suite_id'] == 'structured_prompting_guardrails_multi_llm'].copy()
+    else:
+        # Look for rows that contain both scenario_A and scenario_B
+        logger.info("Looking for rows with scenario_A and scenario_B fields")
+        ab_df = df[df.apply(lambda row: isinstance(row, dict) and 'scenario_A' in row and 'scenario_B' in row, axis=1)].copy()
     
     if ab_df.empty:
         logger.warning("No A/B comparison results found")
@@ -142,12 +152,19 @@ def analyze_a_b_comparison(df: pd.DataFrame, output_dir: str, logger: logging.Lo
         # Extract scenario A data
         scenario_a = row.get('scenario_A', {})
         
+        # Check if scenario_a is a string and try to parse it as JSON
+        if isinstance(scenario_a, str):
+            try:
+                scenario_a = json.loads(scenario_a)
+            except json.JSONDecodeError:
+                scenario_a = {}
+        
         # Safety checks from constraint_result
         a_constraint = scenario_a.get('constraint_result', {})
         a_safety_violation = False
         if not a_constraint.get('passed', True):
             violations = a_constraint.get('violations', [])
-            a_safety_violation = any("prohibited keyword" in v.lower() for v in violations)
+            a_safety_violation = any("prohibited keyword" in v.lower() for v in violations) if isinstance(violations, list) else False
             
         record['safety_violation_A'] = int(a_safety_violation)
         record['constraint_adherence_A'] = int(a_constraint.get('passed', True))
@@ -168,12 +185,19 @@ def analyze_a_b_comparison(df: pd.DataFrame, output_dir: str, logger: logging.Lo
         # Extract scenario B data
         scenario_b = row.get('scenario_B', {})
         
+        # Check if scenario_b is a string and try to parse it as JSON
+        if isinstance(scenario_b, str):
+            try:
+                scenario_b = json.loads(scenario_b)
+            except json.JSONDecodeError:
+                scenario_b = {}
+        
         # Safety checks from constraint_result
         b_constraint = scenario_b.get('constraint_result', {})
         b_safety_violation = False
         if not b_constraint.get('passed', True):
             violations = b_constraint.get('violations', [])
-            b_safety_violation = any("prohibited keyword" in v.lower() for v in violations)
+            b_safety_violation = any("prohibited keyword" in v.lower() for v in violations) if isinstance(violations, list) else False
             
         record['safety_violation_B'] = int(b_safety_violation)
         record['constraint_adherence_B'] = int(b_constraint.get('passed', True))

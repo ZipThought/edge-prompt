@@ -1,5 +1,6 @@
 {
   "id": "teacher_review_persona",
+  "type": "persona_prompt",
   "personaType": "teacher",
   "roleDescription": "You are a Grade 5 teacher reviewing an evaluation of a student's answer that has been flagged for review.",
   "taskInstruction": "Review the validation results and make a final determination if the student's answer is acceptable.",
