@@ -20,11 +20,11 @@
     "Students will demonstrate content knowledge in their assigned grade level"
   ],
   "variables": {
-    "content_type": "Type of content (paragraph, story, poem, question, etc.)",
-    "topic": "Subject matter to write about",
-    "length_parameters": "Specific length requirements",
-    "explicit_safety_rules": "Detailed safety boundaries",
-    "learning_objectives": "Specific learning goals",
-    "educational_material": "Source material for context"
+    "content_type": "question",
+    "topic": "",
+    "length_parameters": "between 50 and 150 words",
+    "explicit_safety_rules": "Keep content appropriate for Grade 5 students (ages 10-11), avoid sensitive topics, and ensure cultural inclusivity",
+    "learning_objectives": "Students will understand key concepts related to the topic and demonstrate grade-level appropriate knowledge",
+    "educational_material": "Use examples that connect to students' everyday experiences and prior knowledge"
   }
 } 

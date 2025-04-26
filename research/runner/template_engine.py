@@ -81,27 +81,42 @@ class TemplateEngine:
         processed_prompt = pattern
 
         # 2-4. Variable Extraction & Substitution
-        required_vars = template.get("variables", {}) # Spec suggests a 'variables' definition
+        template_vars = template.get("variables", {}) # Get template-defined variables and defaults
         provided_vars = set(variables.keys())
         found_vars_in_pattern = set(self.VAR_PATTERN.findall(pattern))
         metadata["variables_in_pattern"] = list(found_vars_in_pattern)
-
-        missing_required = []
+        
+        # Track missing variables for debugging
+        missing_vars = []
+        
+        # First, use provided values where available
+        substitution_vars = {}  # The variables we'll actually use
+        
+        # For each variable found in the pattern...
         for var_name in found_vars_in_pattern:
-            if var_name not in provided_vars:
-                 # Check if the template schema defines this variable as required (future enhancement)
-                 # For now, we'll warn but attempt to proceed, replacing with empty string.
-                 self.logger.warning(f"Variable '{var_name}' found in template '{template_id}' pattern but not provided. Substituting empty string.")
-                 variables[var_name] = "" # Substitute missing optional vars with empty
-                 # If schemas defined requirements: if required_vars.get(var_name, {}).get('required', False):
-                 #    missing_required.append(var_name)
-
-        # Raise error if explicitly required variables are missing (based on schema - future)
-        if missing_required:
-            error_msg = f"Template {template_id} missing required variables: {missing_required}"
-            self.logger.error(error_msg)
-            metadata["error"] = error_msg
-            return None, metadata
+            if var_name in provided_vars:
+                # Use the provided value
+                substitution_vars[var_name] = variables[var_name]
+            elif var_name in template_vars:
+                # Use the default value from template
+                default_value = template_vars.get(var_name, "")
+                # Handle if the default is a dict (for backward compatibility)
+                if isinstance(default_value, dict):
+                    default_value = ""
+                substitution_vars[var_name] = default_value
+                self.logger.debug(f"Variable '{var_name}' not provided, using default from template.")
+            else:
+                # No default available, use empty string and log warning
+                self.logger.warning(f"Variable '{var_name}' found in template '{template_id}' pattern but not provided. Substituting empty string.")
+                substitution_vars[var_name] = ""
+                missing_vars.append(var_name)
+        
+        # Add missing vars to metadata for debugging
+        if missing_vars:
+            metadata["missing_variables"] = missing_vars
+            
+        # Replace the original variables with our processed ones that include defaults
+        variables = substitution_vars
 
         # Perform substitution
         try:
@@ -215,6 +230,57 @@ class TemplateEngine:
         optimized = re.sub(r'\n\s*\n', '\n\n', optimized) # Replace multiple newlines with double newline
         optimized = optimized.strip() # Remove leading/trailing whitespace
         return optimized
+        
+    def preprocess_template_variables(self, template_name: str, variables: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Preprocesses template variables, adding defaults and checking requirements.
+        
+        Args:
+            template_name: The name of the template to load
+            variables: The provided variables
+            
+        Returns:
+            Dict with preprocessed variables including default values
+        """
+        # Load the template
+        template = self.config_loader.load_template(template_name)
+        if not template:
+            self.logger.error(f"Failed to load template: {template_name} for preprocessing")
+            return variables
+        
+        template_id = template.get('id', template_name)
+        processed_vars = variables.copy()
+        
+        # Check which variables are needed in the pattern
+        pattern = template.get("pattern", "")
+        needed_vars = set(self.VAR_PATTERN.findall(pattern))
+        
+        # Get default values
+        default_values = template.get("defaultValues", {})
+        
+        # Get variable definitions
+        var_definitions = template.get("variables", {})
+        
+        # Add default values for missing variables
+        for var_name in needed_vars:
+            if var_name not in processed_vars and var_name in default_values:
+                processed_vars[var_name] = default_values[var_name]
+                self.logger.debug(f"Added default value for '{var_name}' in template {template_id}")
+                
+        # Check for required variables that are still missing
+        missing_required = []
+        for var_name, var_info in var_definitions.items():
+            is_required = isinstance(var_info, dict) and var_info.get('required', False)
+            if is_required and var_name in needed_vars and var_name not in processed_vars:
+                missing_required.append(var_name)
+                # Add placeholder text to indicate missing required variable
+                processed_vars[var_name] = f"[MISSING REQUIRED: {var_name}]"
+                
+        # Log warnings for missing required variables
+        if missing_required:
+            self.logger.warning(f"Template {template_id} missing required variables: {missing_required}")
+            
+        return processed_vars
     
     def extract_template_variables(self, template_name: str) -> List[str]:
         """
