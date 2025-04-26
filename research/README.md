@@ -25,17 +25,74 @@ Each test case runs two scenarios that are compared:
 ### Prerequisites
 
 - Python 3.10+
+- System dependencies for building packages:
+  - cmake
+  - pkg-config
+  - gcc/g++
+  - make
 - LM Studio (for running local LLM-S models)
 - API keys for LLM-L models:
   - OpenAI API key (for GPT models)
   - Anthropic API key (for Claude models)
 
-### Installation
+### Quick Setup
+
+We've created automated setup scripts to make environment setup easy:
+
+1. **Install system dependencies** (requires sudo):
+   ```sh
+   sudo ./setup-system-deps.sh
+   ```
+
+2. **Set up Python environment** (interactive):
+   ```sh
+   ./setup.sh
+   ```
+   This script will:
+   - Create and configure a Python virtual environment
+   - Install required Python packages
+   - Set up environment variables and API keys interactively
+   - Configure PYTHONPATH automatically
+
+3. **Start LM Studio** and load your preferred model(s) for the LLM-S role.
+
+### Running Experiments
+
+You can run experiments using the provided scripts:
+
+```sh
+# Run with actual API calls and LM Studio
+./run_test.sh
+
+# Run in mock mode (no API calls, for testing)
+./run_with_mock.sh
+```
+
+The scripts accept additional parameters:
+
+```sh
+# Example with custom config and output directory
+./run_test.sh --config configs/test_suites/my_custom_suite.json --output data/my_test
+```
+
+Common options:
+- `--config`: Specify a test suite configuration file
+- `--output`: Set the output directory for results
+- `--skip-verification`: Skip the validation architecture verification
+
+> **Important Notes:** 
+> - You must run all commands from the `research` directory
+> - Make sure your `.env` file has the correct API keys and LM Studio URL
+> - The system will automatically set PYTHONPATH when using the setup script
+
+## Advanced Setup
+
+If you prefer to set up manually rather than using the provided scripts:
 
 1. Create a Python virtual environment:
    ```sh
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   source venv/bin/activate
    ```
 
 2. Install dependencies:
@@ -43,55 +100,15 @@ Each test case runs two scenarios that are compared:
    pip install -r requirements.txt
    ```
    
-   The requirements.txt file includes all necessary dependencies, including:
-   - OpenAI Python SDK for GPT model access
-   - Core libraries like numpy, pandas, and matplotlib
-   - Other required packages for the EdgePrompt framework
-
 3. Configure environment:
    - Copy `.env.example` to `.env`
-   - Add your LM Studio URL (typically `http://localhost:1234`) for LLM-S models
-   - Add your OpenAI and/or Anthropic API keys for LLM-L models
+   - Add your LM Studio URL (typically `http://localhost:1234`)
+   - Add your OpenAI and Anthropic API keys
 
-4. Start LM Studio and load your preferred model(s) for the LLM-S role
-
-### Running Experiments
-
-Run a test suite using the CLI:
-
-```sh
-python -m runner.runner_cli --config configs/test_suites/structured_prompting_guardrails.json --output data
-```
-
-For convenience, you can also use one of the provided bash scripts:
-
-```sh
-# Basic test with environment variables from .env file
-./run_validation_test.sh
-
-# More comprehensive test using .env, with auto venv and verification
-./run_test.sh
-```
-
-The `run_test.sh` script relies on your `.env` file for API keys and LM Studio URL and includes additional features:
-- Automatic virtual environment setup and dependency check
-- Runs verification checks before running the test suite
-- Detailed progress reporting and error handling
-
-Additional options:
-- `--log-level DEBUG`: Increase verbosity
-- `--mock-models`: Use mock models instead of real LLMs
-- `--lm-studio-url URL`: Override the LM Studio URL from .env
-- `--openai-api-key KEY`: Override the OpenAI API key from .env
-- `--anthropic-api-key KEY`: Override the Anthropic API key from .env
-
-> **Important Note:** 
-> - You must run the CLI from the `research` directory
-> - Make sure the `model_configs.json` file exists in the `configs` directory and contains both `llm_l_models` and `llm_s_models` sections
-> - The Python path must be set up correctly to find the modules. If you encounter import errors, try:
->   ```sh
->   export PYTHONPATH=$PYTHONPATH:$(pwd)  # On Windows: set PYTHONPATH=%PYTHONPATH%;%CD%
->   ```
+4. Set PYTHONPATH:
+   ```sh
+   export PYTHONPATH=$PYTHONPATH:$(pwd)
+   ```
 
 ## Validation Architecture
 
@@ -147,7 +164,7 @@ The validation system is designed to fail fast with clear error messages rather 
 To verify the validation architecture works correctly, use the included verification script:
 
 ```sh
-./verify_validation.py
+python verify_validation.py
 ```
 
 This script tests three critical components:
@@ -174,8 +191,8 @@ The analysis outputs will include comparison metrics like:
 
 ## Directory Structure
 
-- `configs/`: JSON configuration files for hardware profiles, models, templates, and test suites
-  - `templates/`: Contains structured prompts including new persona templates
+- `configs/`: JSON configuration files for models, templates, and test suites
+  - `templates/`: Contains structured prompts including persona templates
   - `test_suites/`: Test suite configurations for A/B testing
 - `data/`: Experiment results (raw and processed)
 - `figures/`: Generated plots and visualizations
@@ -192,6 +209,13 @@ The framework uses LM Studio's OpenAI-compatible API to run inference on local l
 4. Update `configs/model_configs.json` to include the correct models in the `llm_s_models` section
 5. Set `LM_STUDIO_URL` in your `.env` file or use the `--lm-studio-url` flag
 
+### Recommended Models
+
+The following models work well with the framework:
+- Gemma 3 12B: [LM Studio download link](https://model.lmstudio.ai/download/lmstudio-community/gemma-3-12b-it-GGUF)
+- Gemma 3 4B: [LM Studio download link](https://model.lmstudio.ai/download/lmstudio-community/gemma-3-4b-it-GGUF)
+- LLaMa 3.2 3B: [LM Studio download link](https://model.lmstudio.ai/download/hugging-quants/Llama-3.2-3B-Instruct-Q8_0-GGUF)
+
 ## Using API Models for LLM-L
 
 For the LLM-L role (persona simulation and review), the framework uses cloud API models:
@@ -207,6 +231,13 @@ For the LLM-L role (persona simulation and review), the framework uses cloud API
 During development or when API access is limited, you can use mock mode:
 
 ```sh
+# Using the convenience script
+./run_with_mock.sh
+
+# Or directly with environment variable
+MOCK_MODE=true ./run_test.sh
+
+# Or with the CLI directly
 python -m runner.runner_cli --config configs/test_suites/example_suite.json --mock-models
 ```
 
@@ -216,40 +247,40 @@ This replaces both LLM-L and LLM-S calls with simulated responses, allowing you 
 
 ### Common Issues:
 
-1. **JSON Parsing Errors**:
+1. **Building Package Errors**:
+   - **Symptom**: Errors when building packages like sentencepiece or bitsandbytes
+   - **Solution**: Install system dependencies with `sudo ./setup-system-deps.sh`
+
+2. **JSON Parsing Errors**:
    - **Symptom**: Error messages about invalid JSON from LLM responses
-   - **Solution**: The system now includes robust JSON extraction for various formats. If issues persist, check the LLM response format and consider updating the extraction patterns in `evaluation_engine.py`.
+   - **Solution**: The system includes robust JSON extraction for various formats. If issues persist, check the LLM response format and update extraction patterns.
 
-2. **Template Processing Errors**:
+3. **Template Processing Errors**:
    - **Symptom**: Type errors in template processing, particularly with numeric variables
-   - **Solution**: The system automatically converts all variable types to strings. Ensure templates use `[variable_name]` format for placeholders.
+   - **Solution**: Ensure templates use `[variable_name]` format for placeholders.
 
-3. **Missing API Keys**:
+4. **Missing API Keys**:
    - **Symptom**: Warnings about missing API keys or LM Studio URL
-   - **Solution**: Properly set environment variables either in `.env` file or directly on the command line.
+   - **Solution**: Run the interactive setup script or manually edit the `.env` file.
 
-4. **Missing Dependencies**:
+5. **Missing Dependencies**:
    - **Symptom**: Errors like `ModuleNotFoundError: No module named 'openai'`
-   - **Solution**: Ensure all dependencies are installed from requirements.txt:
-     ```sh
-     pip install -r requirements.txt
-     ```
-   - The `run_test.sh` script will automatically check and install dependencies from requirements.txt.
+   - **Solution**: Run `./setup.sh` which will install required packages.
 
-5. **Validation Failures**:
+6. **Validation Failures**:
    - **Symptom**: All validation stages fail with parsing errors
-   - **Solution**: Verify that your LLM-S models can understand and respond to the validation prompts. Consider simplifying validation prompts or using more capable models.
+   - **Solution**: Verify that your LLM-S models can understand and respond to the validation prompts.
 
-6. **Import Errors**:
+7. **Import Errors**:
    - **Symptom**: "ModuleNotFoundError" when running scripts
-   - **Solution**: Run all commands from the `research` directory and ensure your virtual environment is activated.
+   - **Solution**: Make sure the virtual environment is activated and PYTHONPATH is set correctly.
 
 ### Verification:
 
-If you suspect issues with the validation architecture, run the verification script before real experiments:
+If you suspect issues with the validation architecture, run the verification script:
 
 ```sh
-./verify_validation.py
+python verify_validation.py
 ```
 
 If any verification checks fail, review and fix the corresponding components before proceeding.
@@ -260,4 +291,4 @@ Please follow the implementation guidance in `docs/specifications/PROMPT_ENGINEE
 
 ## License
 
-See the project's main LICENSE file. 
+See the project's main LICENSE file.
