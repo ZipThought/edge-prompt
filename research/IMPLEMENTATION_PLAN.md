@@ -82,7 +82,7 @@ After implementing the changes:
 
 ## Completed Refactoring
 
-The implementation of the four-run structure is now complete:
+The implementation of the four-run structure is now complete and the topic inconsistency issue has been fixed:
 
 1. Configuration files have been updated with the new terminology and structure:
    - `configs/model_configs.json` now uses `cloud_llm_models` and `edge_llm_models`
@@ -100,7 +100,13 @@ The implementation of the four-run structure is now complete:
    - Run 3: EdgeLLM executor with SingleTurn_Direct method
    - Run 4: EdgeLLM executor with MultiTurn_EdgePrompt method (target improvement)
 
-4. Placeholder for quality metrics comparing against Run 1 (reference) has been added
+4. Topic consistency has been implemented:
+   - Teacher request is now generated once at the test case level
+   - This shared request is stored in the test case object and used by all runs
+   - Question generation in baseline runs has been enhanced to maintain topic focus
+   - Topic verification logging has been added to confirm consistency across runs
+
+5. Placeholder for quality metrics comparing against Run 1 (reference) has been added
 
 ## Next Steps
 

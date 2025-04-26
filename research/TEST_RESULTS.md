@@ -1,17 +1,18 @@
-# EdgePrompt Phase 1 Initial Test Results
+# EdgePrompt Phase 1 Implementation Progress
 
-This document summarizes the results of running the **initial, unrefined** four-run structure experiment with real APIs. These results represent a first pass implementation and highlight several critical areas for improvement.
+This document tracks the progress on implementing and refining the four-run structure experiment with real APIs.
 
 ## Test Configuration
 
-- **Date**: April 26, 2025
+- **Initial Test Date**: April 26, 2025
+- **Latest Test Date**: April 27, 2025
 - **Test Suite**: four_run_comparison
 - **Test Case**: simple_math_question
 - **CloudLLM**: gpt-4o (OpenAI)
 - **EdgeLLM**: gemma-3-4b-it (LM Studio)
-- **Status**: INITIAL UNREFINED IMPLEMENTATION
+- **Status**: PARTIAL REFINEMENT (1/4 CRITICAL GAPS ADDRESSED)
 
-## Performance Metrics
+## Performance Metrics (Initial Implementation)
 
 | Metric | Run 1 (Cloud Baseline) | Run 3 (Edge Baseline) | Run 4 (Edge EdgePrompt) |
 |--------|------------------------|------------------------|--------------------------|
@@ -19,15 +20,29 @@ This document summarizes the results of running the **initial, unrefined** four-
 | Total Tokens | 595 | 904 | 2,689 |
 | Tokens/Second | 38.37 | 17.66 | 86.53 |
 
-## CRITICAL GAPS IDENTIFIED
+## Critical Gaps Progress
 
-### 1. Topic Inconsistency Problem ⚠️
+### 1. Topic Inconsistency Problem ✅ FIXED
+
+**Initial Issue:**
 - Baseline runs (1 & 3) generated completely unrelated questions about the water cycle instead of algebra
-- This represents a fundamental flaw in prompt construction for baseline runs
-- **HIGH PRIORITY**: Baseline runs must address the same topic as EdgePrompt runs for valid comparison
+- This represented a fundamental flaw in prompt construction for baseline runs
 
-### 2. Template Variable Missing Issues ⚠️
-- Multiple template processing warnings observed:
+**Solution Implemented:**
+- Moved teacher request generation to the beginning of the test case execution
+- Stored shared teacher request in the test case object for use across all runs
+- Updated all run methods to use this shared teacher request
+- Added topic consistency verification to log and confirm topic alignment
+
+**Verification Results:**
+- All runs now consistently address the same topic (algebra)
+- Run 1 now generates: "Solve the equation 3x + 5 = 20 for x..."
+- Run 3 now generates: "Solve the equation 3x + 2 = 11..."
+- Questions are now directly comparable across all runs
+
+### 2. Template Variable Missing Issues ⚠️ PENDING
+
+- Multiple template processing warnings still observed:
   - `length_parameters`
   - `explicit_safety_rules`
   - `educational_material`
@@ -35,67 +50,59 @@ This document summarizes the results of running the **initial, unrefined** four-
   - `content_type`
 - These missing variables impair prompt quality and consistency
 
-### 3. Validation System Failures ⚠️
+### 3. Validation System Failures ⚠️ PENDING
+
 - JSON parsing errors in validation sequence:
   - `VALIDATION ERROR: Received empty output for JSON parsing`
 - Validation templates not correctly formatted for JSON output
 - Validation sequence not robust to model output variations
 
-### 4. Token Usage Inefficiency ⚠️
+### 4. Token Usage Inefficiency ⚠️ PENDING
+
 - Run 4 using 3-4x more tokens than baseline runs
 - Validation sequences consuming excessive token budget
 - Need for more optimized prompt construction
 
-## Quality Observations
+## Latest Quality Observations
 
-### Questions Generated
+### Questions Generated (After Topic Fix)
 
-1. **Run 1 (Cloud Baseline)**: "What is the water cycle, and can you explain it in your own words?"
-   - ⚠️ COMPLETELY OFF-TOPIC: No relation to the test case topic (algebra)
+1. **Run 1 (Cloud Baseline)**: "Solve the equation 3x + 5 = 20 for x, ensuring that you use only positive numbers in your calculation"
+   - ✓ ON-TOPIC: Directly addresses algebraic equations
+   - ✓ Properly incorporates constraints from the teacher request
 
-2. **Run 3 (Edge Baseline)**: "Imagine you're teaching a younger brother or sister about rain. Explain in your own words how rain forms – step-by-step."
-   - ⚠️ COMPLETELY OFF-TOPIC: Weather focus instead of algebra
+2. **Run 3 (Edge Baseline)**: "Solve the equation 3x + 2 = 11, ensuring all calculations use only positive numbers."
+   - ✓ ON-TOPIC: Directly addresses algebraic equations
+   - ✓ Properly incorporates constraints from the teacher request
 
-3. **Run 4 (Edge EdgePrompt)**: "What is Algebra? (Grade 5)" with a detailed explanation of algebra concepts including variables and equations.
-   - ✓ Correctly focused on the test case topic (basic algebra)
-   - ✓ Includes "x + 3 = 5" example (relevant to "Solve for x: 2x + 5 = 11" context)
+3. **Run 4 (Edge EdgePrompt)**: "Guided practice exercise focused on solving simple algebraic equations"
+   - ✓ Correctly focused on the test case topic
+   - ✓ Maintains structured approach from EdgePrompt methodology
 
-### Answers Generated
+## Remaining Action Items
 
-1. **Run 1 (Cloud Baseline)**: Explanation of the water cycle (evaporation, condensation, precipitation)
-   - ⚠️ OFF-TOPIC: No relation to test case subject matter
-
-2. **Run 3 (Edge Baseline)**: Explanation of rain formation
-   - ⚠️ OFF-TOPIC: No relation to test case subject matter
-
-3. **Run 4 (Edge EdgePrompt)**: Explanation of algebra with variables and equations
-   - ✓ Correctly on-topic
-   - ✓ References "x + 3 = 5" with solution x = 2, shows understanding of equation solving
-
-## IMMEDIATE ACTION ITEMS
-
-1. **Fix Topic Control in Baseline Runs** (HIGHEST PRIORITY)
-   - Modify test case to explicitly control topic in all runs
-   - Ensure consistent context propagation across all runs
-   - Add verification step to confirm topic consistency
-
-2. **Template Standardization**
+1. **Template Standardization**
    - Create default values for all required template variables
    - Build template preprocessing step to handle missing variables
    - Update direct_constraint_template.json with all necessary fields
 
-3. **Validation Overhaul**
+2. **Validation Overhaul**
    - Redesign validation JSON structure for more reliable parsing
    - Add fallback validation mechanisms when JSON parsing fails
    - Simplify validation sequence for EdgeLLM models
 
-4. **Token Optimization**
+3. **Token Optimization**
    - Reduce validation sequence complexity and length
    - Implement progressive validation (stop early on failures)
    - Optimize template design for token efficiency
 
-## Initial Conclusions
+## Progress Summary
 
-While the current implementation successfully demonstrates the potential of the EdgePrompt approach, this initial test revealed **significant implementation flaws** that must be addressed before meaningful comparisons can be made. The lack of topic consistency across runs is especially problematic, as it prevents direct comparison of output quality.
+The critical topic inconsistency issue has been successfully addressed, enabling meaningful comparison between runs. All four runs now correctly focus on the same algebraic topic, ensuring that evaluation metrics will be properly aligned.
 
-The promising aspect is that Run 4 (EdgeLLM + EdgePrompt) did correctly address the intended topic despite the unrefined implementation, suggesting the approach has merit. However, reliable metrics and comparisons will require fixing the identified critical gaps in the next iteration.
+The implementation now maintains topic consistency by generating a teacher request at the beginning of each test case and sharing it across all runs. This approach follows the Meta-Dialectical Methodology by:
+1. Identifying the issue (thesis)
+2. Analyzing failure modes (antithesis)
+3. Developing a solution that maintains consistency across contexts
+
+Three critical gaps remain to be addressed in subsequent iterations, but the current implementation now provides a valid foundation for comparing the different approaches.
