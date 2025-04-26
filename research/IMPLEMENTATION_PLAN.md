@@ -1,349 +1,135 @@
 # EdgePrompt Refactoring Implementation Plan
 
-This document outlines the specific changes needed to align the codebase with the revised Phase 1 experimental design specified in `docs/specifications/PROMPT_ENGINEERING.md`.
+## Background & Current State
 
-## Overview
+The EdgePrompt research framework has undergone a significant refactoring to align with the revised Phase 1 experimental design. Key changes implemented include:
 
-The key changes involve:
-1. Rename terminology (LLM-L/LLM-S to CloudLLM/EdgeLLM) ✅
-2. Refactor the test execution to implement the four-run structure ✅
-3. Update configuration files to use the new terminology ✅
-4. Modify the result structure to store data according to the new run organization ✅
-5. Set up Run 1 as the Phase 1 Proxy Reference for evaluation ✅
+1.  **Terminology Update:** Renamed "LLM-L" to "CloudLLM" and "LLM-S" to "EdgeLLM" across the codebase and configurations.
+2.  **Four-Run Structure:** Replaced the previous Scenario A/B execution with a four-run structure:
+    *   **Run 1:** CloudLLM Baseline (SingleTurn_Direct) - Serves as the quality reference.
+    *   **Run 2:** CloudLLM EdgePrompt (MultiTurn_EdgePrompt) - Cloud performance with EdgePrompt method.
+    *   **Run 3:** EdgeLLM Baseline (SingleTurn_Direct) - Edge baseline performance.
+    *   **Run 4:** EdgeLLM EdgePrompt (MultiTurn_EdgePrompt) - Target method for evaluation.
+3.  **Configuration Updates:** `model_configs.json` and `test_suites/ab_test_suite.json` reflect the new terminology and run structure.
+4.  **Core Runner Update:** `runner/runner_core.py` now orchestrates the four runs.
+5.  **Topic Consistency:** Implemented a shared teacher request mechanism per test case to ensure all four runs address the same topic. This was a critical fix from previous iterations.
+6.  **Analysis/Visualization Alignment:** `scripts/analyze_results.py` and `scripts/render_figures.py` have been updated to process the four-run data structure and generate the intended comparison outputs (e.g., Run 4 vs Run 3 for efficiency/safety, Runs 3/4 vs Run 1 for quality).
+7.  **Initial Template Robustness:** Basic default value handling was added to `template_engine.py`.
+8.  **JSON Utilities:** A `json_utils.py` module was added with functions for more robust JSON extraction and validation. Fallback logic using simplified templates and direct JSON generation was added to `evaluation_engine.py`.
 
-## Implementation Tasks
+**Current Goal:** Address the remaining critical issues identified in `TEST_RESULTS.md` to achieve reliable data generation for Phase 1, focusing on validating the effectiveness and efficiency of the EdgePrompt method (Run 4) compared to the Edge Baseline (Run 3), using the Cloud Baseline (Run 1) as a reference.
 
-### 1. Configuration File Updates
+**Remaining Critical Issues (As of Last Review):**
 
-#### 1.1. `configs/model_configs.json` ✅
-- Rename top-level keys:
-  - `"llm_l_models"` → `"cloud_llm_models"` ✅
-  - `"llm_s_models"` → `"edge_llm_models"` ✅
+1.  **Validation Robustness (JSON Parsing):** Despite improvements and fallbacks (`json_utils.py`), logs indicate persistent failures in reliably parsing JSON outputs from validation steps, especially from EdgeLLM, but occasionally even from CloudLLM. This corrupts results.
+2.  **Token Usage Inefficiency:** Run 4 (EdgePrompt) consumes significantly more tokens than Run 3 (Edge Baseline), primarily due to the multi-stage validation process. This needs optimization for practical edge deployment.
+3.  **Template Standardization:** While basic defaults exist, warnings for missing variables still occur, indicating potential inconsistencies or incomplete template definitions.
 
-#### 1.2. `configs/test_suites/ab_test_suite.json` ✅
-- Modify the `models` object:
-  - Rename `"llm_l"` → `"cloud_llm"` ✅
-  - Rename `"llm_s"` → `"edge_llm"` ✅
-- Change A/B test structure to use the four run organization:
-  - Replace `scenario_a_variants` section with a `run_parameters` section that defines specific parameters for each run ✅
-  - Update `analysis_targets` to reflect comparisons between Run 1-4, especially Run 4 vs Run 3 ✅
+## Implementation Tasks (Prioritized)
 
-### 2. Python Module Updates
+### 1. Validation System Overhaul (Highest Priority)
 
-#### 2.1. `runner/config_loader.py` ✅
-- Modify `load_model_config`:
-  - Update references to look in `"cloud_llm_models"` and `"edge_llm_models"` in model_configs.json ✅
-  - Update logging messages to use the new terminology ✅
+**Goal:** Achieve near 100% reliability in parsing validation results (passed/score/feedback) from both CloudLLM and EdgeLLM outputs.
 
-#### 2.2. `runner/model_manager.py` ✅
-- Rename methods for clarity:
-  - `initialize_llm_l` → `initialize_cloud_llm` ✅
-  - `initialize_llm_s` → `initialize_edge_llm` ✅
-  - `execute_llm_l` → `execute_cloud_llm` ✅
-  - `execute_llm_s` → `execute_edge_llm` ✅
-- Update internal references and logging to use the CloudLLM/EdgeLLM terminology ✅
+**Background:** Unreliable JSON parsing is the primary blocker. Models, especially smaller ones, struggle to adhere strictly to JSON-only output formats when embedded within complex prompts.
 
-#### 2.3. `runner/runner_core.py` ✅
-- Major refactoring required:
-  - Replace internal uses of "LLM-L"/"LLM-S" with "CloudLLM"/"EdgeLLM" ✅
-  - Update method calls to renamed ModelManager methods ✅
-  - Rewrite `run_test_suite` to use the 4-run structure instead of Scenario A/B ✅
-  - Replace `_run_scenario_a` and `_run_scenario_b` with methods for the four runs: ✅
-    - `_run_cloud_baseline` (SingleTurn_Direct with CloudLLM) ✅
-    - `_run_cloud_edgeprompt` (MultiTurn_EdgePrompt with CloudLLM) ✅
-    - `_run_edge_baseline` (SingleTurn_Direct with EdgeLLM) ✅
-    - `_run_edge_edgeprompt` (MultiTurn_EdgePrompt with EdgeLLM) ✅
-  - Modify result structure to store data under `run_1`, `run_2`, `run_3`, `run_4` keys ✅
-  - Set up quality/agreement metrics calculation in reference to Run 1 ✅
+**Tasks:**
 
-#### 2.4. `runner/result_logger.py` ✅
-- Update `log_result` to handle the new nested result structure with run_1 through run_4 ✅
+1.  **Simplify Validation Templates:**
+    *   **Action:** Review and aggressively simplify `configs/templates/validation_template.json` and `configs/templates/json_focused_validation_template.json`.
+    *   **Rationale:** Reduce cognitive load on the LLM. Remove *all* extraneous text, conversational filler, and complex criteria descriptions within the prompt. Focus solely on the input (Question, Answer) and the required JSON output structure. Use extremely direct instructions like "Output ONLY the following JSON structure: ...".
+    *   **File:** `configs/templates/validation_template.json`, `configs/templates/json_focused_validation_template.json`
 
-#### 2.5. Other Supporting Files
-- Update `constraint_enforcer.py`, `evaluation_engine.py` and other modules for consistency
+2.  **Enhance JSON Parsing in `json_utils.py`:**
+    *   **Action:** Review and potentially add more robust regex patterns to `extract_json_from_text` to handle variations like missing quotes around keys or boolean values, while being careful not to parse *incorrect* structures. Add logging for which extraction method succeeds.
+    *   **Rationale:** Capture more near-miss JSON outputs before resorting to repair or failure.
+    *   **File:** `runner/json_utils.py`
 
-### 3. Implementation Order 
+3.  **Refine JSON Repair Prompt:**
+    *   **Action:** Review the repair prompt generated in `model_manager.py::repair_json_with_llm`'s internal `llm_repair_func`. Make it extremely clear that *only* valid JSON is desired, explicitly mentioning the required keys again.
+    *   **Rationale:** Improve the success rate of the LLM-based repair mechanism.
+    *   **File:** `runner/model_manager.py` (within `repair_json_with_llm`)
 
-1. Begin with updating `model_configs.json` to use the new terminology ✅
-2. Update `config_loader.py` to work with the new configuration structure ✅
-3. Refactor `model_manager.py` to use the new method names and terminology ✅
-4. Create a new ab_test_suite.json file with the revised structure ✅
-5. Refactor `runner_core.py` to use the 4-run structure ✅
-6. Update `result_logger.py` to handle the new result structure ✅
-7. Make consistency updates throughout the remaining modules
+4.  **Add Non-LLM Fallback Parsing:**
+    *   **Action:** In `evaluation_engine.py`'s `validate_with_sequence`, if all JSON parsing/repair attempts fail for a validation stage result, implement a final *non-LLM* attempt using regex to extract simple signals directly from the raw `generated_text`. Look for patterns like `passed: true`, `score: 0.8`, `decision: pass`, etc. If found, populate the `stage_result` with these extracted values and default feedback, logging a clear warning that fallback parsing was used.
+    *   **Rationale:** Extract *some* result even from complete JSON failure, preventing the entire run from being invalidated due to one malformed validation step, while clearly marking the result as potentially less reliable.
+    *   **File:** `runner/evaluation_engine.py`
 
-### 4. Testing Strategy
+5.  **Investigate CloudLLM (Run 2) Validation Failures:**
+    *   **Action:** Add detailed DEBUG logging within `evaluation_engine.py` specifically before and after the CloudLLM call in `_run_cloud_edgeprompt`'s validation step. Log the exact prompt sent and the raw response received when a parsing error occurs.
+    *   **Rationale:** Understand why the high-capability model is failing the JSON task to inform prompt refinement.
+    *   **File:** `runner/evaluation_engine.py`, `runner/runner_core.py`
 
-After implementing the changes:
-1. Run a small test case end-to-end
-2. Verify the structure of the output JSONL file
-3. Check that each run (1-4) executes correctly
-4. Validate that Run 1 results are properly used as reference for comparing Run 3 and Run 4
+**Confirmation:**
+*   Run `run_test.sh --config configs/test_suites/ab_test_suite.json --log-level DEBUG`.
+*   Check `runner.log.txt` for *any* JSON parsing errors or warnings (including repair attempts and fallback usage). The goal is zero critical parsing errors that stop validation.
+*   Check `all_results.jsonl` to ensure `run_2.steps.multi_stage_validation` and `run_4.steps.multi_stage_validation` consistently contain structured `stageResults` with valid `passed`, `score`, and `feedback` fields.
 
-## Completed Refactoring
+### 2. Token Optimization (High Priority)
 
-The implementation of the four-run structure is now complete and the topic inconsistency issue has been fixed:
+**Goal:** Significantly reduce the token footprint of Run 4 (EdgeLLM EdgePrompt), particularly the validation steps, without sacrificing essential guardrail effectiveness.
 
-1. Configuration files have been updated with the new terminology and structure:
-   - `configs/model_configs.json` now uses `cloud_llm_models` and `edge_llm_models`
-   - `configs/test_suites/ab_test_suite.json` now uses the four-run structure with `run_parameters`
+**Background:** Current results show Run 4 uses ~5x the tokens of Run 3, largely due to multiple validation LLM calls.
 
-2. Core modules have been refactored:
-   - `config_loader.py` loads models from the correct sections
-   - `model_manager.py` uses the new method names and executes models correctly
-   - `result_logger.py` handles the new result structure with run_1 through run_4
-   - `runner_core.py` has been completely rewritten to implement the four-run structure
+**Tasks:**
 
-3. The new structure implements:
-   - Run 1: CloudLLM executor with SingleTurn_Direct method (baseline reference)
-   - Run 2: CloudLLM executor with MultiTurn_EdgePrompt method
-   - Run 3: EdgeLLM executor with SingleTurn_Direct method
-   - Run 4: EdgeLLM executor with MultiTurn_EdgePrompt method (target improvement)
+1.  **Detailed Token Profiling:**
+    *   **Action:** Enhance `evaluation_engine.py`'s `validate_with_sequence` loop to log the `input_tokens` and `output_tokens` for *each individual validation stage* call.
+    *   **Rationale:** Pinpoint which validation stages are most token-intensive.
+    *   **File:** `runner/evaluation_engine.py`
 
-4. Topic consistency has been implemented:
-   - Teacher request is now generated once at the test case level
-   - This shared request is stored in the test case object and used by all runs
-   - Question generation in baseline runs has been enhanced to maintain topic focus
-   - Topic verification logging has been added to confirm consistency across runs
+2.  **Optimize Validation Templates (Brevity):**
+    *   **Action:** Revisit validation templates (`validation_template.json`, `json_focused_validation_template.json`) identified in Task 1. Further shorten instructions and context where possible, focusing only on the essential information needed for the specific check.
+    *   **Rationale:** Directly reduce input tokens per validation call.
+    *   **File:** `configs/templates/validation_template.json`, `configs/templates/json_focused_validation_template.json`
 
-5. Placeholder for quality metrics comparing against Run 1 (reference) has been added
+3.  **Consolidate Validation Stages:**
+    *   **Action:** Analyze the `basic_validation_sequence.json`. Can checks like 'relevance' and 'accuracy' be combined into a single prompt/LLM call without losing effectiveness? Design and test a new, more concise validation sequence (e.g., `consolidated_validation_sequence.json`).
+    *   **Rationale:** Reduce the *number* of LLM calls required for validation.
+    *   **File:** Create new file in `configs/templates/`
 
-## Next Steps: Resolving Remaining Critical Issues
+4.  **Implement Progressive Validation (Early Exit):**
+    *   **Action:** Verify that `evaluation_engine.py` strictly adheres to the `abortOnFailure` setting in the validation sequence schema. If a high-priority check (like safety) fails, subsequent lower-priority checks should be skipped.
+    *   **Rationale:** Avoid unnecessary token usage on answers already deemed invalid.
+    *   **File:** `runner/evaluation_engine.py`
 
-### 1. Template System Flexibility Enhancement ✅ FIXED & PLANNED
+**Confirmation:**
+*   Run the test suite using both `basic_validation_sequence` and the new `consolidated_validation_sequence` (update `ab_test_suite.json` to test both if needed).
+*   Compare `run_4.total_metrics.total_tokens` between the sequences.
+*   Analyze logs for per-stage token counts to verify reduction.
+*   Manually review results to ensure the consolidated sequence still catches errors effectively (compare `run_4.final_decision` across sequence types).
 
-- [x] PHASE 1 - Initial Robustness (COMPLETED)
-  - [x] Modify template_engine.py to handle variable defaults
-  - [x] Implement clean variable substitution with debug logging
-  - [x] Add basic defaults for built-in templates
-  - [x] Verify backward compatibility with existing templates
+### 3. Template Standardization (Medium Priority)
 
-- [ ] PHASE 2 - Comprehensive Template Architecture (PLANNED)
-  - [ ] Design a flexible schema system for template validation
-  - [ ] Support for template variants (teacher-created, admin-defined, downloaded)
-  - [ ] Implement variable transformation pipeline with custom handlers
-  - [ ] Add template versioning and compatibility hooks
-  - [ ] Create template preview/testing tooling
-  
-**Implementation Notes:**
-- Any template system must anticipate significant variation in template structure
-- Templates will be authored by various stakeholders (teachers, admins, third parties)
-- Template engine should be robust to missing variables with sensible fallbacks
-- Logging should be informative but not block execution for non-critical issues
+**Goal:** Eliminate warnings about missing template variables and ensure all prompts are generated consistently using defined defaults.
 
-### 2. Validation System Overhaul
+**Background:** While basic defaults were added, some variables used in patterns might still lack defaults in the template definitions.
 
-- [ ] DO: Redesign validation JSON structure
-  - [ ] Create simpler, more robust JSON schemas for validation
-  - [ ] Add explicit type hints in prompts (e.g., "score must be a number between 0 and 10")
-  - [ ] Restructure validation steps to use simpler objects with fewer nested properties
-- [ ] DO: Implement progressive validation
-  - [ ] Exit validation sequence early on critical failures
-  - [ ] Prioritize essential validation steps over optional ones
-  - [ ] Add fallbacks for partially successful validations
-- [ ] DO: Add fallback validation mechanisms
-  - [ ] Enhance JSON parsing with better regex patterns
-  - [ ] Implement structured text parsing as fallback when JSON fails
-  - [ ] Add specific error handling for common validation failure patterns
-- [ ] DO: Simplify validation for EdgeLLM
-  - [ ] Create EdgeLLM-specific validation templates with simpler structure
-  - [ ] Reduce validation steps for EdgeLLM to essential checks only
-  - [ ] Improve error messages specific to EdgeLLM limitations
-- [ ] CONFIRM: Run test with validation-focused logging
-  - [ ] Verify no JSON parsing errors occur
-  - [ ] Confirm validation results are consistently structured
-  - [ ] Check that validation failures are properly handled
+**Tasks:**
 
-### 3. Token Optimization
+1.  **Audit & Update Template Defaults:**
+    *   **Action:** Systematically review *every* template file in `configs/templates/`. For each variable placeholder `[var_name]` found in the `"pattern"`, ensure `var_name` exists as a key within the `"variables"` object in that template file. Provide a sensible default value (even if an empty string `""`). Pay special attention to `direct_constraint_template.json`.
+    *   **Rationale:** Guarantees that `template_engine.py` can always find a value (either provided or default) for substitution.
+    *   **Files:** All files in `configs/templates/`
 
-- [ ] DO: Analyze token usage patterns
-  - [ ] Profile token consumption across all steps of each run
-  - [ ] Identify highest token-consuming components
-  - [ ] Quantify baseline vs. current token usage
-- [ ] DO: Optimize validation sequence
-  - [ ] Reduce prompt length in validation steps
-  - [ ] Consolidate multiple validation checks where possible
-  - [ ] Simplify instruction text in prompts
-- [ ] DO: Implement token budgeting
-  - [ ] Add configurable token budget limits for each run
-  - [ ] Create dynamic validation that adapts to token constraints
-  - [ ] Implement adaptive prompt compression techniques
-- [ ] DO: Optimize template design
-  - [ ] Remove redundant or unnecessary text from templates
-  - [ ] Create more concise versions of standard prompts
-  - [ ] Develop context-aware template selection based on token limits
-- [ ] CONFIRM: Measure token usage improvements
-  - [ ] Compare token counts before and after optimization
-  - [ ] Verify that validation quality is maintained despite token reduction
-  - [ ] Calculate token efficiency metrics (score per token)
+2.  **Refine Template Engine Logging:**
+    *   **Action:** Modify the logging in `template_engine.py::process_template` to clearly distinguish between: a) using a provided variable, b) using a default variable from the template, and c) a variable in the pattern missing both provided and default values (this case should be eliminated by step 1, but log an ERROR if it occurs).
+    *   **Rationale:** Improve debuggability and confirm defaults are working as expected.
+    *   **File:** `runner/template_engine.py`
 
-### Implementation Order
+**Confirmation:**
+*   Run the test suite with `--log-level DEBUG`.
+*   Scrutinize `runner.log.txt` for any template processing warnings or errors. The goal is zero warnings related to missing variables that have defaults defined. Verify DEBUG logs show correct usage of defaults.
 
-1. Start with Template Standardization, as this provides the foundation for the other improvements
-2. Next address Validation System Overhaul, as validation errors can corrupt results
-3. Finally implement Token Optimization, once the system is working reliably
+## Implementation Order
 
-### Analysis and Documentation
+1.  **Validation System Overhaul:** Fix the core reliability issues first.
+2.  **Token Optimization:** Improve efficiency once validation is reliable.
+3.  **Template Standardization:** Clean up warnings and ensure consistency.
 
-- [ ] Update analysis scripts to process the new result structure
-- [ ] Test the implementation with both mock mode and real API calls
-- [ ] Document token usage improvements and validation success rates
-- [ ] Implement detailed quality/agreement metrics calculation in the analysis phase
+## Analysis and Documentation
 
-## Test Plan
+*   **Update Analysis Scripts:** Ensure `analyze_results.py` and `render_figures.py` correctly process and visualize the data generated *after* the validation and token optimizations are complete.
+*   **Update Documentation:** Update `IMPLEMENTATION_PLAN.md`, `TEST_RESULTS.md`, and `README.md` to reflect the final state after these tasks are completed. Document the effectiveness of the JSON repair/fallback mechanisms and the achieved token savings.
 
-To verify the implementation works correctly with real models:
-
-### 1. Environment Setup
-
-1. Configure API keys and endpoints in a `.env` file:
-   ```bash
-   # EdgePrompt Research Environment
-   OPENAI_API_KEY=<your-openai-api-key>
-   ANTHROPIC_API_KEY=<your-anthropic-api-key>
-   LM_STUDIO_URL=<lm-studio-server-url>  # Default: http://localhost:1234/v1
-   ```
-
-2. Verify installation of required packages:
-   ```bash
-   pip install openai anthropic requests
-   ```
-
-3. Ensure LM Studio server is running for EdgeLLM models:
-   - Launch LM Studio
-   - Load the required models (gemma-3-4b-it)
-   - Start the local server
-   - Verify connectivity with the LM Studio API
-
-### 2. Test Execution
-
-1. Start with a small test case:
-   ```bash
-   python -m runner.runner_cli --config configs/test_suites/ab_test_suite.json --output ./results --log-level INFO
-   ```
-
-2. Monitor execution of all four runs:
-   - Run 1: CloudLLM with SingleTurn_Direct
-   - Run 2: CloudLLM with MultiTurn_EdgePrompt
-   - Run 3: EdgeLLM with SingleTurn_Direct
-   - Run 4: EdgeLLM with MultiTurn_EdgePrompt
-
-3. Verify results generation:
-   - Check that all runs complete successfully
-   - Examine the output JSON files for proper structure
-   - Ensure metrics are being collected correctly
-
-### 3. Results Analysis
-
-1. Verify result structure:
-   - Confirm each run has input, output, and metrics data
-   - Check that quality metrics placeholders are correctly formatted
-
-2. Compare run performance:
-   - Compare Run 3 vs Run 1 (baseline performance gap)
-   - Compare Run 4 vs Run 3 (EdgePrompt improvement)
-   - Analyze efficiency metrics (token usage, latency)
-
-3. Validate quality comparison:
-   - Review Run 1 outputs as reference standard
-   - Verify the preparation for post-analysis phase comparing outputs
-
-### 4. Error Handling Validation
-
-1. Test system resilience:
-   - Temporarily disconnect LM Studio to verify error handling
-   - Introduce invalid API keys to verify graceful failure
-   - Test with incomplete/malformed templates
-
-2. Verify logging quality:
-   - Ensure errors are properly captured in log files
-   - Check that error messages are informative and actionable
-
-## Run Methods Structure
-
-The four run methods have been implemented in `runner_core.py`:
-
-```python
-def _run_cloud_baseline(self, test_case, cloud_llm_model_data):
-    """
-    Execute Run 1 (Cloud Baseline):
-    CloudLLM executor with SingleTurn_Direct method.
-    """
-    # Generate simple question, simulate student answer, evaluate, and enforce constraints
-    pass
-
-def _run_cloud_edgeprompt(self, test_case, cloud_llm_model_data, validation_sequence_id):
-    """
-    Execute Run 2 (Cloud EdgePrompt):
-    CloudLLM executor with MultiTurn_EdgePrompt method.
-    """
-    # Generate structured question with constraints, simulate student answer, 
-    # perform multistage validation, enforce constraints, and review if needed
-    pass
-
-def _run_edge_baseline(self, test_case, edge_llm_model_data):
-    """
-    Execute Run 3 (Edge Baseline):
-    EdgeLLM executor with SingleTurn_Direct method.
-    """
-    # Generate simple question, simulate student answer, evaluate, and enforce constraints
-    # Quality compared to Run 1 reference in analysis phase
-    pass
-
-def _run_edge_edgeprompt(self, test_case, edge_llm_model_data, validation_sequence_id):
-    """
-    Execute Run 4 (Edge EdgePrompt):
-    EdgeLLM executor with MultiTurn_EdgePrompt method.
-    """
-    # Generate structured question with constraints, simulate student answer, 
-    # perform multistage validation, enforce constraints
-    # Quality compared to Run 1 reference in analysis phase
-    pass
-```
-
-## Result Structure
-
-The new result structure includes quality metrics compared to Run 1 (reference):
-
-```json
-{
-  "id": "run_123",
-  "timestamp": "2025-04-26T12:34:56.789Z",
-  "test_case_id": "simple_math_question",
-  "cloud_llm_model_id": "gpt-4o",
-  "edge_llm_model_id": "gemma-3-4b-it",
-  "hardware_profile": "sim_unconstrained",
-  "input_stimulus": {...},
-  "run_1": {
-    "output": "...",
-    "status": "completed",
-    "steps": {...},
-    "final_decision": {...},
-    "total_metrics": {...}
-  },
-  "run_2": {
-    "output": "...",
-    "status": "completed",
-    "steps": {...},
-    "final_decision": {...},
-    "total_metrics": {...},
-    "quality_vs_ref": {...}
-  },
-  "run_3": {
-    "output": "...",
-    "status": "completed",
-    "steps": {...},
-    "final_decision": {...},
-    "total_metrics": {...},
-    "quality_vs_ref": {...}
-  },
-  "run_4": {
-    "output": "...",
-    "status": "completed",
-    "steps": {...},
-    "final_decision": {...},
-    "total_metrics": {...},
-    "quality_vs_ref": {...}
-  }
-}
-```
+This plan prioritizes fixing the blocking validation issues, then addresses efficiency, and finally cleans up template handling. Completing these steps should result in a reliable framework capable of generating the necessary data for Phase 1 analysis.
