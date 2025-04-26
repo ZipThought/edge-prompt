@@ -108,13 +108,87 @@ The implementation of the four-run structure is now complete and the topic incon
 
 5. Placeholder for quality metrics comparing against Run 1 (reference) has been added
 
-## Next Steps
+## Next Steps: Resolving Remaining Critical Issues
 
-1. Update the analysis scripts to process the new result structure
-2. Test the implementation with a small end-to-end test case
-3. Verify the output JSONL structure is correct
-4. Test the system with both mock mode and real API calls
-5. Implement detailed quality/agreement metrics calculation in the analysis phase
+### 1. Template Standardization
+
+- [ ] DO: Create a template variable defaults mechanism in template_engine.py
+  - [ ] Add defaultValues field to all template JSON schemas
+  - [ ] Implement fallback to defaults when variables are missing
+  - [ ] Log warnings but continue processing when non-critical variables are missing
+- [ ] DO: Update direct_constraint_template.json with all necessary fields
+  - [ ] Add default values for length_parameters
+  - [ ] Add default values for explicit_safety_rules
+  - [ ] Add default values for educational_material
+  - [ ] Add default values for learning_objectives
+  - [ ] Add default values for content_type
+- [ ] DO: Add template preprocessing step
+  - [ ] Detect and warn about required vs. optional variables
+  - [ ] Add standardized placeholder text for missing variables
+  - [ ] Create helper function for variable state verification
+- [ ] CONFIRM: Run test with DEBUG logging level
+  - [ ] Verify no template variable warnings appear in logs
+  - [ ] Verify prompts include all necessary context
+  - [ ] Ensure backward compatibility with existing templates
+
+### 2. Validation System Overhaul
+
+- [ ] DO: Redesign validation JSON structure
+  - [ ] Create simpler, more robust JSON schemas for validation
+  - [ ] Add explicit type hints in prompts (e.g., "score must be a number between 0 and 10")
+  - [ ] Restructure validation steps to use simpler objects with fewer nested properties
+- [ ] DO: Implement progressive validation
+  - [ ] Exit validation sequence early on critical failures
+  - [ ] Prioritize essential validation steps over optional ones
+  - [ ] Add fallbacks for partially successful validations
+- [ ] DO: Add fallback validation mechanisms
+  - [ ] Enhance JSON parsing with better regex patterns
+  - [ ] Implement structured text parsing as fallback when JSON fails
+  - [ ] Add specific error handling for common validation failure patterns
+- [ ] DO: Simplify validation for EdgeLLM
+  - [ ] Create EdgeLLM-specific validation templates with simpler structure
+  - [ ] Reduce validation steps for EdgeLLM to essential checks only
+  - [ ] Improve error messages specific to EdgeLLM limitations
+- [ ] CONFIRM: Run test with validation-focused logging
+  - [ ] Verify no JSON parsing errors occur
+  - [ ] Confirm validation results are consistently structured
+  - [ ] Check that validation failures are properly handled
+
+### 3. Token Optimization
+
+- [ ] DO: Analyze token usage patterns
+  - [ ] Profile token consumption across all steps of each run
+  - [ ] Identify highest token-consuming components
+  - [ ] Quantify baseline vs. current token usage
+- [ ] DO: Optimize validation sequence
+  - [ ] Reduce prompt length in validation steps
+  - [ ] Consolidate multiple validation checks where possible
+  - [ ] Simplify instruction text in prompts
+- [ ] DO: Implement token budgeting
+  - [ ] Add configurable token budget limits for each run
+  - [ ] Create dynamic validation that adapts to token constraints
+  - [ ] Implement adaptive prompt compression techniques
+- [ ] DO: Optimize template design
+  - [ ] Remove redundant or unnecessary text from templates
+  - [ ] Create more concise versions of standard prompts
+  - [ ] Develop context-aware template selection based on token limits
+- [ ] CONFIRM: Measure token usage improvements
+  - [ ] Compare token counts before and after optimization
+  - [ ] Verify that validation quality is maintained despite token reduction
+  - [ ] Calculate token efficiency metrics (score per token)
+
+### Implementation Order
+
+1. Start with Template Standardization, as this provides the foundation for the other improvements
+2. Next address Validation System Overhaul, as validation errors can corrupt results
+3. Finally implement Token Optimization, once the system is working reliably
+
+### Analysis and Documentation
+
+- [ ] Update analysis scripts to process the new result structure
+- [ ] Test the implementation with both mock mode and real API calls
+- [ ] Document token usage improvements and validation success rates
+- [ ] Implement detailed quality/agreement metrics calculation in the analysis phase
 
 ## Test Plan
 
