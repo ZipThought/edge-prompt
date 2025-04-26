@@ -110,6 +110,75 @@ The implementation of the four-run structure is now complete:
 4. Test the system with both mock mode and real API calls
 5. Implement detailed quality/agreement metrics calculation in the analysis phase
 
+## Test Plan
+
+To verify the implementation works correctly with real models:
+
+### 1. Environment Setup
+
+1. Configure API keys and endpoints in a `.env` file:
+   ```bash
+   # EdgePrompt Research Environment
+   OPENAI_API_KEY=<your-openai-api-key>
+   ANTHROPIC_API_KEY=<your-anthropic-api-key>
+   LM_STUDIO_URL=<lm-studio-server-url>  # Default: http://localhost:1234/v1
+   ```
+
+2. Verify installation of required packages:
+   ```bash
+   pip install openai anthropic requests
+   ```
+
+3. Ensure LM Studio server is running for EdgeLLM models:
+   - Launch LM Studio
+   - Load the required models (gemma-3-4b-it)
+   - Start the local server
+   - Verify connectivity with the LM Studio API
+
+### 2. Test Execution
+
+1. Start with a small test case:
+   ```bash
+   python -m runner.runner_cli --config configs/test_suites/ab_test_suite.json --output ./results --log-level INFO
+   ```
+
+2. Monitor execution of all four runs:
+   - Run 1: CloudLLM with SingleTurn_Direct
+   - Run 2: CloudLLM with MultiTurn_EdgePrompt
+   - Run 3: EdgeLLM with SingleTurn_Direct
+   - Run 4: EdgeLLM with MultiTurn_EdgePrompt
+
+3. Verify results generation:
+   - Check that all runs complete successfully
+   - Examine the output JSON files for proper structure
+   - Ensure metrics are being collected correctly
+
+### 3. Results Analysis
+
+1. Verify result structure:
+   - Confirm each run has input, output, and metrics data
+   - Check that quality metrics placeholders are correctly formatted
+
+2. Compare run performance:
+   - Compare Run 3 vs Run 1 (baseline performance gap)
+   - Compare Run 4 vs Run 3 (EdgePrompt improvement)
+   - Analyze efficiency metrics (token usage, latency)
+
+3. Validate quality comparison:
+   - Review Run 1 outputs as reference standard
+   - Verify the preparation for post-analysis phase comparing outputs
+
+### 4. Error Handling Validation
+
+1. Test system resilience:
+   - Temporarily disconnect LM Studio to verify error handling
+   - Introduce invalid API keys to verify graceful failure
+   - Test with incomplete/malformed templates
+
+2. Verify logging quality:
+   - Ensure errors are properly captured in log files
+   - Check that error messages are informative and actionable
+
 ## Run Methods Structure
 
 The four run methods have been implemented in `runner_core.py`:
