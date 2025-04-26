@@ -89,7 +89,7 @@ def load_results(data_dir: str, logger: logging.Logger) -> pd.DataFrame:
                                     path_parts = full_path.split(os.sep)
                                     # Try to find known test suite names in the path
                                     for part in path_parts:
-                                        if part in ['multi_stage_validation', 'neural_symbolic_validation', 'resource_optimization']:
+                                        if part in ['multi_stage_validation', 'neural_symbolic_validation', 'resource_optimization', 'four_run_comparison']:
                                             data['test_suite_id'] = part
                                             break
                                 results.append(data)
@@ -109,21 +109,21 @@ def load_results(data_dir: str, logger: logging.Logger) -> pd.DataFrame:
     df = pd.json_normalize(results)
     return df
 
-def analyze_scenario_comparison(df: pd.DataFrame, output_dir: str, logger: logging.Logger) -> None:
+def analyze_four_run_comparison(df: pd.DataFrame, output_dir: str, logger: logging.Logger) -> None:
     """
-    Analyze Phase 1 Scenario comparison results (e.g., A/B testing).
+    Analyze Four-Run Comparison results (CloudLLM vs EdgeLLM with SingleTurn_Direct vs MultiTurn_EdgePrompt).
 
-    Loads detailed run data, extracts metrics for Scenario A and B,
+    Loads detailed run data, extracts metrics for all four runs,
     calculates aggregate statistics (rates, averages), and saves
     both detailed and aggregated comparison data to CSV files suitable
     for the render_figures.py script.
     
     Args:
-        df: DataFrame containing raw results (expecting nested scenario data).
+        df: DataFrame containing raw results (expecting nested run data).
         output_dir: Directory to save processed CSV results.
         logger: Logger instance.
     """
-    logger.info("Starting A/B Comparison Analysis (Phase 1)...")
+    logger.info("Starting Four-Run Comparison Analysis...")
 
     # Ensure output directory exists
     try:
@@ -132,91 +132,99 @@ def analyze_scenario_comparison(df: pd.DataFrame, output_dir: str, logger: loggi
         logger.error(f"Failed to create output directory {output_dir}: {e}")
         return # Cannot proceed without output directory
 
-    # Filter DataFrame for relevant rows (containing both scenarios)
-    # Check if scenario data is nested or already flattened
-    if 'scenario_A.status' in df.columns and 'scenario_B.status' in df.columns:
+    # Filter DataFrame for relevant rows (containing all runs)
+    # Check if run data is nested or already flattened
+    if 'run_1.status' in df.columns and 'run_3.status' in df.columns and 'run_4.status' in df.columns:
         # Data seems already normalized/flattened
-        ab_df = df.copy()
-        logger.debug(f"Found {len(ab_df)} rows with flattened scenario data.")
-    elif 'scenario_A' in df.columns and 'scenario_B' in df.columns:
+        four_run_df = df.copy()
+        logger.debug(f"Found {len(four_run_df)} rows with flattened run data.")
+    elif 'run_1' in df.columns and 'run_3' in df.columns and 'run_4' in df.columns:
          # Data needs normalization from nested dicts
          try:
              # Check if columns contain dicts or potentially JSON strings
-             if isinstance(df['scenario_A'].iloc[0], str):
-                  df['scenario_A'] = df['scenario_A'].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
-             if isinstance(df['scenario_B'].iloc[0], str):
-                  df['scenario_B'] = df['scenario_B'].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
+             if isinstance(df['run_1'].iloc[0], str):
+                  df['run_1'] = df['run_1'].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
+             if isinstance(df['run_3'].iloc[0], str):
+                  df['run_3'] = df['run_3'].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
+             if isinstance(df['run_4'].iloc[0], str):
+                  df['run_4'] = df['run_4'].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
 
              # Normalize nested data
-             ab_df = pd.json_normalize(df.to_dict('records'), sep='.')
-             logger.debug(f"Normalized nested scenario data. Resulting columns: {ab_df.columns.tolist()}")
+             four_run_df = pd.json_normalize(df.to_dict('records'), sep='.')
+             logger.debug(f"Normalized nested run data. Resulting columns: {four_run_df.columns.tolist()}")
          except Exception as e:
-             logger.error(f"Error normalizing nested scenario data: {e}", exc_info=True)
+             logger.error(f"Error normalizing nested run data: {e}", exc_info=True)
              return
     else:
-         logger.warning("Could not find 'scenario_A' and 'scenario_B' columns/data for A/B analysis. Skipping.")
+         logger.warning("Could not find 'run_1', 'run_3' and 'run_4' columns/data for analysis. Skipping.")
          return
 
-    if ab_df.empty:
-        logger.warning("No A/B comparison results found after filtering/normalization. Skipping.")
+    if four_run_df.empty:
+        logger.warning("No four-run comparison results found after filtering/normalization. Skipping.")
         return
         
-    logger.info(f"Processing {len(ab_df)} A/B comparison results entries.")
-
-    # Check for variant_id column or add default if missing
-    if 'variant_id' not in ab_df.columns:
-        logger.info("No 'variant_id' column found. Adding default 'standard' variant ID.")
-        ab_df['variant_id'] = 'standard'
+    logger.info(f"Processing {len(four_run_df)} four-run comparison results entries.")
     
-    # Get unique variants
-    variants = ab_df['variant_id'].unique()
-    logger.info(f"Found {len(variants)} Scenario A variants: {variants}")
-
     # --- Extract Key Metrics Per Run --- 
     # Initialize list to store extracted data for each run
     detailed_comparison_records = []
 
-    for _, row in ab_df.iterrows():
+    for _, row in four_run_df.iterrows():
         record = {
             # Identifiers
             'run_id': row.get('id', 'unknown'),
             'test_case_id': row.get('test_case_id', 'unknown'),
-            'llm_l_model_id': row.get('llm_l_model_id', 'unknown'),
-            'llm_s_model_id': row.get('llm_s_model_id', 'unknown'),
-            'hardware_profile': row.get('hardware_profile', 'unknown'),
-            'variant_id': row.get('variant_id', 'standard')
+            'cloud_llm_model_id': row.get('cloud_llm_model_id', 'unknown'),
+            'edge_llm_model_id': row.get('edge_llm_model_id', 'unknown'),
+            'hardware_profile': row.get('hardware_profile', 'unknown')
         }
 
-        # --- Scenario A Metrics --- 
+        # --- Run 4 Metrics (EdgePrompt) --- 
         # Safety (derived from constraints)
-        a_constraint_violations = row.get('scenario_A.steps.constraint_enforcement.violations', [])
+        run4_constraint_violations = row.get('run_4.steps.constraint_enforcement.violations', [])
         # Ensure violations is a list before processing
-        if not isinstance(a_constraint_violations, list):
-             a_constraint_violations = [] 
-        record['safety_violation_A'] = int(any("prohibited keyword" in str(v).lower() for v in a_constraint_violations))
+        if not isinstance(run4_constraint_violations, list):
+             run4_constraint_violations = [] 
+        record['safety_violation_run4'] = int(any("prohibited keyword" in str(v).lower() for v in run4_constraint_violations))
         # Constraint Adherence
-        record['constraint_passed_A'] = int(row.get('scenario_A.steps.constraint_enforcement.passed', False))
+        record['constraint_passed_run4'] = int(row.get('run_4.steps.constraint_enforcement.passed', False))
         # Validation
-        record['validation_passed_A'] = int(row.get('scenario_A.final_decision.passed_validation', False))
-        record['validation_score_A'] = pd.to_numeric(row.get('scenario_A.final_decision.final_score'), errors='coerce')
+        record['validation_passed_run4'] = int(row.get('run_4.final_decision.passed_validation', False))
+        record['validation_score_run4'] = pd.to_numeric(row.get('run_4.final_decision.final_score'), errors='coerce')
         # Performance
-        record['total_tokens_A'] = pd.to_numeric(row.get('scenario_A.total_metrics.total_tokens'), errors='coerce')
-        record['latency_ms_A'] = pd.to_numeric(row.get('scenario_A.total_metrics.latency_ms'), errors='coerce')
+        record['total_tokens_run4'] = pd.to_numeric(row.get('run_4.total_metrics.total_tokens'), errors='coerce')
+        record['latency_ms_run4'] = pd.to_numeric(row.get('run_4.total_metrics.latency_ms'), errors='coerce')
+        # Output for quality comparison
+        record['output_run4'] = row.get('run_4.output', '')
 
-        # --- Scenario B Metrics ---
+        # --- Run 3 Metrics (Edge Baseline) ---
         # Safety (derived from constraints)
-        b_constraint_violations = row.get('scenario_B.steps.constraint_enforcement.violations', [])
-        if not isinstance(b_constraint_violations, list):
-             b_constraint_violations = []
-        record['safety_violation_B'] = int(any("prohibited keyword" in str(v).lower() for v in b_constraint_violations))
+        run3_constraint_violations = row.get('run_3.steps.constraint_enforcement.violations', [])
+        if not isinstance(run3_constraint_violations, list):
+             run3_constraint_violations = []
+        record['safety_violation_run3'] = int(any("prohibited keyword" in str(v).lower() for v in run3_constraint_violations))
         # Constraint Adherence
-        record['constraint_passed_B'] = int(row.get('scenario_B.steps.constraint_enforcement.passed', False))
-        # Baseline Evaluation (use this for B's pass/score)
-        record['evaluation_passed_B'] = int(row.get('scenario_B.final_decision.passed_evaluation', False))
-        record['evaluation_score_B'] = pd.to_numeric(row.get('scenario_B.final_decision.final_score'), errors='coerce')
+        record['constraint_passed_run3'] = int(row.get('run_3.steps.constraint_enforcement.passed', False))
+        # Baseline Evaluation (use this for Run 3's pass/score)
+        record['evaluation_passed_run3'] = int(row.get('run_3.final_decision.passed_evaluation', False))
+        record['evaluation_score_run3'] = pd.to_numeric(row.get('run_3.final_decision.final_score'), errors='coerce')
         # Performance
-        record['total_tokens_B'] = pd.to_numeric(row.get('scenario_B.total_metrics.total_tokens'), errors='coerce')
-        record['latency_ms_B'] = pd.to_numeric(row.get('scenario_B.total_metrics.latency_ms'), errors='coerce')
+        record['total_tokens_run3'] = pd.to_numeric(row.get('run_3.total_metrics.total_tokens'), errors='coerce')
+        record['latency_ms_run3'] = pd.to_numeric(row.get('run_3.total_metrics.latency_ms'), errors='coerce')
+        # Output for quality comparison
+        record['output_run3'] = row.get('run_3.output', '')
+        
+        # --- Run 1 Metrics (Cloud Reference) ---
+        # Reference Data
+        record['total_tokens_run1'] = pd.to_numeric(row.get('run_1.total_metrics.total_tokens'), errors='coerce')
+        record['latency_ms_run1'] = pd.to_numeric(row.get('run_1.total_metrics.latency_ms'), errors='coerce')
+        record['output_run1'] = row.get('run_1.output', '')
+        
+        # --- Run 2 Metrics (Cloud EdgePrompt) ---
+        # Just include basic metrics for potential future use
+        record['total_tokens_run2'] = pd.to_numeric(row.get('run_2.total_metrics.total_tokens'), errors='coerce')
+        record['latency_ms_run2'] = pd.to_numeric(row.get('run_2.total_metrics.latency_ms'), errors='coerce')
+        record['output_run2'] = row.get('run_2.output', '')
 
         detailed_comparison_records.append(record)
 
@@ -226,21 +234,25 @@ def analyze_scenario_comparison(df: pd.DataFrame, output_dir: str, logger: loggi
     
     # --- Create Detailed DataFrame --- 
     detailed_df = pd.DataFrame(detailed_comparison_records)
+    
     # Handle potential NaN values resulting from coerce errors or missing data
-    numeric_cols = ['safety_violation_A', 'constraint_passed_A', 'validation_passed_A', 'validation_score_A', 'total_tokens_A', 'latency_ms_A',
-                    'safety_violation_B', 'constraint_passed_B', 'evaluation_passed_B', 'evaluation_score_B', 'total_tokens_B', 'latency_ms_B']
+    numeric_cols = [
+        'safety_violation_run4', 'constraint_passed_run4', 'validation_passed_run4', 'validation_score_run4', 'total_tokens_run4', 'latency_ms_run4',
+        'safety_violation_run3', 'constraint_passed_run3', 'evaluation_passed_run3', 'evaluation_score_run3', 'total_tokens_run3', 'latency_ms_run3',
+        'total_tokens_run1', 'latency_ms_run1', 'total_tokens_run2', 'latency_ms_run2'
+    ]
     for col in numeric_cols:
         if col in detailed_df.columns:
             detailed_df[col] = detailed_df[col].fillna(0)
 
     # Save detailed results
-    detailed_file = os.path.join(output_dir, 'ab_comparison_detailed.csv')
+    detailed_file = os.path.join(output_dir, 'four_run_comparison_detailed.csv')
     detailed_df.to_csv(detailed_file, index=False)
-    logger.info(f"Saved detailed A/B comparison results to {detailed_file}")
+    logger.info(f"Saved detailed four-run comparison results to {detailed_file}")
 
     # --- Aggregate Results for Visualization --- 
-    # Group by relevant factors (e.g., llm_s_model, hardware_profile, variant_id)
-    grouping_factors = ['llm_s_model_id', 'hardware_profile', 'variant_id']
+    # Group by relevant factors (cloud_llm_model_id, edge_llm_model_id, hardware_profile)
+    grouping_factors = ['cloud_llm_model_id', 'edge_llm_model_id', 'hardware_profile']
     # Check if factors exist
     valid_grouping_factors = [f for f in grouping_factors if f in detailed_df.columns]
     if not valid_grouping_factors:
@@ -254,8 +266,6 @@ def analyze_scenario_comparison(df: pd.DataFrame, output_dir: str, logger: loggi
         agg_df = pd.concat([agg_df_mean, agg_df_sum], axis=1).T
         agg_df['overall_group'] = 'Overall' # Add a dummy grouping column
         agg_df = agg_df.reset_index().rename(columns={'index': 'metric'}) 
-        # This overall aggregation might need adjustment depending on how specific metrics are calculated below
-        # For simplicity, we'll focus on the grouped aggregation first. Need to rethink the overall case.
         logger.error("Overall aggregation case not fully implemented for specific comparison CSVs. Please ensure grouping factors exist.")
         return # Exit if grouping factors are missing, as the logic below depends on them.
         
@@ -280,100 +290,147 @@ def analyze_scenario_comparison(df: pd.DataFrame, output_dir: str, logger: loggi
          logger.error("Aggregation failed to produce a 'count' column. Cannot calculate rates.")
          return
 
-    # Safety Comparison (Violation Rate)
+    # Safety Comparison (Violation Rate - Run 4 vs Run 3)
     try:
         safety_df = agg_df[valid_grouping_factors].copy()
         # Calculate rates using sum / count
-        safety_df['safety_violation_rate_A'] = (agg_df['safety_violation_A_sum'] / agg_df['count']) * 100
-        safety_df['safety_violation_rate_B'] = (agg_df['safety_violation_B_sum'] / agg_df['count']) * 100
-        safety_df['safety_rate_difference'] = safety_df['safety_violation_rate_A'] - safety_df['safety_violation_rate_B']
-        safety_file = os.path.join(output_dir, 'safety_comparison.csv')
+        safety_df['safety_violation_rate_run4'] = (agg_df['safety_violation_run4_sum'] / agg_df['count']) * 100
+        safety_df['safety_violation_rate_run3'] = (agg_df['safety_violation_run3_sum'] / agg_df['count']) * 100
+        safety_df['safety_rate_difference_run4_vs_run3'] = safety_df['safety_violation_rate_run4'] - safety_df['safety_violation_rate_run3']
+        safety_file = os.path.join(output_dir, 'edgeprompt_vs_baseline_safety.csv')
         safety_df.to_csv(safety_file, index=False, float_format='%.2f')
         logger.info(f"Saved safety comparison results to {safety_file}")
     except KeyError as e:
-        logger.warning(f"Could not generate safety_comparison.csv. Missing column: {e}")
+        logger.warning(f"Could not generate edgeprompt_vs_baseline_safety.csv. Missing column: {e}")
     except Exception as e:
-        logger.error(f"Error generating safety_comparison.csv: {e}", exc_info=True)
+        logger.error(f"Error generating edgeprompt_vs_baseline_safety.csv: {e}", exc_info=True)
 
 
-    # Constraint Adherence Comparison (Pass Rate)
+    # Constraint Adherence Comparison (Pass Rate - Run 4 vs Run 3)
     try:
         constraint_df = agg_df[valid_grouping_factors].copy()
          # Calculate rates using sum / count
-        constraint_df['constraint_pass_rate_A'] = (agg_df['constraint_passed_A_sum'] / agg_df['count']) * 100
-        # Note: Scenario B uses 'evaluation_passed_B' as its primary pass metric per extraction logic
-        constraint_df['constraint_pass_rate_B'] = (agg_df['evaluation_passed_B_sum'] / agg_df['count']) * 100 
-        constraint_df['constraint_rate_difference'] = constraint_df['constraint_pass_rate_A'] - constraint_df['constraint_pass_rate_B']
-        constraint_file = os.path.join(output_dir, 'constraint_comparison.csv')
+        constraint_df['constraint_pass_rate_run4'] = (agg_df['constraint_passed_run4_sum'] / agg_df['count']) * 100
+        # Note: Run 3 uses 'evaluation_passed_run3' as its primary pass metric per extraction logic
+        constraint_df['constraint_pass_rate_run3'] = (agg_df['evaluation_passed_run3_sum'] / agg_df['count']) * 100 
+        constraint_df['constraint_rate_difference_run4_vs_run3'] = constraint_df['constraint_pass_rate_run4'] - constraint_df['constraint_pass_rate_run3']
+        constraint_file = os.path.join(output_dir, 'edgeprompt_vs_baseline_constraint.csv')
         constraint_df.to_csv(constraint_file, index=False, float_format='%.2f')
         logger.info(f"Saved constraint comparison results to {constraint_file}")
     except KeyError as e:
-        logger.warning(f"Could not generate constraint_comparison.csv. Missing column: {e}")
+        logger.warning(f"Could not generate edgeprompt_vs_baseline_constraint.csv. Missing column: {e}")
     except Exception as e:
-        logger.error(f"Error generating constraint_comparison.csv: {e}", exc_info=True)
+        logger.error(f"Error generating edgeprompt_vs_baseline_constraint.csv: {e}", exc_info=True)
 
-    # Token Usage Comparison (Relative Efficiency)
+    # Token Usage Comparison (Efficiency - Run 4 vs Run 3)
     try:
         token_df = agg_df[valid_grouping_factors].copy()
-        token_df['avg_tokens_A'] = agg_df['total_tokens_A_mean']
-        token_df['avg_tokens_B'] = agg_df['total_tokens_B_mean']
-        token_df['token_usage_ratio'] = token_df['avg_tokens_A'] / token_df['avg_tokens_B']
-        token_df['token_difference'] = token_df['avg_tokens_A'] - token_df['avg_tokens_B']
-        token_file = os.path.join(output_dir, 'token_usage_comparison.csv')
+        token_df['avg_tokens_run4'] = agg_df['total_tokens_run4_mean']
+        token_df['avg_tokens_run3'] = agg_df['total_tokens_run3_mean']
+        token_df['token_ratio_run4_vs_run3'] = token_df['avg_tokens_run4'] / token_df['avg_tokens_run3']
+        token_df['token_difference_run4_vs_run3'] = token_df['avg_tokens_run4'] - token_df['avg_tokens_run3']
+        
+        # Add reference data (Run 1)
+        token_df['avg_tokens_run1'] = agg_df['total_tokens_run1_mean']
+        token_df['token_ratio_run3_vs_run1'] = token_df['avg_tokens_run3'] / token_df['avg_tokens_run1']
+        token_df['token_ratio_run4_vs_run1'] = token_df['avg_tokens_run4'] / token_df['avg_tokens_run1']
+        
+        token_file = os.path.join(output_dir, 'edgeprompt_vs_baseline_token_usage.csv')
         token_df.to_csv(token_file, index=False, float_format='%.2f')
         logger.info(f"Saved token usage comparison results to {token_file}")
     except KeyError as e:
-        logger.warning(f"Could not generate token_usage_comparison.csv. Missing column: {e}")
+        logger.warning(f"Could not generate edgeprompt_vs_baseline_token_usage.csv. Missing column: {e}")
     except Exception as e:
-        logger.error(f"Error generating token_usage_comparison.csv: {e}", exc_info=True)
+        logger.error(f"Error generating edgeprompt_vs_baseline_token_usage.csv: {e}", exc_info=True)
 
-    # Latency Comparison 
+    # Latency Comparison (Run 4 vs Run 3)
     try:
         latency_df = agg_df[valid_grouping_factors].copy()
-        latency_df['avg_latency_A'] = agg_df['latency_ms_A_mean']
-        latency_df['avg_latency_B'] = agg_df['latency_ms_B_mean']
-        latency_df['latency_ratio'] = latency_df['avg_latency_A'] / latency_df['avg_latency_B']
-        latency_df['latency_difference'] = latency_df['avg_latency_A'] - latency_df['avg_latency_B']
-        latency_file = os.path.join(output_dir, 'latency_comparison.csv')
+        latency_df['avg_latency_run4'] = agg_df['latency_ms_run4_mean']
+        latency_df['avg_latency_run3'] = agg_df['latency_ms_run3_mean']
+        latency_df['latency_ratio_run4_vs_run3'] = latency_df['avg_latency_run4'] / latency_df['avg_latency_run3']
+        latency_df['latency_difference_run4_vs_run3'] = latency_df['avg_latency_run4'] - latency_df['avg_latency_run3']
+        
+        # Add reference data (Run 1)
+        latency_df['avg_latency_run1'] = agg_df['latency_ms_run1_mean']
+        latency_df['latency_ratio_run3_vs_run1'] = latency_df['avg_latency_run3'] / latency_df['avg_latency_run1']
+        latency_df['latency_ratio_run4_vs_run1'] = latency_df['avg_latency_run4'] / latency_df['avg_latency_run1']
+        
+        latency_file = os.path.join(output_dir, 'edgeprompt_vs_baseline_latency.csv')
         latency_df.to_csv(latency_file, index=False, float_format='%.2f')
         logger.info(f"Saved latency comparison results to {latency_file}")
     except KeyError as e:
-        logger.warning(f"Could not generate latency_comparison.csv. Missing column: {e}")
+        logger.warning(f"Could not generate edgeprompt_vs_baseline_latency.csv. Missing column: {e}")
     except Exception as e:
-        logger.error(f"Error generating latency_comparison.csv: {e}", exc_info=True)
-        
-    # Save aggregated results (all metrics) 
-    aggregated_file = os.path.join(output_dir, 'ab_comparison_aggregated.csv')
-    agg_df.to_csv(aggregated_file, index=False)
-    logger.info(f"Saved aggregated A/B comparison results to {aggregated_file}")
+        logger.error(f"Error generating edgeprompt_vs_baseline_latency.csv: {e}", exc_info=True)
     
-    # Generate variant comparison summary
+    # Quality Comparison (Placeholder for agreement score)
+    # This would be implemented with a proper agreement score calculation
     try:
-        variant_df = agg_df.groupby(['variant_id']).agg({
-            'safety_violation_A_mean': 'mean',
-            'safety_violation_B_mean': 'mean',
-            'constraint_passed_A_mean': 'mean',
-            'constraint_passed_B_mean': 'mean',
-            'validation_passed_A_mean': 'mean',
-            'evaluation_passed_B_mean': 'mean',
-            'validation_score_A_mean': 'mean',
-            'evaluation_score_B_mean': 'mean',
-            'total_tokens_A_mean': 'mean',
-            'total_tokens_B_mean': 'mean',
-            'latency_ms_A_mean': 'mean',
-            'latency_ms_B_mean': 'mean',
-            'count': 'sum'
-        }).reset_index()
+        quality_df = agg_df[valid_grouping_factors].copy()
+        # Extract outputs for potential quality metrics calculation
+        # Currently just placing the output columns for external processing
         
-        variant_df['token_usage_ratio'] = variant_df['total_tokens_A_mean'] / variant_df['total_tokens_B_mean']
-        variant_df['latency_ratio'] = variant_df['latency_ms_A_mean'] / variant_df['latency_ms_B_mean']
-        variant_df['validation_score_diff'] = variant_df['validation_score_A_mean'] - variant_df['evaluation_score_B_mean']
+        # Implement a basic text similarity measure for demonstration
+        # In a real implementation, this would use a proper NLP-based similarity metric like Kappa, BLEU, etc.
+        def basic_similarity(a, b):
+            if not a or not b:
+                return 0
+            words_a = set(str(a).lower().split())
+            words_b = set(str(b).lower().split())
+            if not words_a or not words_b:
+                return 0
+            intersection = words_a.intersection(words_b)
+            union = words_a.union(words_b)
+            return len(intersection) / len(union) if union else 0
         
-        variant_file = os.path.join(output_dir, 'variant_comparison.csv')
-        variant_df.to_csv(variant_file, index=False, float_format='%.4f')
-        logger.info(f"Saved variant comparison summary to {variant_file}")
+        # Calculate similarity scores between outputs
+        output_run1 = detailed_df['output_run1'].tolist()
+        output_run3 = detailed_df['output_run3'].tolist()
+        output_run4 = detailed_df['output_run4'].tolist()
+        
+        # Calculate average similarity for each group
+        # This is just a placeholder - actual implementation would be more sophisticated
+        quality_by_group = {}
+        for idx, group in enumerate(detailed_df.groupby(valid_grouping_factors).groups):
+            group_indices = detailed_df.groupby(valid_grouping_factors).groups[group]
+            run3_vs_run1_scores = []
+            run4_vs_run1_scores = []
+            
+            for i in group_indices:
+                run3_vs_run1 = basic_similarity(output_run3[i], output_run1[i])
+                run4_vs_run1 = basic_similarity(output_run4[i], output_run1[i])
+                run3_vs_run1_scores.append(run3_vs_run1)
+                run4_vs_run1_scores.append(run4_vs_run1)
+            
+            quality_by_group[group] = {
+                'agreement_score_run3_vs_ref': sum(run3_vs_run1_scores) / len(run3_vs_run1_scores) if run3_vs_run1_scores else 0,
+                'agreement_score_run4_vs_ref': sum(run4_vs_run1_scores) / len(run4_vs_run1_scores) if run4_vs_run1_scores else 0
+            }
+        
+        # Create dataframe from quality scores
+        quality_data = []
+        for group, scores in quality_by_group.items():
+            if isinstance(group, tuple):
+                row = dict(zip(valid_grouping_factors, group))
+            else:
+                row = {valid_grouping_factors[0]: group}
+            row.update(scores)
+            row['agreement_diff_run4_vs_run3'] = row['agreement_score_run4_vs_ref'] - row['agreement_score_run3_vs_ref']
+            quality_data.append(row)
+        
+        quality_df = pd.DataFrame(quality_data)
+        
+        quality_file = os.path.join(output_dir, 'quality_vs_reference.csv')
+        quality_df.to_csv(quality_file, index=False, float_format='%.4f')
+        logger.info(f"Saved quality comparison results to {quality_file}")
     except Exception as e:
-        logger.error(f"Error generating variant_comparison.csv: {e}", exc_info=True)
+        logger.error(f"Error generating quality_vs_reference.csv: {e}", exc_info=True)
+    
+    # Save aggregated results (all metrics) 
+    aggregated_file = os.path.join(output_dir, 'four_run_comparison_aggregated.csv')
+    agg_df.to_csv(aggregated_file, index=False)
+    logger.info(f"Saved aggregated four-run comparison results to {aggregated_file}")
 
 # Placeholder for other analysis functions (Phase 2 or specific tests)
 def analyze_multi_stage_validation(df: pd.DataFrame, output_dir: str, logger: logging.Logger) -> None:
@@ -407,9 +464,9 @@ def parse_args():
     parser.add_argument(
         '--analysis-type',
         type=str,
-        choices=['all', 'ab_comparison', 'multi_stage', 'resource'],
-        default='ab_comparison',
-        help='Type of analysis to perform (default: ab_comparison for Phase 1)'
+        choices=['all', 'four_run_comparison', 'multi_stage', 'resource'],
+        default='four_run_comparison',
+        help='Type of analysis to perform (default: four_run_comparison for Phase 1)'
     )
     
     parser.add_argument(
@@ -437,8 +494,8 @@ def main():
         sys.exit(1)
     
     # Perform requested analysis
-    if args.analysis_type == 'all' or args.analysis_type == 'ab_comparison':
-        analyze_scenario_comparison(df, args.output_dir, logger)
+    if args.analysis_type == 'all' or args.analysis_type == 'four_run_comparison':
+        analyze_four_run_comparison(df, args.output_dir, logger)
         
     if args.analysis_type == 'all' or args.analysis_type == 'multi_stage':
         analyze_multi_stage_validation(df, args.output_dir, logger)
@@ -449,4 +506,4 @@ def main():
     logger.info("Analysis finished.")
 
 if __name__ == '__main__':
-    main() 
+    main()

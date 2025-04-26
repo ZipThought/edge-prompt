@@ -26,7 +26,26 @@ This document provides specific guidance for Claude when working with the EdgePr
 
 3. **API keys are available in `.env`** and automatically loaded by the scripts.
 
-4. **The EdgePrompt Python environment** uses a venv that is activated by the scripts automatically.
+4. **The EdgePrompt Python environment** uses a venv that must be activated before running Python scripts directly:
+   ```bash
+   source venv/bin/activate
+   ```
+
+## Common Commands
+
+### Analysis and Visualization
+
+Run the analysis script on validation test data:
+```bash
+source venv/bin/activate
+python scripts/analyze_results.py --data-dir=data/validation_test --output-dir=data/processed --analysis-type=four_run_comparison
+```
+
+Generate figures from processed data:
+```bash
+source venv/bin/activate
+python scripts/render_figures.py --data-dir=data/processed --output-dir=figures
+```
 
 ## Testing Practices
 
@@ -73,6 +92,7 @@ This approach is particularly valuable for complex issues like the topic inconsi
    - `constraint_enforcer.py` - Content constraint checking
    - `result_logger.py` - Results logging and storage
    - `config_loader.py` - Configuration loading
+   - `json_utils.py` - JSON processing utilities
 
 2. **Configuration files in `configs/`**:
    - `model_configs.json` - CloudLLM and EdgeLLM model definitions
@@ -82,6 +102,10 @@ This approach is particularly valuable for complex issues like the topic inconsi
 3. **Results stored in `data/`**:
    - JSON output files with detailed run information
    - Log files with execution traces
+
+4. **Analysis scripts in `scripts/`**:
+   - `analyze_results.py` - Process raw data into comparison metrics
+   - `render_figures.py` - Generate visualization figures and tables
 
 ## Terminology
 
