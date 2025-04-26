@@ -10,7 +10,7 @@ This document tracks the progress on implementing and refining the four-run stru
 - **Test Case**: simple_math_question
 - **CloudLLM**: gpt-4o (OpenAI)
 - **EdgeLLM**: gemma-3-4b-it (LM Studio)
-- **Status**: PARTIAL REFINEMENT (2/4 CRITICAL GAPS ADDRESSED)
+- **Status**: NEAR COMPLETION (3/4 CRITICAL GAPS ADDRESSED)
 
 ## Performance Metrics (Initial Implementation)
 
@@ -64,12 +64,33 @@ This document tracks the progress on implementing and refining the four-run stru
 - Architecture must accommodate downloadable template packages
 - Design should anticipate significant variation in template structure
 
-### 3. Validation System Failures ⚠️ PENDING
+### 3. Validation System Failures ✅ FIXED
 
+**Initial Issues:**
 - JSON parsing errors in validation sequence:
   - `VALIDATION ERROR: Received empty output for JSON parsing`
 - Validation templates not correctly formatted for JSON output
 - Validation sequence not robust to model output variations
+
+**Solution Implementation:**
+- Created centralized `json_utils.py` module with robust JSON parsing functions
+- Improved pattern matching to correctly extract JSON from markdown code blocks
+- Added specialized JSON extraction and repair utilities
+- Implemented a multi-tier approach to JSON handling:
+  1. Try standard validation sequence first
+  2. Fall back to simplified validation sequence if needed
+  3. Try direct JSON generation if both validation approaches fail
+  4. Attempt JSON repair on previous outputs as last resort
+- Limited repair attempts to prevent infinite loops
+- Added safeguards to detect and extract valid JSON from code blocks
+
+**Verification Results:**
+- Tests confirm JSON parsing and repair mechanism works properly
+- No infinite loops observed in validation process
+- Successfully extracting JSON from markdown code blocks
+- JSON repair properly identifies already valid JSON in code blocks
+- All validation stages now complete without errors
+
 
 ### 4. Token Usage Inefficiency ⚠️ PENDING
 
@@ -112,11 +133,27 @@ This document tracks the progress on implementing and refining the four-run stru
 
 ## Progress Summary
 
-The critical topic inconsistency issue has been successfully addressed, enabling meaningful comparison between runs. All four runs now correctly focus on the same algebraic topic, ensuring that evaluation metrics will be properly aligned.
+Three of the four critical gaps have now been successfully addressed:
 
-The implementation now maintains topic consistency by generating a teacher request at the beginning of each test case and sharing it across all runs. This approach follows the Meta-Dialectical Methodology by:
-1. Identifying the issue (thesis)
-2. Analyzing failure modes (antithesis)
-3. Developing a solution that maintains consistency across contexts
+1. **Topic Inconsistency** ✅ FIXED
+   - All four runs now correctly focus on the same algebraic topic
+   - Teacher request is generated once and shared across all runs
+   - Enables meaningful comparison between different runs
 
-Three critical gaps remain to be addressed in subsequent iterations, but the current implementation now provides a valid foundation for comparing the different approaches.
+2. **Template System Flexibility** ✅ PHASE 1 FIXED
+   - Basic robustness improvements completed
+   - Templates now handle missing variables gracefully
+   - System maintains compatibility with existing templates
+
+3. **Validation System Failures** ✅ FIXED
+   - JSON parsing issues resolved with new centralized utilities
+   - Successfully extracting structured data from LLM responses
+   - Multi-tier approach with fallbacks prevents validation failures
+   - No more infinite loops in JSON repair process
+
+Each solution was developed using the Meta-Dialectical Methodology:
+1. Identifying the core issue (thesis)
+2. Analyzing potential failure modes (antithesis)
+3. Developing robust solutions that address edge cases (synthesis)
+
+Only token usage inefficiency remains to be addressed in subsequent iterations. With three critical gaps fixed, the implementation now provides a reliable foundation for comparing the different approaches, enabling meaningful experiments with the EdgePrompt framework.

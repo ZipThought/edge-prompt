@@ -1086,16 +1086,141 @@ Provide a JSON response with these fields:
                 return self._execute_edge_llm(edge_llm_model_data, prompt, params)
             
             # Execute the validation through the evaluation engine
-            validation_result = self.evaluation_engine.validate_with_sequence(
-                question=question,
-                answer=answer,
-                context=teacher_request,  # Contains constraints and rubric
-                validation_sequence_id=validation_sequence_id,
-                llm_executor=edge_llm_executor_wrapper
-            )
+            try:
+                validation_result = self.evaluation_engine.validate_with_sequence(
+                    question=question,
+                    answer=answer,
+                    context=teacher_request,  # Contains constraints and rubric
+                    validation_sequence_id=validation_sequence_id,
+                    llm_executor=edge_llm_executor_wrapper
+                )
+                return validation_result
+            except ValueError as ve:
+                # Catch JSON parsing errors specifically
+                if "VALIDATION ERROR" in str(ve) and any(msg in str(ve) for msg in ["JSON", "parse"]):
+                    self.logger.warning(f"JSON parsing error detected: {ve}")
+                    
+                    # Import our new JSON utilities
+                    from .json_utils import parse_llm_json_output
+                    
+                    # First try the simplified validation sequence
+                    simple_validation_id = "simplified_validation_sequence"
+                    
+                    # Only try simplified sequence if we're not already using it
+                    if validation_sequence_id != simple_validation_id:
+                        self.logger.info("Attempting validation with simplified sequence for better JSON output...")
+                        try:
+                            # Try with the simplified sequence
+                            validation_result = self.evaluation_engine.validate_with_sequence(
+                                question=question,
+                                answer=answer,
+                                context=teacher_request,
+                                validation_sequence_id=simple_validation_id,
+                                llm_executor=edge_llm_executor_wrapper
+                            )
+                            return validation_result
+                        except Exception as e2:
+                            self.logger.error(f"Simplified validation also failed: {e2}")
+                            # Proceed to direct JSON generation
+                    
+                    # If we get here, both regular and simplified validation failed
+                    # Use a direct JSON generation approach
+                    self.logger.info("Generating direct validation JSON...")
+                    
+                    # Construct a simple validation prompt that focuses just on generating valid JSON
+                    json_focus_prompt = f"""Evaluate this student answer to a question. Return ONLY valid JSON without markdown.
+
+QUESTION: {question}
+
+STUDENT ANSWER: {answer}
+
+Evaluate if the answer is relevant to the question and the information is accurate.
+Output MUST be valid JSON with this exact structure: {{"passed": true/false, "score": 0.7, "feedback": "Your feedback here"}}
+
+The "passed" field must be true or false.
+The "score" field must be a number between 0 and 1.
+The "feedback" field must be a string with your evaluation.
+
+IMPORTANT: Return ONLY the JSON object - NO markdown formatting, code blocks, or explanations."""
+
+                    # Execute with parameters forcing JSON output and low temperature
+                    json_params = {
+                        "temperature": 0.1,
+                        "max_tokens": 256,
+                        "json_output": True
+                    }
+                    
+                    result = edge_llm_executor_wrapper(json_focus_prompt, json_params)
+                    
+                    if result.get("error"):
+                        self.logger.error(f"Direct JSON generation failed: {result.get('error')}")
+                        
+                        # Last resort - try JSON repair if we have a response from a previous attempt
+                        # This typically happens when there's a partial JSON in a prior validation attempt
+                        original_error_text = str(ve)
+                        if "extract valid JSON from output:" in original_error_text:
+                            # Try to extract the failed output from the error message
+                            error_parts = original_error_text.split("output:")
+                            if len(error_parts) > 1:
+                                failed_output = error_parts[1].strip()
+                                if failed_output:
+                                    self.logger.info("Attempting JSON repair on previous failed output...")
+                                    repaired_json_str = self.model_manager.repair_json_with_llm(
+                                        failed_output, 
+                                        edge_llm_model_data,
+                                        max_attempts=1
+                                    )
+                                    try:
+                                        # Try to parse the repaired JSON
+                                        parsed_json = json.loads(repaired_json_str)
+                                        return {
+                                            "isValid": parsed_json.get("passed", False),
+                                            "finalScore": float(parsed_json.get("score", 0.0)),
+                                            "stageResults": [{
+                                                "stageId": "json_repaired_validation",
+                                                "passed": parsed_json.get("passed", False),
+                                                "score": float(parsed_json.get("score", 0.0)),
+                                                "feedback": parsed_json.get("feedback", "Repaired validation result.")
+                                            }],
+                                            "aggregateFeedback": parsed_json.get("feedback", "Repaired validation result."),
+                                            "metrics": {"json_repaired": True}
+                                        }
+                                    except json.JSONDecodeError:
+                                        # Give up and raise the original exception
+                                        raise ve
+                        
+                        # If we get here, all approaches failed
+                        raise ve
+                        
+                    # Try to parse the direct JSON result using our utility
+                    generated_text = result.get("generated_text", "")
+                    parsed_json = parse_llm_json_output(
+                        generated_text,
+                        required_keys=["passed", "score", "feedback"],
+                        default_values={
+                            "passed": False,
+                            "score": 0.5,
+                            "feedback": "Validation could not be completed properly."
+                        }
+                    )
+                    
+                    # Return in the expected format for validation results
+                    return {
+                        "isValid": parsed_json.get("passed", False),
+                        "finalScore": float(parsed_json.get("score", 0.0)),
+                        "stageResults": [{
+                            "stageId": "direct_json_validation",
+                            "passed": parsed_json.get("passed", False),
+                            "score": float(parsed_json.get("score", 0.0)),
+                            "feedback": parsed_json.get("feedback", "Direct JSON validation result.")
+                        }],
+                        "aggregateFeedback": parsed_json.get("feedback", "Direct JSON validation result."),
+                        "metrics": result.get("metrics", {})
+                    }
+                else:
+                    # Not a JSON parsing error, re-raise
+                    raise
             
-            return validation_result
-        
         except Exception as e:
             self.logger.error(f"Multi-stage validation error: {e}", exc_info=True)
             return {"error": f"Validation failed: {str(e)}", "isValid": False}

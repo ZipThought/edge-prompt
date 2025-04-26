@@ -9,7 +9,6 @@ edge LLMs (via multi-stage validation) and external LLMs (Anthropic Claude).
 import logging
 import json
 import time
-import re
 from typing import Dict, Any, List, Optional, Union, Callable
 
 try:
@@ -21,6 +20,7 @@ except ImportError:
 # Local application imports
 from .template_engine import TemplateEngine
 from .metrics_collector import MetricsCollector
+from .json_utils import parse_llm_json_output, repair_json_with_llm
 
 class EvaluationEngine:
     """
@@ -219,116 +219,33 @@ class EvaluationEngine:
             text: Raw LLM output text.
             
         Returns:
-            Parsed JSON as dict, or a default dict with error feedback if parsing/validation fails.
+            Parsed JSON as dict, or raises ValueError if parsing fails.
         """
+        # Use our centralized JSON parsing utility
+        required_keys = ["passed", "score", "feedback"]
+        default_values = {
+            "passed": False,
+            "score": 0.5,
+            "feedback": "Failed to parse validation result."
+        }
+        
+        # If input is empty or not a string, we can't parse it
         if not text or not isinstance(text, str) or text.strip() == "":
             self.logger.warning("Received empty or non-string output for JSON parsing.")
-            # CRASH on empty input
             raise ValueError("VALIDATION ERROR: Received empty output for JSON parsing.")
-
-        self.logger.debug(f"Attempting to parse JSON from output (first 150 chars): {text[:150]}...")
-        parsed_json = None
-
-        # 1. Try direct parsing first (most common case hopefully)
-        try:
-            parsed_json = json.loads(text)
-            self.logger.debug("Direct JSON parsing successful.")
-        except json.JSONDecodeError:
-            self.logger.debug("Direct JSON parsing failed, attempting extraction...")
-            # 2. Try extracting from markdown code blocks (```json ... ``` or ``` ... ```)
-            patterns = [
-                r'```(?:json)?\s*(\{.*?\})\s*```', # ```json { ... } ```
-                r'```\s*(\{.*?\})\s*```',         # ``` { ... } ```
-                # Permissive: Find any object starting with { and ending with } (may capture too much)
-                r'(\{.*?\})\s*$' # Find json object at the end of the string often works
-            ]
-            for i, pattern in enumerate(patterns):
-                try:
-                    match = re.search(pattern, text, re.DOTALL)
-                    if match:
-                        json_text = match.group(1)
-                        self.logger.debug(f"Found potential JSON using pattern {i+1}: {json_text[:100]}...")
-                        parsed_json = json.loads(json_text) # Try parsing the extracted text
-                        self.logger.debug("Extraction and parsing successful.")
-                        break # Stop after first successful extraction
-                except json.JSONDecodeError:
-                    self.logger.debug(f"Pattern {i+1} matched, but extracted text was not valid JSON. Trying next pattern.")
-                    continue # Try next pattern
-                except Exception as e:
-                     self.logger.error(f"Unexpected error during JSON extraction with pattern {i+1}: {e}", exc_info=True)
-                     continue # Try next pattern
+        
+        self.logger.debug(f"Parsing JSON from output (first 100 chars): {text[:100]}...")
+        
+        # Use the centralized parsing function
+        result = parse_llm_json_output(text, required_keys, default_values)
+        
+        # We'll maintain the previous behavior of crashing on parse failure to maintain
+        # compatibility with existing error handling in _step_multistage_validation_edge
+        if not result or not all(k in result for k in required_keys):
+            self.logger.warning(f"Could not parse valid JSON with required keys from output: {text[:100]}...")
+            raise ValueError(f"VALIDATION ERROR: Could not extract valid JSON with required keys from output: {text[:100]}...")
             
-            # 3. If still no JSON, try to parse bullet-point or YAML-style format
-            if not parsed_json and ("- passed:" in text or "- valid:" in text or "- score:" in text):
-                try:
-                    self.logger.debug("Trying to parse bullet-point format...")
-                    # Extract key-value pairs using regex
-                    bullet_pattern = r'-\s+([a-zA-Z_]+):\s+(.+)'
-                    matches = re.findall(bullet_pattern, text)
-                    if matches:
-                        bullet_json = {}
-                        for key, value in matches:
-                            # Convert value to appropriate type
-                            if value.lower() == 'true':
-                                bullet_json[key] = True
-                            elif value.lower() == 'false':
-                                bullet_json[key] = False
-                            elif value.replace('.', '', 1).isdigit():
-                                bullet_json[key] = float(value)
-                            else:
-                                bullet_json[key] = value.strip()
-                        if bullet_json:
-                            parsed_json = bullet_json
-                            self.logger.debug(f"Successfully parsed bullet-point format: {parsed_json}")
-                except Exception as e:
-                    self.logger.error(f"Error parsing bullet-point format: {e}", exc_info=True)
-            
-            if not parsed_json:
-                self.logger.warning(f"Could not extract valid JSON object from text: {text[:150]}...")
-                # CRASH on JSON parsing failure
-                raise ValueError(f"VALIDATION ERROR: Could not extract valid JSON from output: {text[:100]}...")
-
-        # 3. Validate structure and types of the parsed JSON
-        if not isinstance(parsed_json, dict):
-            self.logger.warning(f"Parsed result is not a dictionary: {type(parsed_json)}")
-            # CRASH on type error
-            raise TypeError(f"VALIDATION ERROR: Parsed result is not a dictionary: {type(parsed_json)}")
-
-        # Check and normalize alternative key names
-        # Map 'valid' to 'passed' if 'passed' is missing but 'valid' exists
-        if 'valid' in parsed_json and 'passed' not in parsed_json:
-            parsed_json['passed'] = parsed_json['valid']
-            self.logger.debug("Mapped 'valid' key to 'passed'")
-
-        # Check required keys first for clearer error messages
-        required_keys = {"passed", "score", "feedback"}
-        missing_keys = required_keys - set(parsed_json.keys())
-        if missing_keys:
-            feedback = f"INTERNAL PARSING ERROR: Parsed JSON is missing required keys: {missing_keys}." 
-            self.logger.warning(feedback)
-            # CRASH on missing keys
-            raise ValueError(f"VALIDATION ERROR: Parsed JSON is missing required keys: {missing_keys}")
-
-        # Validate types
-        type_errors = []
-        if not isinstance(parsed_json.get("passed"), bool):
-            type_errors.append(f"'passed' is not bool (got {type(parsed_json.get('passed'))})")
-        if not isinstance(parsed_json.get("score"), (int, float)):
-            type_errors.append(f"'score' is not number (got {type(parsed_json.get('score'))})")
-        if not isinstance(parsed_json.get("feedback"), str):
-             type_errors.append(f"'feedback' is not string (got {type(parsed_json.get('feedback'))})")
-
-        if type_errors:
-            feedback = f"INTERNAL PARSING ERROR: Parsed JSON has type errors: {'; '.join(type_errors)}."
-            self.logger.warning(feedback)
-            # CRASH on type errors
-            raise TypeError(f"VALIDATION ERROR: Parsed JSON has type errors: {'; '.join(type_errors)}")
-
-        # If all checks pass, return the parsed and validated data
-        self.logger.debug("Successfully parsed and validated JSON result.")
-        # Ensure score is float
-        parsed_json["score"] = float(parsed_json["score"])
-        return parsed_json
+        return result
     
     def evaluate_with_llm_proxy(self, content_to_evaluate: str, 
                               reference_criteria: str,

@@ -1,0 +1,19 @@
+{
+  "id": "json_focused_validation_template",
+  "type": "validation",
+  "pattern": "Evaluate if this student answer addresses the question properly. RETURN ONLY VALID JSON.\n\nQUESTION: [question]\n\nSTUDENT ANSWER: [answer]\n\nYou must evaluate this answer as a Grade 5 teacher.\n\nYour output MUST be valid JSON with this structure:\n{\n  \"passed\": true or false,\n  \"score\": a number from 0-1,\n  \"feedback\": \"Your feedback\"\n}\n\nNO text before or after the JSON. ONLY return the JSON object.",
+  "constraints": [
+    "Output must be valid JSON",
+    "Focus on relevance to the question"
+  ],
+  "answerSpace": {
+    "minWords": 1,
+    "maxWords": 50,
+    "vocabulary": "grade-appropriate",
+    "structure": "json"
+  },
+  "variables": {
+    "question": "The educational question being asked",
+    "answer": "The student's answer to evaluate"
+  }
+}

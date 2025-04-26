@@ -425,11 +425,19 @@ class ModelManager:
                 "max_tokens": params.get("max_tokens", 256), # Typically smaller for edge
                 "stream": False # Expect single response
             }
-            # --- Removed response_format addition for LM Studio --- 
-            # # Add response_format if requesting JSON (check heuristics)
-            # if params.get("json_output", False) or params.get("response_format", {}).get("type") == "json_object":
-            #      payload["response_format"] = {"type": "json_object"}
-            # --- End removal ---
+            # Handle JSON format requestsj
+            json_format_requested = params.get("json_output", False) or (
+                isinstance(params.get("response_format"), dict) and 
+                params.get("response_format", {}).get("type") == "json_object"
+            )
+            
+            # Since LM Studio doesn't support response_format parameter,
+            # we'll modify the prompt to emphasize JSON output when requested
+            if json_format_requested and not "json" in prompt.lower():
+                # Add explicit JSON formatting instructions
+                prompt_addition = "\n\nIMPORTANT: Your response must be a valid JSON object only. Do not include any text outside the JSON object."
+                payload["messages"][0]["content"] = prompt + prompt_addition
+                self.logger.debug("Added JSON formatting instructions to prompt.")
 
             headers = {"Content-Type": "application/json"}
 
@@ -454,12 +462,30 @@ class ModelManager:
                     raise # Re-raise the error after logging
                 # --- End added error handling ---
 
-            return self._execute_model_call(
+            result = self._execute_model_call(
                 model_data=model_data,  # Pass the full model data dict
                 prompt=prompt, 
                 api_call_func=api_call,
                 result_key="generated_text" # Specify the correct output key for EdgeLLM
             )
+            
+            # Check if JSON repair is needed
+            if json_format_requested and not result.get("error"):
+                generated_text = result.get("generated_text", "")
+                try:
+                    # Test if it's valid JSON
+                    json.loads(generated_text)
+                    # It's valid, no need to repair
+                except json.JSONDecodeError:
+                    # It's not valid JSON, attempt repair (limit to one attempt)
+                    self.logger.warning("EdgeLLM returned invalid JSON, attempting repair...")
+                    fixed_text = self.repair_json_output(generated_text, model_data, max_attempts=1)
+                    if fixed_text != generated_text:
+                        self.logger.info("JSON repaired successfully")
+                        result["generated_text"] = fixed_text
+                        result["json_repaired"] = True
+            
+            return result
 
         else:
             # Placeholder for other EdgeLLM clients (e.g., direct Transformers/llama.cpp)
@@ -479,6 +505,74 @@ class ModelManager:
         else:
             self.logger.warning(f"Model {model_key} not found in cache for unloading.")
 
+    def repair_json_with_llm(self, text: str, model_data: Dict[str, Any], max_attempts: int = 1) -> str:
+        """
+        Attempts to repair malformed JSON output by making a follow-up model call.
+        Uses the new centralized json_utils.repair_json_with_llm function.
+        
+        Args:
+            text: The potentially malformed JSON text
+            model_data: The model configuration used to make the repair call
+            max_attempts: Maximum number of repair attempts to prevent infinite loops
+            
+        Returns:
+            Fixed JSON string or the original string if repair fails/isn't needed
+        """
+        from .json_utils import repair_json_with_llm, extract_json_from_text
+        
+        # Define the LLM repair function that will be called by the utility
+        def llm_repair_func(prompt: str, model_data: Dict[str, Any]) -> str:
+            # Execute the model with the repair prompt
+            params = {
+                "temperature": 0.1,
+                "max_tokens": 512,
+                "json_output": True
+            }
+            
+            result = self.execute_edge_llm(model_data, prompt, params)
+            
+            if result.get("error"):
+                self.logger.warning(f"JSON repair LLM call failed: {result.get('error')}")
+                return text  # Return original on failure
+                
+            return result.get("generated_text", "")
+        
+        # First check if it's already valid JSON or if we can extract it from markdown
+        parsed_json, method = extract_json_from_text(text)
+        if parsed_json is not None:
+            self.logger.info(f"Already valid JSON or successfully extracted (method: {method})")
+            # Convert back to string
+            return json.dumps(parsed_json)
+        
+        # If extraction failed, try repair
+        required_keys = ["passed", "score", "feedback"]
+        default_values = {
+            "passed": False,
+            "score": 0.5,
+            "feedback": "Failed to parse validation result."
+        }
+        
+        # Call the centralized repair function
+        repair_result = repair_json_with_llm(
+            text=text,
+            llm_repair_func=llm_repair_func,
+            model_data=model_data,
+            required_keys=required_keys,
+            default_values=default_values,
+            max_attempts=max_attempts
+        )
+        
+        # Return the result as JSON string
+        return json.dumps(repair_result)
+        
+    # For backwards compatibility
+    def repair_json_output(self, text: str, model_data: Dict[str, Any], max_attempts: int = 1) -> str:
+        """
+        Legacy method for backwards compatibility.
+        Uses the new repair_json_with_llm method.
+        """
+        return self.repair_json_with_llm(text, model_data, max_attempts)
+                
     def get_model_info(self, model_id: str, model_type: str = "edge_llm") -> Optional[Dict[str, Any]]:
         """Retrieves configuration details for a given model ID."""
         try:

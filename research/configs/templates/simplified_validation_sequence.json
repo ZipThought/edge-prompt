@@ -1,19 +1,21 @@
 {
   "id": "simplified_validation_sequence",
   "type": "validation_sequence",
-  "description": "A simplified validation sequence with fewer stages for resource-constrained environments",
+  "description": "A simplified validation sequence with fewer stages for resource-constrained environments, optimized for JSON output",
   "stages": [
     {
       "id": "combined_validation",
-      "template_id": "validation_template",
-      "description": "Combined validation check for content quality and accuracy",
+      "template_id": "json_focused_validation_template",
+      "description": "Combined validation check using a JSON-focused template for more reliable output",
       "validation_criteria": {
         "focus": "combined",
-        "passing_score": 6
+        "passing_score": 0.6
       },
-      "weight": 1.0
+      "weight": 1.0,
+      "priority": 10
     }
   ],
   "aggregation_method": "direct",
-  "passing_threshold": 6.0
+  "passing_threshold": 0.6,
+  "abortOnFailure": true
 } 
