@@ -42,15 +42,20 @@ class ResultLogger:
     
     def log_result(self, result: Dict[str, Any]) -> str:
         """
-        Log a test result.
+        Log a test result with the four-run structure.
         
         Args:
-            result: The test result to log
+            result: The test result to log, which should contain run_1, run_2, run_3, and run_4 data
             
         Returns:
             Path to the logged result file
         """
         self.logger.info(f"Logging result for test: {result.get('id', 'unknown')}")
+        
+        # Verify the result has a proper structure (should include at least one run)
+        has_runs = any(f"run_{i}" in result for i in range(1, 5))
+        if not has_runs:
+            self.logger.warning(f"Result lacks expected run structure (run_1 through run_4): {result.keys()}")
         
         # Create a filename based on the test ID and timestamp
         test_id = result.get('id', 'unknown')
@@ -142,3 +147,56 @@ class ResultLogger:
         self.logger.info(f"Loaded {len(results)} results from individual files")
         
         return results
+    
+    def get_run_summary_stats(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Generate summary statistics specifically for the four-run experiments.
+        
+        This provides basic analysis of run completion rates and success/failure stats.
+        
+        Args:
+            results: List of test results in the four-run format
+            
+        Returns:
+            Dictionary with summary statistics
+        """
+        summary = {
+            "total_experiments": len(results),
+            "runs": {
+                "run_1": {"completed": 0, "failed": 0},
+                "run_2": {"completed": 0, "failed": 0},
+                "run_3": {"completed": 0, "failed": 0},
+                "run_4": {"completed": 0, "failed": 0}
+            },
+            "primary_comparison": {
+                "run_4_vs_run_3_completed": 0,
+                "run_3_vs_run_1_completed": 0,
+                "run_4_vs_run_1_completed": 0
+            }
+        }
+        
+        for result in results:
+            # Count completed/failed runs
+            for i in range(1, 5):
+                run_key = f"run_{i}"
+                if run_key in result:
+                    run_data = result[run_key]
+                    if run_data.get("status") == "completed":
+                        summary["runs"][run_key]["completed"] += 1
+                    elif run_data.get("status") == "failed" or run_data.get("error"):
+                        summary["runs"][run_key]["failed"] += 1
+            
+            # Count successful comparisons (both runs completed)
+            if ("run_4" in result and result["run_4"].get("status") == "completed" and
+                "run_3" in result and result["run_3"].get("status") == "completed"):
+                summary["primary_comparison"]["run_4_vs_run_3_completed"] += 1
+                
+            if ("run_3" in result and result["run_3"].get("status") == "completed" and
+                "run_1" in result and result["run_1"].get("status") == "completed"):
+                summary["primary_comparison"]["run_3_vs_run_1_completed"] += 1
+                
+            if ("run_4" in result and result["run_4"].get("status") == "completed" and
+                "run_1" in result and result["run_1"].get("status") == "completed"):
+                summary["primary_comparison"]["run_4_vs_run_1_completed"] += 1
+        
+        return summary

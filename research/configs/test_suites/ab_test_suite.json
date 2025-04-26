@@ -1,6 +1,6 @@
 {
-  "test_suite_id": "ab_comparison_phase1",
-  "description": "Phase 1 A/B Comparison: EdgePrompt vs Baseline.",
+  "test_suite_id": "four_run_comparison",
+  "description": "Phase 1 Four-Run Comparison: CloudLLM vs EdgeLLM with SingleTurn_Direct vs MultiTurn_EdgePrompt.",
   "templates": [
     "teacher_request_persona",
     "student_question_persona",
@@ -10,23 +10,33 @@
     "baseline_eval_persona"
   ],
   "models": {
-    "llm_l": "gpt-4o",
-    "llm_s": [
-        "gemma-3-4b-it"
-        ]
+    "cloud_llm": "gpt-4o",
+    "edge_llm": ["gemma-3-4b-it"]
   },
-  "scenario_a_variants": [
-    {
-      "id": "standard",
-      "description": "Standard EdgePrompt approach with full multi-stage validation",
-      "validation_sequence": "basic_validation_sequence"
+  "run_parameters": {
+    "run_1": {
+      "executor": "cloud_llm",
+      "method": "single_turn_direct",
+      "description": "Phase 1 Proxy Reference - CloudLLM, SingleTurn_Direct"
     },
-    {
-      "id": "simplified",
-      "description": "Simplified EdgePrompt approach with reduced validation stages",
-      "validation_sequence": "simplified_validation_sequence"
+    "run_2": {
+      "executor": "cloud_llm",
+      "method": "multi_turn_edgeprompt",
+      "validation_sequence": "basic_validation_sequence",
+      "description": "CloudLLM, MultiTurn_EdgePrompt"
+    },
+    "run_3": {
+      "executor": "edge_llm",
+      "method": "single_turn_direct",
+      "description": "EdgeLLM, SingleTurn_Direct" 
+    },
+    "run_4": {
+      "executor": "edge_llm",
+      "method": "multi_turn_edgeprompt",
+      "validation_sequence": "basic_validation_sequence",
+      "description": "EdgeLLM, MultiTurn_EdgePrompt"
     }
-  ],
+  },
   "hardware_profiles": [
     "sim_unconstrained"
   ],
@@ -50,5 +60,42 @@
             "expected_answer_pattern": "x\\s*=\\s*3"
        }
     }
+  ],
+  "analysis_targets": [
+    {
+      "name": "Safety Effectiveness (Run 4 vs. Run 3)",
+      "description": "Compare rates of safety violations (detected by ConstraintEnforcement + review) between Run 4 (Edge EdgePrompt) and Run 3 (Edge Baseline).",
+      "metrics": ["safety_violation_rate_run4", "safety_violation_rate_run3"],
+      "visualization": "bar_chart", 
+      "figure_name": "Figure_Paper_EdgePrompt_vs_Baseline_Safety"
+    },
+    {
+      "name": "Constraint Adherence (Run 4 vs. Run 3)",
+      "description": "Compare rates of adherence to explicit constraints (e.g., word count) measured by ConstraintEnforcement.",
+      "metrics": ["constraint_adherence_rate_run4", "constraint_adherence_rate_run3"],
+      "visualization": "bar_chart", 
+      "figure_name": "Figure_Paper_EdgePrompt_vs_Baseline_Constraints"
+    },
+    {
+      "name": "Quality vs. Reference (Run 4, Run 3 vs. Run 1)",
+      "description": "Compare the quality agreement scores of Run 4 and Run 3 outputs against the reference standard (Run 1).",
+      "metrics": ["agreement_score_kappa_run4_vs_ref", "agreement_score_kappa_run3_vs_ref"],
+      "visualization": "bar_chart", 
+      "figure_name": "Figure_Paper_Quality_vs_Reference"
+    },
+    {
+      "name": "Token Usage Comparison (Run 4 vs. Run 3)",
+      "description": "Compare the total token usage (input + output) for completing the task in each run.",
+      "metrics": ["avg_total_tokens_run4", "avg_total_tokens_run3"],
+      "visualization": "table", 
+      "table_name": "Table_Paper_TokenCompare"
+    },
+    {
+      "name": "Latency Comparison (Run 4 vs. Run 3)",
+      "description": "Compare the total observed wall-clock time for completing the task in each run.",
+      "metrics": ["avg_total_latency_run4", "avg_total_latency_run3"],
+      "visualization": "table", 
+      "table_name": "Table_Paper_LatencyCompare"
+    }
   ]
-} 
+}

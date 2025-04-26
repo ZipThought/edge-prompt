@@ -45,13 +45,13 @@ class MockModel:
     - Eliminates network latency and API costs during development
     """
     
-    def __init__(self, model_id: str, model_type: str = "llm_s"):
+    def __init__(self, model_id: str, model_type: str = "edge_llm"):
         """
         Retains model identity to maintain traceability in mock scenarios.
         
         Args:
             model_id: Identifier for the model
-            model_type: Type of model ('llm_l' or 'llm_s')
+            model_type: Type of model ('cloud_llm' or 'edge_llm')
         """
         self.model_id = model_id
         self.model_type = model_type
@@ -71,7 +71,7 @@ class MockModel:
         self.logger.debug(f"Generating mock response for prompt (first 50 chars): {prompt[:50]}... Args: {kwargs}")
         
         # Simulate processing delay based on prompt length and model type
-        delay = min(0.5 if self.model_type == "llm_s" else 1.5, len(prompt) * 0.0002)
+        delay = min(0.5 if self.model_type == "edge_llm" else 1.5, len(prompt) * 0.0002)
         time.sleep(delay)
         
         # Generate different mock responses based on model type and structure
@@ -80,30 +80,30 @@ class MockModel:
                       kwargs.get("response_format", {}).get("type") == "json_object" or \
                       "json" in prompt.lower() # Simple heuristic
         
-        if self.model_type == "llm_l":
-            generated_text = f"MOCK LLM-L RESPONSE from {self.model_id}: This simulates a persona response."
+        if self.model_type == "cloud_llm":
+            generated_text = f"MOCK CloudLLM RESPONSE from {self.model_id}: This simulates a persona response."
             if expect_json:
-                # Mimic LLM_L_Interaction output structure (nested under llm_output)
+                # Mimic CloudLLM_Interaction output structure (nested under llm_output)
                 mock_obj = {
                     "role": "teacher" if "teacher" in prompt.lower() else "student",
                     "content": f"Mock {self.model_id} response with simulated JSON structure",
                     "evaluation": {
                         "score": random.randint(6, 9),
-                        "feedback": "This is mock feedback from the LLM-L model.",
+                        "feedback": "This is mock feedback from the CloudLLM model.",
                         "passed": True
                     }
                 }
                 generated_text = json.dumps(mock_obj)
-            output_key = "llm_output" # Key defined in LLM_L_Interaction spec
-        else:  # llm_s
-            generated_text = f"MOCK LLM-S RESPONSE from {self.model_id}: This simulates an edge model response."
+            output_key = "llm_output" # Key defined in CloudLLM_Interaction spec
+        else:  # edge_llm
+            generated_text = f"MOCK EdgeLLM RESPONSE from {self.model_id}: This simulates an edge model response."
             if expect_json:
                  # Mimic EdgeLLMExecution output structure (nested under generated_text)
                  # Often used for validation stages
                 mock_obj = {
                     "passed": random.choice([True, True, False]),  # Bias toward passing
                     "score": random.uniform(0.5, 1.0),
-                    "feedback": "This is mock feedback from the LLM-S validation model.",
+                    "feedback": "This is mock feedback from the EdgeLLM validation model.",
                     "word_count": random.randint(40, 120) # Example extra data
                 }
                 generated_text = json.dumps(mock_obj)
@@ -131,10 +131,10 @@ class MockModel:
         
 class ModelManager:
     """
-    Abstracts model access for LLM-L (API) and LLM-S (local/API) models.
+    Abstracts model access for CloudLLM (API) and EdgeLLM (local/API) models.
 
     Uses ConfigLoader to get model details and MetricsCollector for performance tracking.
-    Aligns with `LLM_L_Interaction` and `EdgeLLMExecution` algorithms.
+    Aligns with `CloudLLM_Interaction` and `EdgeLLMExecution` algorithms.
     """
     
     def __init__(self, config_loader: ConfigLoader, metrics_collector: MetricsCollector,
@@ -147,9 +147,9 @@ class ModelManager:
         Args:
             config_loader: Instance of ConfigLoader to fetch model configs.
             metrics_collector: Instance of MetricsCollector for timing/token counts.
-            lm_studio_url: URL for LM Studio API (for some LLM-S).
-            openai_api_key: OpenAI API key (for LLM-L).
-            anthropic_api_key: Anthropic API key (for LLM-L).
+            lm_studio_url: URL for LM Studio API (for some EdgeLLM).
+            openai_api_key: OpenAI API key (for CloudLLM).
+            anthropic_api_key: Anthropic API key (for CloudLLM).
         """
         self.logger = logging.getLogger("edgeprompt.runner.model_manager")
         self.config_loader = config_loader
@@ -196,7 +196,7 @@ class ModelManager:
     
     def _initialize_model(self, model_id: str, model_type: str, mock_mode: bool) -> Dict[str, Any]:
         """
-        Helper to initialize or retrieve a model (LLM-L or LLM-S).
+        Helper to initialize or retrieve a model (CloudLLM or EdgeLLM).
 
         Handles caching, mock mode, and provider-specific setup.
         """
@@ -231,25 +231,25 @@ class ModelManager:
         provider = model_config.get("provider", "").lower()
         client_type = model_config.get("client_type", "").lower()
 
-        if model_type == "llm_l":
+        if model_type == "cloud_llm":
             if provider == "openai":
                 model_config["client"] = self._get_openai_client()
             elif provider == "anthropic":
                  model_config["client"] = self._get_anthropic_client()
             else:
-                raise ValueError(f"Unsupported provider for LLM-L model {model_id}: {provider}")
-            self.logger.info(f"Initialized LLM-L ({provider}): {model_id}")
+                raise ValueError(f"Unsupported provider for CloudLLM model {model_id}: {provider}")
+            self.logger.info(f"Initialized CloudLLM ({provider}): {model_id}")
 
-        elif model_type == "llm_s":
+        elif model_type == "edge_llm":
             # Currently primarily supports LM Studio compatible endpoints
             if client_type == "lm_studio" or "local" in client_type: # Assume local means LM Studio for now
-                 # No specific client needed, will use requests in execute_llm_s
+                 # No specific client needed, will use requests in execute_edge_llm
                  model_config["client_type"] = "lm_studio" # Standardize
-                 self.logger.info(f"Prepared LLM-S (LM Studio target): {model_id} at {self.lm_studio_url}")
+                 self.logger.info(f"Prepared EdgeLLM (LM Studio target): {model_id} at {self.lm_studio_url}")
                  if not requests:
                      self.logger.warning("`requests` library needed for LM Studio interaction.")
             else:
-                 raise ValueError(f"Unsupported client_type for LLM-S model {model_id}: {client_type}")
+                 raise ValueError(f"Unsupported client_type for EdgeLLM model {model_id}: {client_type}")
 
         else:
             raise ValueError(f"Unknown model type: {model_type}")
@@ -259,18 +259,18 @@ class ModelManager:
         self.loaded_models[model_key] = model_config
         return model_config
 
-    def initialize_llm_l(self, model_id: str, mock_mode: bool = False) -> Dict[str, Any]:
-        """Initializes an LLM-L model using the helper method."""
-        return self._initialize_model(model_id, "llm_l", mock_mode)
+    def initialize_cloud_llm(self, model_id: str, mock_mode: bool = False) -> Dict[str, Any]:
+        """Initializes a CloudLLM model using the helper method."""
+        return self._initialize_model(model_id, "cloud_llm", mock_mode)
 
-    def initialize_llm_s(self, model_id: str, mock_mode: bool = False) -> Dict[str, Any]:
-        """Initializes an LLM-S model using the helper method."""
-        return self._initialize_model(model_id, "llm_s", mock_mode)
+    def initialize_edge_llm(self, model_id: str, mock_mode: bool = False) -> Dict[str, Any]:
+        """Initializes an EdgeLLM model using the helper method."""
+        return self._initialize_model(model_id, "edge_llm", mock_mode)
 
     def _execute_model_call(self, model_data: Dict[str, Any], prompt: str,
-                            api_call_func: Callable[..., Tuple[str, int, int]], # Func returning (output_text, in_tokens, out_tokens)
-                            result_key: str # Key for the main output ('generated_text' or 'llm_output')
-                           ) -> Dict[str, Any]:
+                           api_call_func: Callable[..., Tuple[str, int, int]], # Func returning (output_text, in_tokens, out_tokens)
+                           result_key: str # Key for the main output ('generated_text' or 'llm_output')
+                          ) -> Dict[str, Any]:
         """
         Helper function to wrap model execution, handle timing, metrics, and errors.
         """
@@ -310,13 +310,13 @@ class ModelManager:
                 "metrics": self.metrics_collector.get_results() # Get latency if timer stopped
             }
 
-    def execute_llm_l(self, model_data: Dict[str, Any], prompt: str,
+    def execute_cloud_llm(self, model_data: Dict[str, Any], prompt: str,
                      params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Execute LLM-L (API model) interaction. Aligns with LLM_L_Interaction algorithm.
+        Execute CloudLLM (API model) interaction. Aligns with CloudLLM_Interaction algorithm.
 
         Args:
-            model_data: Model configuration dictionary (from initialize_llm_l).
+            model_data: Model configuration dictionary (from initialize_cloud_llm).
             prompt: The prompt string.
             params: Dictionary of generation parameters (e.g., temperature, max_tokens, response_format).
 
@@ -334,7 +334,7 @@ class ModelManager:
         provider = model_data.get("provider", "").lower()
         client = model_data.get("client")
         if not client:
-             return {"error": f"LLM-L client for {model_id} not initialized.", "llm_output": None, "metrics": {}}
+             return {"error": f"CloudLLM client for {model_id} not initialized.", "llm_output": None, "metrics": {}}
 
         def api_call() -> Tuple[str, int, int]:
             if provider == "openai":
@@ -370,18 +370,18 @@ class ModelManager:
                 out_tokens = response.usage.output_tokens
                 return output_text, in_tokens, out_tokens
             else:
-                raise ValueError(f"Unsupported LLM-L provider for execution: {provider}")
+                raise ValueError(f"Unsupported CloudLLM provider for execution: {provider}")
 
         return self._execute_model_call(model_data, prompt, api_call, "llm_output")
 
-    def execute_llm_s(self, model_data: Dict[str, Any], prompt: str,
+    def execute_edge_llm(self, model_data: Dict[str, Any], prompt: str,
                      params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Execute LLM-S (edge model) task. Aligns with EdgeLLMExecution algorithm.
+        Execute EdgeLLM (edge model) task. Aligns with EdgeLLMExecution algorithm.
         Currently assumes LM Studio compatible API endpoint.
 
         Args:
-            model_data: Model configuration dictionary (from initialize_llm_s).
+            model_data: Model configuration dictionary (from initialize_edge_llm).
             prompt: The prompt string.
             params: Dictionary of generation parameters (e.g., temperature, max_tokens).
 
@@ -458,19 +458,19 @@ class ModelManager:
                 model_data=model_data,  # Pass the full model data dict
                 prompt=prompt, 
                 api_call_func=api_call,
-                result_key="generated_text" # Specify the correct output key for LLM-S
+                result_key="generated_text" # Specify the correct output key for EdgeLLM
             )
 
         else:
-            # Placeholder for other LLM-S clients (e.g., direct Transformers/llama.cpp)
-            self.logger.error(f"LLM-S client type '{client_type}' not implemented for execution.")
+            # Placeholder for other EdgeLLM clients (e.g., direct Transformers/llama.cpp)
+            self.logger.error(f"EdgeLLM client type '{client_type}' not implemented for execution.")
             return {
-                "error": f"LLM-S client type '{client_type}' execution not implemented.",
+                "error": f"EdgeLLM client type '{client_type}' execution not implemented.",
                 "generated_text": None,
                 "metrics": {}
             }
 
-    def unload_model(self, model_id: str, model_type: str = "llm_s"):
+    def unload_model(self, model_id: str, model_type: str = "edge_llm"):
         """Removes a model from the cache (conceptual unload)."""
         model_key = f"{model_type}:{model_id}"
         if model_key in self.loaded_models:
@@ -479,16 +479,16 @@ class ModelManager:
         else:
             self.logger.warning(f"Model {model_key} not found in cache for unloading.")
 
-    def get_model_info(self, model_id: str, model_type: str = "llm_s") -> Optional[Dict[str, Any]]:
+    def get_model_info(self, model_id: str, model_type: str = "edge_llm") -> Optional[Dict[str, Any]]:
         """Retrieves configuration details for a given model ID."""
         try:
              config = self.config_loader.load_model_config(model_id)
              if config:
-                 # Ensure the type matches (check provider for LLM-L, client_type for LLM-S)
-                 is_llm_l = model_type == "llm_l" and config.get("provider") in ["openai", "anthropic"]
-                 is_llm_s = model_type == "llm_s" and "local" in config.get("client_type", "").lower()
+                 # Ensure the type matches (check provider for CloudLLM, client_type for EdgeLLM)
+                 is_cloud_llm = model_type == "cloud_llm" and config.get("provider") in ["openai", "anthropic"]
+                 is_edge_llm = model_type == "edge_llm" and "local" in config.get("client_type", "").lower()
 
-                 if (is_llm_l and model_type == "llm_l") or (is_llm_s and model_type == "llm_s"):
+                 if (is_cloud_llm and model_type == "cloud_llm") or (is_edge_llm and model_type == "edge_llm"):
                       return config
                  else:
                      self.logger.warning(f"Model ID {model_id} found, but type mismatch (expected {model_type}).")
@@ -497,4 +497,4 @@ class ModelManager:
                  return None
         except Exception as e:
             self.logger.error(f"Error retrieving info for model {model_id}: {str(e)}")
-            return None 
+            return None

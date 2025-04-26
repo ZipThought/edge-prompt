@@ -1,5 +1,5 @@
 {
-  "llm_l_models": [
+  "cloud_llm_models": [
     {
       "model_id": "gpt-4o",
       "provider": "openai",
@@ -13,7 +13,7 @@
       "notes": "Alternative high-capability model for simulation"
     }
   ],
-  "llm_s_models": [
+  "edge_llm_models": [
     {
       "model_id": "gemma-3-12b-it",
       "base_model": "gemma-3-12b",
@@ -63,4 +63,4 @@
       "notes": "Simulates low-end edge capability"
     }
   ]
-} 
+}

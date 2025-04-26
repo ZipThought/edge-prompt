@@ -166,7 +166,7 @@ class ConfigLoader:
     def load_model_config(self, model_id: str) -> Optional[Dict[str, Any]]:
         """
         Load a specific model configuration from model_configs.json.
-        Searches within both 'llm_l_models' and 'llm_s_models' lists.
+        Searches within both 'cloud_llm_models' and 'edge_llm_models' lists.
         
         Args:
             model_id: Identifier for the model
@@ -184,25 +184,25 @@ class ConfigLoader:
                 self.logger.error(f"Expected a dictionary in {self._model_configs_file}, found {type(model_data)}")
                 return None
 
-            # Search in LLM-L models
-            llm_l_list = model_data.get('llm_l_models', [])
-            if isinstance(llm_l_list, list):
-                 for model in llm_l_list:
+            # Search in cloud_llm_models (previously llm_l_models)
+            cloud_llm_list = model_data.get('cloud_llm_models', [])
+            if isinstance(cloud_llm_list, list):
+                 for model in cloud_llm_list:
                       if isinstance(model, dict) and model.get('model_id') == model_id:
-                           self.logger.debug(f"Found model '{model_id}' in llm_l_models.")
+                           self.logger.debug(f"Found model '{model_id}' in cloud_llm_models.")
                            return model
             else:
-                self.logger.warning(f"'llm_l_models' key in {self._model_configs_file} is not a list.")
+                self.logger.warning(f"'cloud_llm_models' key in {self._model_configs_file} is not a list.")
 
-            # Search in LLM-S models if not found in LLM-L
-            llm_s_list = model_data.get('llm_s_models', [])
-            if isinstance(llm_s_list, list):
-                 for model in llm_s_list:
+            # Search in edge_llm_models (previously llm_s_models) if not found in cloud_llm_models
+            edge_llm_list = model_data.get('edge_llm_models', [])
+            if isinstance(edge_llm_list, list):
+                 for model in edge_llm_list:
                       if isinstance(model, dict) and model.get('model_id') == model_id:
-                           self.logger.debug(f"Found model '{model_id}' in llm_s_models.")
+                           self.logger.debug(f"Found model '{model_id}' in edge_llm_models.")
                            return model
             else:
-                 self.logger.warning(f"'llm_s_models' key in {self._model_configs_file} is not a list.")
+                 self.logger.warning(f"'edge_llm_models' key in {self._model_configs_file} is not a list.")
 
             # If not found in either list
             self.logger.warning(f"Model config with id '{model_id}' not found in {self._model_configs_file}")
@@ -308,4 +308,4 @@ class ConfigLoader:
             return None
         except Exception as e:
             self.logger.error(f"Error loading validation sequence {sequence_name} from {sequence_path}: {str(e)}", exc_info=True)
-            return None 
+            return None
