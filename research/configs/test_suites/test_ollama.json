@@ -1,0 +1,64 @@
+{
+  "test_suite_id": "ollama_backend_test",
+  "description": "Ollama backend test with basic validation architecture.",
+  "templates": [
+    "teacher_request_persona",
+    "student_question_persona",
+    "student_answer_persona",
+    "validation_persona",
+    "teacher_review_persona",
+    "baseline_eval_persona"
+  ],
+  "models": {
+    "cloud_llm": "gpt-4o",
+    "edge_llm": ["gemma-3-4b-it-ollama"]
+  },
+  "run_parameters": {
+    "run_1": {
+      "executor": "cloud_llm",
+      "method": "single_turn_direct",
+      "description": "Phase 1 Proxy Reference - CloudLLM, SingleTurn_Direct"
+    },
+    "run_2": {
+      "executor": "cloud_llm",
+      "method": "multi_turn_edgeprompt",
+      "validation_sequence": "basic_validation_sequence",
+      "description": "CloudLLM, MultiTurn_EdgePrompt"
+    },
+    "run_3": {
+      "executor": "edge_llm",
+      "method": "single_turn_direct",
+      "description": "EdgeLLM, SingleTurn_Direct" 
+    },
+    "run_4": {
+      "executor": "edge_llm",
+      "method": "multi_turn_edgeprompt",
+      "validation_sequence": "basic_validation_sequence",
+      "description": "EdgeLLM, MultiTurn_EdgePrompt"
+    }
+  },
+  "hardware_profiles": [
+    "sim_unconstrained"
+  ],
+  "test_cases": [
+    {
+      "id": "simple_math_question",
+      "variables": {
+         "topic": "basic algebra",
+         "difficulty": "easy",
+         "context": "Solve for x: 2x + 5 = 11"
+      },
+       "constraints": {
+         "max_words": 100,
+         "min_words": 5,
+         "prohibited_keywords": ["unsafe", "inappropriate"],
+         "required_topics": ["algebra", "solution"]
+       },
+       "evaluation_criteria": {
+            "completeness": 0.4,
+            "accuracy": 0.6,
+            "expected_answer_pattern": "x\\s*=\\s*3"
+       }
+    }
+  ]
+}

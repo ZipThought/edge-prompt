@@ -59,7 +59,7 @@ if [ -f .env ]; then
     echo "Loading environment variables from .env..."
     export $(grep -v '^#' .env | xargs)
 else
-    echo "Warning: .env file not found. Make sure necessary environment variables (API keys, LM Studio URL) are set manually."
+    echo "Warning: .env file not found. Make sure necessary environment variables (API keys, LM Studio URL, Ollama URL) are set manually."
 fi
 
 # Set Log Level (can be overridden by .env)
@@ -67,10 +67,16 @@ export LOG_LEVEL=${LOG_LEVEL:-"DEBUG"}
 
 echo "Environment configured using .env (or manual export):"
 echo "- LM Studio URL: ${LM_STUDIO_URL:-"Not Set"}"
+echo "- Ollama URL: ${OLLAMA_URL:-"Not Set"}"
 echo "- Log Level: $LOG_LEVEL"
 echo "- Test Config: $CONFIG_FILE"
 echo "- Output Directory: $OUTPUT_DIR"
 # Note: API keys are not printed for security
+
+# Check if any local inference backend is set
+if [[ -z "$LM_STUDIO_URL" && -z "$OLLAMA_URL" ]]; then
+    echo "Warning: Neither LM_STUDIO_URL nor OLLAMA_URL is set. Tests requiring EdgeLLM execution might fail unless using mock mode."
+fi
 
 # Run verification if not skipped
 if [ "$RUN_VERIFICATION" = true ]; then
@@ -109,4 +115,4 @@ if [ $? -eq 0 ]; then
 else
     echo "================================================================="
     echo "Test failed with errors. Check logs for details."
-fi 
+fi

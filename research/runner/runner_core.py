@@ -34,8 +34,8 @@ class RunnerCore:
     """
     
     def __init__(self, config_path: str, output_dir: str, log_level: str = "INFO",
-                lm_studio_url: Optional[str] = None, mock_models: bool = False,
-                 openai_api_key: Optional[str] = None,
+                lm_studio_url: Optional[str] = None, ollama_url: Optional[str] = None, 
+                mock_models: bool = False, openai_api_key: Optional[str] = None,
                 anthropic_api_key: Optional[str] = None):
         """
         Initialize the RunnerCore and all its components.
@@ -47,6 +47,7 @@ class RunnerCore:
             output_dir: Directory for storing results and logs.
             log_level: Logging verbosity level (DEBUG, INFO, WARNING, ERROR).
             lm_studio_url: Base URL for LM Studio server (if used for EdgeLLM).
+            ollama_url: Base URL for Ollama server (if used for EdgeLLM).
             mock_models: If True, use mock models instead of real LLMs.
             openai_api_key: API key for OpenAI (CloudLLM).
             anthropic_api_key: API key for Anthropic (CloudLLM and Proxy Evaluation).
@@ -63,6 +64,7 @@ class RunnerCore:
         self.logger.info(f"Output directory: {output_dir}")
         self.logger.info(f"Log level: {log_level}")
         if lm_studio_url: self.logger.info(f"Using LM Studio URL: {lm_studio_url}")
+        if ollama_url: self.logger.info(f"Using Ollama URL: {ollama_url}")
         self.logger.info(f"Mock models enabled: {mock_models}")
         if openai_api_key: self.logger.debug("OpenAI API key provided.")
         if anthropic_api_key: self.logger.debug("Anthropic API key provided.")
@@ -81,6 +83,7 @@ class RunnerCore:
                 config_loader=self.config_loader,
                 metrics_collector=self.metrics_collector, # Pass collector instance
                 lm_studio_url=lm_studio_url,
+                ollama_url=ollama_url,
                 openai_api_key=openai_api_key,
                 anthropic_api_key=anthropic_api_key
             )
@@ -697,283 +700,345 @@ class RunnerCore:
             model_data=cloud_llm_model_data,
             interaction_type="generate_structured_question",
             prompt=prompt,
-            params={"temperature": 0.7}  # Allow some creativity
+            expected_output_format="text" # Simple text output expected here
         )
-        self.logger.debug(f"Generated question text (first 50): {result.get('llm_output', '')[:50]}...")
+        
         return result
 
     def _step_generate_simple_question(self, test_case: Dict[str, Any], cloud_llm_model_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Step: Generate Simple, Unstructured Question (CloudLLM) with topic control."""
-        self.logger.debug("Generating Simple Question using CloudLLM with topic control...")
+        """Step: Generate Simple Unstructured Question (CloudLLM)."""
+        self.logger.debug("Generating Simple Question using CloudLLM...")
         
-        # Get the shared teacher request if available
-        teacher_request = test_case.get("shared_teacher_request")
-        if teacher_request and isinstance(teacher_request, dict):
-            # Use the shared teacher request for consistency
-            topic = teacher_request.get("topic", "a relevant topic")
-            objective = teacher_request.get("learning_objective", f"Understanding {topic}")
-            # Try to get grade level from constraints
-            grade_level = "Grade 5" # Default
-            if isinstance(teacher_request.get("constraints"), dict):
-                if "safety_rules" in teacher_request["constraints"]:
-                    safety_rules = teacher_request["constraints"]["safety_rules"]
-                    if isinstance(safety_rules, list) and safety_rules:
-                        grade_level = safety_rules[0]  # Use first safety rule as grade level
-        else:
-            # Fall back to previous behavior if shared request not available
-            teacher_req_ctx = test_case.get("teacher_request_context", {})
-            topic = teacher_req_ctx.get("topic", "a relevant topic")
-            objective = teacher_req_ctx.get("learning_objective", "explain something simply")
-            # Infer grade level or use default if not specified
-            grade_level = "Grade 5" # Default
-            if isinstance(teacher_req_ctx.get("desired_constraints"), dict):
-                grade_level = teacher_req_ctx["desired_constraints"].get("safety", grade_level)
+        # For simple baseline, we use a basic template with fewer constraints
+        simple_prompt_template = test_case.get("baseline_template_id", "teacher_request_persona")
+        simple_prompt_vars = {
+            "topic": test_case.get("variables", {}).get("topic", "general knowledge"),
+            "complexity": test_case.get("variables", {}).get("complexity", "moderate"),
+            "audience": test_case.get("variables", {}).get("audience", "high school student"),
+            "learning_objective": f"Understanding {test_case.get('variables', {}).get('topic', 'general knowledge')}"
+        }
+        
+        prompt, metadata = self.template_engine.process_template(simple_prompt_template, simple_prompt_vars)
+        if prompt is None:
+            error_msg = f"Failed to process simple question template '{simple_prompt_template}': {metadata.get('error', 'Unknown')}"
+            self.logger.error(error_msg)
+            return {"error": error_msg, "metrics": {}}
 
-        # Create a more focused prompt with explicit topic control
-        unstructured_prompt = f"""
-Generate a single, clear question about '{topic}' suitable for {grade_level}.
-The question should relate to the objective: {objective}.
-
-Your question should be direct, focused on {topic}, and appropriate for the grade level.
-Do not provide additional context or explanations - just the question itself.
-"""
-
+        # Execute CloudLLM call
         result = self._execute_cloud_llm_interaction(
             model_data=cloud_llm_model_data,
             interaction_type="generate_simple_question",
-            prompt=unstructured_prompt,
-            params={"temperature": 0.7}
+            prompt=prompt,
+            expected_output_format="text" # Simple text output expected here
         )
-        self.logger.debug(f"Generated topic-controlled question (first 50): {result.get('llm_output', '')[:50]}...")
+        
         return result
 
-    def _step_simulate_student_answer(self, question_text: Optional[str], teacher_request: Optional[Dict[str, Any]], test_case: Dict[str, Any], cloud_llm_model_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _step_simulate_student_answer(self, question: str, context: Optional[Dict[str, Any]], test_case: Dict[str, Any], cloud_llm_model_data: Dict[str, Any]) -> Dict[str, Any]:
         """Step: Simulate Student Answer (CloudLLM)."""
         self.logger.debug("Simulating Student Answer using CloudLLM...")
-        if not question_text:
-            return {"error": "Cannot simulate answer: Generated question text is missing.", "metrics": {}}
-        if not teacher_request: teacher_request = {} # Handle missing teacher request gracefully for constraints
-
-        student_answer_template = test_case.get("student_answer_template", "student_answer_persona")
-        # Provide context for the student persona template
-        student_context = {
-             "question_text": question_text,
-             "student_profile_details": test_case.get("student_persona_profile", "Average student."),
-             # Try to get word count target from teacher request constraints
-             "word_count_target": teacher_request.get("constraints", {}).get("maxWords", 100) // 2
+        
+        # Determine student persona template
+        student_template = test_case.get("student_template_id", "student_answer_persona")
+        
+        # Prepare variables for the template
+        student_vars = {
+            "question": question,
+            "student_level": test_case.get("variables", {}).get("student_level", "average"),
+            "topic": test_case.get("variables", {}).get("topic", "general knowledge"),
         }
+        
+        # If we have context from teacher request, add constraint awareness
+        if context and isinstance(context, dict):
+            student_vars["aware_of_constraints"] = True
+            student_vars["constraints"] = context.get("constraints", {})
+            student_vars["min_words"] = context.get("constraints", {}).get("min_words", 100)
+            student_vars["max_words"] = context.get("constraints", {}).get("max_words", 500)
+        else:
+            student_vars["aware_of_constraints"] = False
+        
+        # Process the student template
+        prompt, metadata = self.template_engine.process_template(student_template, student_vars)
+        if prompt is None:
+            error_msg = f"Failed to process student answer template '{student_template}': {metadata.get('error', 'Unknown')}"
+            self.logger.error(error_msg)
+            return {"error": error_msg, "metrics": {}}
+
+        # Execute CloudLLM call
         result = self._execute_cloud_llm_interaction(
             model_data=cloud_llm_model_data,
-            interaction_type="generate_student_answer",
-            persona_template_id=student_answer_template,
-            context_data=student_context
+            interaction_type="simulate_student",
+            prompt=prompt,
+            expected_output_format="text" # Simple text output expected here
         )
-        self.logger.debug(f"Simulated student answer (first 50): {result.get('llm_output', '')[:50]}...")
+        
         return result
 
-    def _step_baseline_evaluation(self, question: Optional[str], answer: Optional[str], test_case: Dict[str, Any], cloud_llm_model_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Step: Simple Baseline Evaluation (CloudLLM)."""
+    def _step_baseline_evaluation(self, question: str, answer: str, test_case: Dict[str, Any], cloud_llm_model_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Step: Baseline Evaluation (CloudLLM)."""
         self.logger.debug("Performing Baseline Evaluation using CloudLLM...")
-        step_result = {"status": "skipped", "passed": False, "score": 0.0, "feedback": ""}
-
-        if not question or not answer:
-            step_result["error"] = "Missing question or answer for evaluation."
-            return step_result
-
-        # Get evaluation criteria from the test case
-        eval_criteria = test_case.get("evaluation_criteria", {})
-        criteria_str = json.dumps(eval_criteria, indent=2)
-
-        context_data = {
-            "question_text": question,
+        
+        # Determine evaluation template
+        eval_template = test_case.get("baseline_eval_template_id", "teacher_review_persona")
+        
+        # Prepare variables for template
+        eval_vars = {
+            "question": question,
             "student_answer": answer,
-            "evaluation_criteria": criteria_str
+            "topic": test_case.get("variables", {}).get("topic", "general knowledge"),
+            "evaluation_criteria": test_case.get("evaluation_criteria", {})
         }
+        
+        # Process evaluation template
+        prompt, metadata = self.template_engine.process_template(eval_template, eval_vars)
+        if prompt is None:
+            error_msg = f"Failed to process baseline evaluation template '{eval_template}': {metadata.get('error', 'Unknown')}"
+            self.logger.error(error_msg)
+            return {"error": error_msg, "metrics": {}}
 
-        # Execute evaluation, requesting JSON output
+        # Execute CloudLLM call
         result = self._execute_cloud_llm_interaction(
             model_data=cloud_llm_model_data,
-            interaction_type="baseline_evaluation",
-            prompt=f"""Evaluate this student answer:
-Question: {question}
-Answer: {answer}
-Criteria: {criteria_str}
-
-Provide a JSON response with these fields:
-{{
-  "passed": true/false,
-  "score": (0.0-1.0),
-  "feedback": "Detailed feedback on the answer"
-}}""",
-            params={"temperature": 0.1, "response_format": {"type": "json_object"}}
+            interaction_type="evaluate_answer",
+            prompt=prompt,
+            expected_output_format="json" # Expect structured evaluation result
         )
-
-        # Parse the result (assuming similar format to validation stages for comparison)
-        parsed_eval = None
+        
+        # Parse evaluation result
         if not result.get("error"):
              parsed_eval = self._parse_json_from_llm_output(result.get("llm_output"))
-             if parsed_eval is None:
-                 self.logger.warning(f"Baseline evaluation result was not parseable JSON.")
-                 # Add error info to the main result dict if parsing failed
-                 result["error"] = result.get("error", "") + " Failed to parse baseline evaluation JSON."
-                 parsed_eval = {"passed": False, "score": 0.0, "feedback": "Parsing failed"} # Default on parse fail
+             if not parsed_eval:
+                 self.logger.warning(f"Failed to parse valid evaluation JSON from CloudLLM output. Output: {result.get('llm_output')}")
+                 result["error"] = result.get("error", "") + " Failed to parse valid evaluation JSON."
              else:
-                 self.logger.debug(f"Parsed baseline evaluation: {parsed_eval}")
-        else:
-             self.logger.warning(f"Baseline evaluation LLM call failed: {result.get('error')}")
-             parsed_eval = {"passed": False, "score": 0.0, "feedback": "Evaluation step failed"} # Default on execution fail
-
-        result["parsed_evaluation"] = parsed_eval # Store parsed data (or default)
+                 # Apply normalization to ensure consistent keys
+                 if "valid" in parsed_eval and "passed" not in parsed_eval:
+                     parsed_eval["passed"] = parsed_eval["valid"]
+                 
+                 if "feedback" not in parsed_eval and "comments" in parsed_eval:
+                     parsed_eval["feedback"] = parsed_eval["comments"]
+                     
+                 if "score" not in parsed_eval and any(k in parsed_eval for k in ["rating", "evaluation", "grade"]):
+                     for key in ["rating", "evaluation", "grade"]:
+                         if key in parsed_eval:
+                             value = parsed_eval[key]
+                             if isinstance(value, (int, float)):
+                                 parsed_eval["score"] = float(value) / 10.0 if value > 10 else float(value)
+                             break
+                 
+                 # Ensure score is within 0-1 range
+                 if "score" in parsed_eval:
+                     try:
+                         score = float(parsed_eval["score"])
+                         if score > 1.0 and score <= 10.0:
+                             parsed_eval["score"] = score / 10.0
+                         elif score > 10.0 and score <= 100.0:
+                             parsed_eval["score"] = score / 100.0
+                     except (ValueError, TypeError):
+                         parsed_eval["score"] = 0.5 # Default if cannot parse
+                         
+             result["parsed_evaluation"] = parsed_eval
+                 
         return result
 
-    def _step_multistage_validation(self, question: Optional[str], answer: Optional[str], 
-                                  teacher_request: Optional[Dict[str, Any]], 
-                                  cloud_llm_model_data: Dict[str, Any],
-                                  validation_sequence_id: str = "basic_validation_sequence") -> Dict[str, Any]:
-        """
-        Performs multi-stage validation using CloudLLM.
-        Uses the EvaluationEngine for the actual validation.
-        """
-        if not question or not answer:
-            return {"error": "Missing question or answer for validation", "isValid": False}
+    def _step_multistage_validation(self, question: str, answer: str, teacher_request: Dict[str, Any], cloud_llm_model_data: Dict[str, Any], validation_sequence_id: str) -> Dict[str, Any]:
+        """Step: Multi-Stage Validation using the EvaluationEngine (CloudLLM)."""
+        self.logger.debug(f"Performing Multi-Stage Validation (CloudLLM) using sequence: {validation_sequence_id}")
         
-        try:
-            self.logger.debug(f"Starting multi-stage validation with sequence '{validation_sequence_id}'")
-            
-            # Use the EvaluationEngine to handle the validation
-            def cloud_llm_executor_wrapper(prompt: str, params: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-                # This inner function calls the actual ModelManager method
-                return self._execute_cloud_llm_interaction(
-                    cloud_llm_model_data, 
-                    "validation", 
-                    prompt=prompt, 
-                    params=params
-                )
-            
-            # Execute the validation through the evaluation engine
-            validation_result = self.evaluation_engine.validate_with_sequence(
-                question=question,
-                answer=answer,
-                context=teacher_request,  # Contains constraints and rubric
-                validation_sequence_id=validation_sequence_id,
-                llm_executor=cloud_llm_executor_wrapper
-            )
-            
-            return validation_result
-        
-        except Exception as e:
-            self.logger.error(f"Multi-stage validation error: {e}", exc_info=True)
-            return {"error": f"Validation failed: {str(e)}", "isValid": False}
-
-    def _step_constraint_enforcement(self, student_answer: Optional[str], context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-        """Step: Constraint Enforcement."""
-        self.logger.debug("Performing Constraint Enforcement...")
-        if not student_answer:
-            return {"passed": False, "violations": ["Cannot enforce constraints: Student answer missing."]}
-        if not context: context = {} # Handle missing context gracefully
-
-        # Get constraints from context
-        constraints_to_enforce = context.get("constraints", {})
-        if not isinstance(constraints_to_enforce, dict):
-            self.logger.warning(f"Constraints from context were not a dictionary: {constraints_to_enforce}. Using empty constraints.")
-            constraints_to_enforce = {}
-
-        result = self.constraint_enforcer.enforce_constraints(
-            content=student_answer,
-            constraints=constraints_to_enforce
+        # Delegate to the evaluation engine
+        result = self.evaluation_engine.evaluate_using_cloud_llm(
+            validation_sequence_id=validation_sequence_id,
+            cloud_llm_model_data=cloud_llm_model_data,
+            question=question,
+            answer=answer,
+            teacher_request=teacher_request
         )
-        self.logger.debug(f"Constraint enforcement complete. Passed: {result.get('passed')}")
+        
         return result
 
-    def _step_teacher_review(self, validation_result: Dict[str, Any], constraint_result: Dict[str, Any], question: Optional[str], answer: Optional[str], cloud_llm_model_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Step: Simulate Teacher Review (CloudLLM, Optional)."""
-        # Trigger review if validation OR constraints failed
-        review_needed = not validation_result.get("isValid", True) or not constraint_result.get("passed", True)
-        if not review_needed:
-            self.logger.debug("Skipping Teacher Review (validation/constraints passed).")
-            return {"status": "skipped (passed validation/constraints)"}
-        if not question or not answer:
-             self.logger.warning("Skipping Teacher Review: Missing question or answer.")
-             return {"status": "skipped (missing question/answer)"}
-
-
-        self.logger.info("Validation/Constraints failed, simulating Teacher Review...")
-        # Prepare context for the review template
-        review_context = {
-             "question": question,
-             "student_answer": answer,
-             "validation_feedback": validation_result.get("aggregateFeedback", "N/A"),
-             "constraint_violations": constraint_result.get("violations", [])
+    def _step_teacher_review(self, validation_result: Dict[str, Any], constraint_result: Dict[str, Any], 
+                            question: str, answer: str, cloud_llm_model_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Step: Teacher Review (CloudLLM) for failed validations."""
+        self.logger.debug("Performing Teacher Review using CloudLLM...")
+        
+        # Prepare the validation results for the teacher review
+        validation_summary = "Validation checks failed.\n"
+        
+        # Add multistage validation feedback
+        if "stages" in validation_result:
+            validation_summary += "Validation stages:\n"
+            for i, stage in enumerate(validation_result.get("stages", [])):
+                status = "✅" if stage.get("passed", False) else "❌"
+                feedback = stage.get("feedback", "No feedback provided")
+                validation_summary += f"{i+1}. {status} {stage.get('name', f'Stage {i+1}')}: {feedback}\n"
+        
+        # Add constraint violation details
+        if not constraint_result.get("passed", True):
+            validation_summary += "\nConstraint violations:\n"
+            for violation in constraint_result.get("violations", []):
+                validation_summary += f"- {violation}\n"
+        
+        # Prepare variables for teacher review
+        review_vars = {
+            "question": question,
+            "student_answer": answer,
+            "validation_summary": validation_summary,
+            "aggregated_feedback": validation_result.get("aggregateFeedback", "No aggregated feedback available")
         }
-        # Assume a standard review template exists
-        review_template = "teacher_review_persona" # Needs to be defined in configs/templates
+        
+        # Process teacher review template
+        review_template = "teacher_review_persona" # Default template
+        prompt, metadata = self.template_engine.process_template(review_template, review_vars)
+        if prompt is None:
+            error_msg = f"Failed to process teacher review template '{review_template}': {metadata.get('error', 'Unknown')}"
+            self.logger.error(error_msg)
+            return {"error": error_msg, "metrics": {}}
 
+        # Execute CloudLLM call
         result = self._execute_cloud_llm_interaction(
-             model_data=cloud_llm_model_data,
-             interaction_type="review_evaluation",
-             persona_template_id=review_template,
-             context_data=review_context,
-             expected_output_format="json" # Expect structured review output
+            model_data=cloud_llm_model_data,
+            interaction_type="teacher_review",
+            prompt=prompt,
+            expected_output_format="json" # Expect structured review result
         )
-
-        # Optionally parse the review JSON
+        
+        # Parse review result
         if not result.get("error"):
              parsed_review = self._parse_json_from_llm_output(result.get("llm_output"))
-             result["parsed_review"] = parsed_review # Add parsed review (or None)
-
-        self.logger.debug(f"Teacher review complete. Error: {result.get('error')}")
+             if not parsed_review:
+                 self.logger.warning(f"Failed to parse valid review JSON from CloudLLM output. Output: {result.get('llm_output')}")
+                 result["error"] = result.get("error", "") + " Failed to parse valid review JSON."
+             else:
+                 result["parsed_review"] = parsed_review
+                 
         return result
+
+    def _step_constraint_enforcement(self, text: str, context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Step: Constraint Enforcement."""
+        # Check if we have constraint data
+        constraints = {}
+        if isinstance(context, dict) and "constraints" in context:
+            constraints = context.get("constraints", {})
+        elif isinstance(context, dict):
+            constraints = context  # Some contexts might have constraints at top level
+        
+        # If no constraints defined, check test case
+        if not constraints and hasattr(self, "_current_test_case"):
+            constraints = getattr(self, "_current_test_case", {}).get("constraints", {})
+        
+        # Default constraints if none specified
+        if not constraints:
+            constraints = {
+                "min_words": 50,
+                "max_words": 500,
+                "prohibited_topics": [],
+                "required_topics": []
+            }
+            
+        # Delegate to the constraint enforcer
+        result = self.constraint_enforcer.validate(text, constraints)
+        return result
+
+    def _execute_cloud_llm_interaction(self, model_data: Dict[str, Any], interaction_type: str, 
+                                      prompt: Optional[str] = None, persona_template_id: Optional[str] = None,
+                                      context_data: Optional[Dict[str, Any]] = None,
+                                      expected_output_format: str = "text") -> Dict[str, Any]:
+        """
+        Execute CloudLLM interaction. Centralized method for CloudLLM calls.
+        
+        Args:
+            model_data: CloudLLM model configuration from ModelManager.
+            interaction_type: Type of interaction for logging.
+            prompt: The prompt to send (if already prepared).
+            persona_template_id: Template ID to process (if not using direct prompt).
+            context_data: Variables for template processing.
+            expected_output_format: What kind of output to request ("text" or "json").
+            
+        Returns:
+            Dictionary with 'llm_output', 'metrics', and optional 'error'.
+        """
+        # If using template instead of direct prompt, process it
+        if prompt is None and persona_template_id:
+            if context_data is None:
+                context_data = {}
+            prompt, metadata = self.template_engine.process_template(persona_template_id, context_data)
+            if prompt is None:
+                error_msg = f"Failed to process template '{persona_template_id}': {metadata.get('error', 'Unknown')}"
+                self.logger.error(error_msg)
+                return {"error": error_msg, "metrics": {}}
+        
+        # Prepare parameters based on expected output format
+        params = {
+            "temperature": 0.7,  # Default temperature, adjust as needed
+            "max_tokens": 1024   # Default max tokens, adjust as needed
+        }
+        
+        # Configure for JSON output if requested
+        if expected_output_format.lower() == "json":
+            params["response_format"] = {"type": "json_object"}
+        
+        # Execute CloudLLM call
+        result = self.model_manager.execute_cloud_llm(model_data, prompt, params)
+        
+        # Log metrics by type for analysis
+        metrics = result.get("metrics", {})
+        if metrics:
+            metrics["interaction_type"] = interaction_type
+            
+        # Return consistent result structure
+        return {
+            "llm_output": result.get("llm_output"),
+            "error": result.get("error"),
+            "metrics": metrics
+        }
 
     # --- EdgeLLM Step Helpers ---
 
     def _step_generate_simple_question_edge(self, test_case: Dict[str, Any], edge_llm_model_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Step: Generate Simple, Unstructured Question (EdgeLLM) with topic control."""
-        self.logger.debug("Generating Simple Question using EdgeLLM with topic control...")
+        """Step: Generate Simple Unstructured Question (EdgeLLM)."""
+        self.logger.debug("Generating Simple Question using EdgeLLM...")
         
-        # Get the shared teacher request if available
-        teacher_request = test_case.get("shared_teacher_request")
-        if teacher_request and isinstance(teacher_request, dict):
-            # Use the shared teacher request for consistency
-            topic = teacher_request.get("topic", "a relevant topic")
-            objective = teacher_request.get("learning_objective", f"Understanding {topic}")
-            # Try to get grade level from constraints
-            grade_level = "Grade 5" # Default
-            if isinstance(teacher_request.get("constraints"), dict):
-                if "safety_rules" in teacher_request["constraints"]:
-                    safety_rules = teacher_request["constraints"]["safety_rules"]
-                    if isinstance(safety_rules, list) and safety_rules:
-                        grade_level = safety_rules[0]  # Use first safety rule as grade level
-        else:
-            # Fall back to previous behavior if shared request not available
-            teacher_req_ctx = test_case.get("teacher_request_context", {})
-            topic = teacher_req_ctx.get("topic", "a relevant topic")
-            objective = teacher_req_ctx.get("learning_objective", "explain something simply")
-            # Infer grade level or use default if not specified
-            grade_level = "Grade 5" # Default
-            if isinstance(teacher_req_ctx.get("desired_constraints"), dict):
-                grade_level = teacher_req_ctx["desired_constraints"].get("safety", grade_level)
+        # For simple baseline, we use a basic template with fewer constraints
+        simple_prompt_template = test_case.get("baseline_template_id", "teacher_request_persona")
+        simple_prompt_vars = {
+            "topic": test_case.get("variables", {}).get("topic", "general knowledge"),
+            "complexity": test_case.get("variables", {}).get("complexity", "moderate"),
+            "audience": test_case.get("variables", {}).get("audience", "high school student"),
+            "learning_objective": f"Understanding {test_case.get('variables', {}).get('topic', 'general knowledge')}"
+        }
+        
+        prompt, metadata = self.template_engine.process_template(simple_prompt_template, simple_prompt_vars)
+        if prompt is None:
+            error_msg = f"Failed to process simple question template '{simple_prompt_template}': {metadata.get('error', 'Unknown')}"
+            self.logger.error(error_msg)
+            return {"error": error_msg, "metrics": {}}
 
-        # Create a more focused prompt with explicit topic control
-        unstructured_prompt = f"""
-Generate a single, clear question about '{topic}' suitable for {grade_level}.
-The question should relate to the objective: {objective}.
-
-Your question should be direct, focused on {topic}, and appropriate for the grade level.
-Do not provide additional context or explanations - just the question itself.
-"""
-
-        result = self._execute_edge_llm(
-             edge_llm_model_data, unstructured_prompt, params={"temperature": 0.7}
+        # Execute EdgeLLM call
+        result = self.model_manager.execute_edge_llm(
+            model_data=edge_llm_model_data,
+            prompt=prompt,
+            params={
+                "temperature": 0.7,
+                "max_tokens": 512
+            }
         )
-        self.logger.debug(f"Generated topic-controlled question (first 50): {result.get('generated_text', '')[:50]}...")
-        return result
+        
+        # Log metrics by type for analysis
+        metrics = result.get("metrics", {})
+        if metrics:
+            metrics["interaction_type"] = "generate_simple_question_edge"
+            
+        # Return consistent result structure
+        return {
+            "generated_text": result.get("generated_text"),
+            "error": result.get("error"),
+            "metrics": metrics
+        }
 
-    def _step_generate_structured_question_edge(self, teacher_request: Optional[Dict[str, Any]], test_case: Dict[str, Any], edge_llm_model_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _step_generate_structured_question_edge(self, teacher_request: Dict[str, Any], test_case: Dict[str, Any], edge_llm_model_data: Dict[str, Any]) -> Dict[str, Any]:
         """Step: Generate Structured Question (EdgeLLM)."""
         self.logger.debug("Generating Question using EdgeLLM...")
-        if not teacher_request: # Handle case where previous step failed
-            return {"error": "Cannot generate question: Teacher request data is missing.", "metrics": {}}
-
+        
         # Determine template: from teacher request or default
         question_gen_template = teacher_request.get("question_template_id", "direct_constraint_template")
         # Use teacher request content directly as variables for the template
@@ -987,457 +1052,279 @@ Do not provide additional context or explanations - just the question itself.
             return {"error": error_msg, "metrics": {}}
 
         # Execute EdgeLLM call
-        result = self._execute_edge_llm(
-             edge_llm_model_data, prompt, params={"temperature": 0.7} # Allow some creativity
+        result = self.model_manager.execute_edge_llm(
+            model_data=edge_llm_model_data,
+            prompt=prompt,
+            params={
+                "temperature": 0.7,
+                "max_tokens": 512
+            }
         )
-        self.logger.debug(f"Generated question text (first 50): {result.get('generated_text', '')[:50]}...")
-        return result
+        
+        # Log metrics by type for analysis
+        metrics = result.get("metrics", {})
+        if metrics:
+            metrics["interaction_type"] = "generate_structured_question_edge"
+            
+        # Return consistent result structure
+        return {
+            "generated_text": result.get("generated_text"),
+            "error": result.get("error"),
+            "metrics": metrics
+        }
 
-    def _step_simulate_student_answer_edge(self, question_text: Optional[str], context: Optional[Dict[str, Any]], test_case: Dict[str, Any], edge_llm_model_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _step_simulate_student_answer_edge(self, question: str, context: Optional[Dict[str, Any]], test_case: Dict[str, Any], edge_llm_model_data: Dict[str, Any]) -> Dict[str, Any]:
         """Step: Simulate Student Answer (EdgeLLM)."""
         self.logger.debug("Simulating Student Answer using EdgeLLM...")
-        if not question_text:
-            return {"error": "Cannot simulate answer: Generated question text is missing.", "metrics": {}}
-        if not context: context = {} # Handle missing context gracefully for constraints
-
-        # Create simple prompt for student answer
-        word_count_target = context.get("constraints", {}).get("maxWords", 100) // 2
         
-        student_prompt = f"""Answer the following question as if you were a student. 
-Write approximately {word_count_target} words.
+        # Determine student persona template
+        student_template = test_case.get("student_template_id", "student_answer_persona")
+        
+        # Prepare variables for the template
+        student_vars = {
+            "question": question,
+            "student_level": test_case.get("variables", {}).get("student_level", "average"),
+            "topic": test_case.get("variables", {}).get("topic", "general knowledge"),
+        }
+        
+        # If we have context from teacher request, add constraint awareness
+        if context and isinstance(context, dict):
+            student_vars["aware_of_constraints"] = True
+            student_vars["constraints"] = context.get("constraints", {})
+            student_vars["min_words"] = context.get("constraints", {}).get("min_words", 100)
+            student_vars["max_words"] = context.get("constraints", {}).get("max_words", 500)
+        else:
+            student_vars["aware_of_constraints"] = False
+        
+        # Process the student template
+        prompt, metadata = self.template_engine.process_template(student_template, student_vars)
+        if prompt is None:
+            error_msg = f"Failed to process student answer template '{student_template}': {metadata.get('error', 'Unknown')}"
+            self.logger.error(error_msg)
+            return {"error": error_msg, "metrics": {}}
 
-Student profile: {test_case.get("student_persona_profile", "Average student.")}
-
-Question: {question_text}
-
-Your answer:"""
-
-        result = self._execute_edge_llm(
-            edge_llm_model_data, student_prompt, params={"temperature": 0.7}
+        # Execute EdgeLLM call
+        result = self.model_manager.execute_edge_llm(
+            model_data=edge_llm_model_data,
+            prompt=prompt,
+            params={
+                "temperature": 0.7,
+                "max_tokens": 1024
+            }
         )
-        self.logger.debug(f"Simulated student answer (first 50): {result.get('generated_text', '')[:50]}...")
-        return result
+        
+        # Log metrics by type for analysis
+        metrics = result.get("metrics", {})
+        if metrics:
+            metrics["interaction_type"] = "simulate_student_edge"
+            
+        # Return consistent result structure
+        return {
+            "generated_text": result.get("generated_text"),
+            "error": result.get("error"),
+            "metrics": metrics
+        }
 
-    def _step_baseline_evaluation_edge(self, question: Optional[str], answer: Optional[str], test_case: Dict[str, Any], edge_llm_model_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Step: Simple Baseline Evaluation (EdgeLLM)."""
+    def _step_baseline_evaluation_edge(self, question: str, answer: str, test_case: Dict[str, Any], edge_llm_model_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Step: Baseline Evaluation (EdgeLLM)."""
         self.logger.debug("Performing Baseline Evaluation using EdgeLLM...")
-        step_result = {"status": "skipped", "passed": False, "score": 0.0, "feedback": ""}
+        
+        # Determine evaluation template
+        eval_template = test_case.get("baseline_eval_template_id", "teacher_review_persona")
+        
+        # Prepare variables for template
+        eval_vars = {
+            "question": question,
+            "student_answer": answer,
+            "topic": test_case.get("variables", {}).get("topic", "general knowledge"),
+            "evaluation_criteria": test_case.get("evaluation_criteria", {})
+        }
+        
+        # Process evaluation template
+        prompt, metadata = self.template_engine.process_template(eval_template, eval_vars)
+        if prompt is None:
+            error_msg = f"Failed to process baseline evaluation template '{eval_template}': {metadata.get('error', 'Unknown')}"
+            self.logger.error(error_msg)
+            return {"error": error_msg, "metrics": {}}
 
-        if not question or not answer:
-            step_result["error"] = "Missing question or answer for evaluation."
-            return step_result
-
-        # Get evaluation criteria from the test case
-        eval_criteria = test_case.get("evaluation_criteria", {})
-        criteria_str = json.dumps(eval_criteria, indent=2)
-
-        eval_prompt = f"""Evaluate this student answer:
-Question: {question}
-Answer: {answer}
-Criteria: {criteria_str}
-
-Provide a JSON response with these fields:
-{{
-  "passed": true/false,
-  "score": (0.0-1.0),
-  "feedback": "Detailed feedback on the answer"
-}}"""
-
-        # Execute evaluation
-        result = self._execute_edge_llm(
-             edge_llm_model_data, eval_prompt, params={"temperature": 0.1, "json_output": True}
+        # Execute EdgeLLM call
+        result = self.model_manager.execute_edge_llm(
+            model_data=edge_llm_model_data,
+            prompt=prompt,
+            params={
+                "temperature": 0.3,
+                "max_tokens": 512,
+                "json_output": True
+            }
         )
-
-        # Parse the result
-        parsed_eval = None
+        
+        # Log metrics by type for analysis
+        metrics = result.get("metrics", {})
+        if metrics:
+            metrics["interaction_type"] = "evaluate_answer_edge"
+        
+        # Parse evaluation result
         if not result.get("error"):
              parsed_eval = self._parse_json_from_llm_output(result.get("generated_text"))
-             if parsed_eval is None:
-                 self.logger.warning(f"Baseline evaluation result was not parseable JSON.")
-                 # Add error info to the main result dict if parsing failed
-                 result["error"] = result.get("error", "") + " Failed to parse baseline evaluation JSON."
-                 parsed_eval = {"passed": False, "score": 0.0, "feedback": "Parsing failed"} # Default on parse fail
+             if not parsed_eval:
+                 self.logger.warning(f"Failed to parse valid evaluation JSON from EdgeLLM output. Output: {result.get('generated_text')}")
+                 result["error"] = result.get("error", "") + " Failed to parse valid evaluation JSON."
              else:
-                 self.logger.debug(f"Parsed baseline evaluation: {parsed_eval}")
-        else:
-             self.logger.warning(f"Baseline evaluation LLM call failed: {result.get('error')}")
-             parsed_eval = {"passed": False, "score": 0.0, "feedback": "Evaluation step failed"} # Default on execution fail
+                 # Apply normalization to ensure consistent keys
+                 if "valid" in parsed_eval and "passed" not in parsed_eval:
+                     parsed_eval["passed"] = parsed_eval["valid"]
+                 
+                 if "feedback" not in parsed_eval and "comments" in parsed_eval:
+                     parsed_eval["feedback"] = parsed_eval["comments"]
+                     
+                 if "score" not in parsed_eval and any(k in parsed_eval for k in ["rating", "evaluation", "grade"]):
+                     for key in ["rating", "evaluation", "grade"]:
+                         if key in parsed_eval:
+                             value = parsed_eval[key]
+                             if isinstance(value, (int, float)):
+                                 parsed_eval["score"] = float(value) / 10.0 if value > 10 else float(value)
+                             break
+                 
+                 # Ensure score is within 0-1 range
+                 if "score" in parsed_eval:
+                     try:
+                         score = float(parsed_eval["score"])
+                         if score > 1.0 and score <= 10.0:
+                             parsed_eval["score"] = score / 10.0
+                         elif score > 10.0 and score <= 100.0:
+                             parsed_eval["score"] = score / 100.0
+                     except (ValueError, TypeError):
+                         parsed_eval["score"] = 0.5 # Default if cannot parse
+                         
+             result["parsed_evaluation"] = parsed_eval
+                 
+        # Return consistent result structure
+        return {
+            "generated_text": result.get("generated_text"),
+            "error": result.get("error"),
+            "metrics": metrics,
+            "parsed_evaluation": result.get("parsed_evaluation", {})
+        }
 
-        result["parsed_evaluation"] = parsed_eval # Store parsed data (or default)
-        return result
-
-    def _step_multistage_validation_edge(self, question: Optional[str], answer: Optional[str], 
-                                      teacher_request: Optional[Dict[str, Any]], 
-                                      edge_llm_model_data: Dict[str, Any],
-                                      validation_sequence_id: str = "basic_validation_sequence") -> Dict[str, Any]:
-        """
-        Performs multi-stage validation using EdgeLLM.
-        Uses the EvaluationEngine for the actual validation.
-        """
-        if not question or not answer:
-            return {"error": "Missing question or answer for validation", "isValid": False}
+    def _step_multistage_validation_edge(self, question: str, answer: str, teacher_request: Dict[str, Any], edge_llm_model_data: Dict[str, Any], validation_sequence_id: str) -> Dict[str, Any]:
+        """Step: Multi-Stage Validation using the EvaluationEngine (EdgeLLM)."""
+        self.logger.debug(f"Performing Multi-Stage Validation (EdgeLLM) using sequence: {validation_sequence_id}")
         
-        try:
-            self.logger.debug(f"Starting multi-stage validation with sequence '{validation_sequence_id}'")
-            
-            # Use the EvaluationEngine to handle the validation
-            def edge_llm_executor_wrapper(prompt: str, params: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-                # This inner function calls the actual ModelManager method
-                return self._execute_edge_llm(edge_llm_model_data, prompt, params)
-            
-            # Execute the validation through the evaluation engine
-            try:
-                validation_result = self.evaluation_engine.validate_with_sequence(
-                    question=question,
-                    answer=answer,
-                    context=teacher_request,  # Contains constraints and rubric
-                    validation_sequence_id=validation_sequence_id,
-                    llm_executor=edge_llm_executor_wrapper
-                )
-                return validation_result
-            except ValueError as ve:
-                # Catch JSON parsing errors specifically
-                if "VALIDATION ERROR" in str(ve) and any(msg in str(ve) for msg in ["JSON", "parse"]):
-                    self.logger.warning(f"JSON parsing error detected: {ve}")
-                    
-                    # Import our new JSON utilities
-                    from .json_utils import parse_llm_json_output
-                    
-                    # First try the simplified validation sequence
-                    simple_validation_id = "simplified_validation_sequence"
-                    
-                    # Only try simplified sequence if we're not already using it
-                    if validation_sequence_id != simple_validation_id:
-                        self.logger.info("Attempting validation with simplified sequence for better JSON output...")
-                        try:
-                            # Try with the simplified sequence
-                            validation_result = self.evaluation_engine.validate_with_sequence(
-                                question=question,
-                                answer=answer,
-                                context=teacher_request,
-                                validation_sequence_id=simple_validation_id,
-                                llm_executor=edge_llm_executor_wrapper
-                            )
-                            return validation_result
-                        except Exception as e2:
-                            self.logger.error(f"Simplified validation also failed: {e2}")
-                            # Proceed to direct JSON generation
-                    
-                    # If we get here, both regular and simplified validation failed
-                    # Use a direct JSON generation approach
-                    self.logger.info("Generating direct validation JSON...")
-                    
-                    # Construct a simple validation prompt that focuses just on generating valid JSON
-                    json_focus_prompt = f"""Evaluate this student answer to a question. Return ONLY valid JSON without markdown.
-
-QUESTION: {question}
-
-STUDENT ANSWER: {answer}
-
-Evaluate if the answer is relevant to the question and the information is accurate.
-Output MUST be valid JSON with this exact structure: {{"passed": true/false, "score": 0.7, "feedback": "Your feedback here"}}
-
-The "passed" field must be true or false.
-The "score" field must be a number between 0 and 1.
-The "feedback" field must be a string with your evaluation.
-
-IMPORTANT: Return ONLY the JSON object - NO markdown formatting, code blocks, or explanations."""
-
-                    # Execute with parameters forcing JSON output and low temperature
-                    json_params = {
-                        "temperature": 0.1,
-                        "max_tokens": 256,
-                        "json_output": True
-                    }
-                    
-                    result = edge_llm_executor_wrapper(json_focus_prompt, json_params)
-                    
-                    if result.get("error"):
-                        self.logger.error(f"Direct JSON generation failed: {result.get('error')}")
-                        
-                        # Last resort - try JSON repair if we have a response from a previous attempt
-                        # This typically happens when there's a partial JSON in a prior validation attempt
-                        original_error_text = str(ve)
-                        if "extract valid JSON from output:" in original_error_text:
-                            # Try to extract the failed output from the error message
-                            error_parts = original_error_text.split("output:")
-                            if len(error_parts) > 1:
-                                failed_output = error_parts[1].strip()
-                                if failed_output:
-                                    self.logger.info("Attempting JSON repair on previous failed output...")
-                                    repaired_json_str = self.model_manager.repair_json_with_llm(
-                                        failed_output, 
-                                        edge_llm_model_data,
-                                        max_attempts=1
-                                    )
-                                    try:
-                                        # Try to parse the repaired JSON
-                                        parsed_json = json.loads(repaired_json_str)
-                                        return {
-                                            "isValid": parsed_json.get("passed", False),
-                                            "finalScore": float(parsed_json.get("score", 0.0)),
-                                            "stageResults": [{
-                                                "stageId": "json_repaired_validation",
-                                                "passed": parsed_json.get("passed", False),
-                                                "score": float(parsed_json.get("score", 0.0)),
-                                                "feedback": parsed_json.get("feedback", "Repaired validation result.")
-                                            }],
-                                            "aggregateFeedback": parsed_json.get("feedback", "Repaired validation result."),
-                                            "metrics": {"json_repaired": True}
-                                        }
-                                    except json.JSONDecodeError:
-                                        # Give up and raise the original exception
-                                        raise ve
-                        
-                        # If we get here, all approaches failed
-                        raise ve
-                        
-                    # Try to parse the direct JSON result using our utility
-                    generated_text = result.get("generated_text", "")
-                    parsed_json = parse_llm_json_output(
-                        generated_text,
-                        required_keys=["passed", "score", "feedback"],
-                        default_values={
-                            "passed": False,
-                            "score": 0.5,
-                            "feedback": "Validation could not be completed properly."
-                        }
-                    )
-                    
-                    # Return in the expected format for validation results
-                    return {
-                        "isValid": parsed_json.get("passed", False),
-                        "finalScore": float(parsed_json.get("score", 0.0)),
-                        "stageResults": [{
-                            "stageId": "direct_json_validation",
-                            "passed": parsed_json.get("passed", False),
-                            "score": float(parsed_json.get("score", 0.0)),
-                            "feedback": parsed_json.get("feedback", "Direct JSON validation result.")
-                        }],
-                        "aggregateFeedback": parsed_json.get("feedback", "Direct JSON validation result."),
-                        "metrics": result.get("metrics", {})
-                    }
-                else:
-                    # Not a JSON parsing error, re-raise
-                    raise
-            
-        except Exception as e:
-            self.logger.error(f"Multi-stage validation error: {e}", exc_info=True)
-            return {"error": f"Validation failed: {str(e)}", "isValid": False}
-
-
-    # --- Core LLM Execution Helpers ---
-
-    def _execute_cloud_llm_interaction(self, model_data: Dict[str, Any], interaction_type: str,
-                                     persona_template_id: Optional[str] = None, context_data: Optional[Dict[str, Any]] = None,
-                                     prompt: Optional[str] = None,
-                                     params: Optional[Dict[str, Any]] = None,
-                                     expected_output_format: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Helper to execute an interaction with CloudLLM.
-        Handles template processing and calls ModelManager.
-        Returns full result dict.
-        """
-        self.logger.debug(f"Executing CloudLLM Interaction: {interaction_type}")
-
-        # Process template if provided
-        if persona_template_id and context_data:
-            # Process Persona Prompt Template
-            processed_prompt, metadata = self.template_engine.process_template(persona_template_id, context_data)
-            if processed_prompt is None:
-                error_msg = f"Failed to process persona template '{persona_template_id}': {metadata.get('error', 'Unknown')}"
-                self.logger.error(error_msg)
-                # Return structure consistent with ModelManager failure
-                return {"error": error_msg, "llm_output": None, "metrics": {}}
-            prompt = processed_prompt
-
-        if not prompt:
-            error_msg = "No prompt provided and template processing failed"
-            self.logger.error(error_msg)
-            return {"error": error_msg, "llm_output": None, "metrics": {}}
-
-        # Set up parameters
-        execution_params = params or {"temperature": 0.7} # Default temp
-        if interaction_type == "review_evaluation": execution_params["temperature"] = 0.2 # More objective review
-        if expected_output_format == "json":
-            execution_params["response_format"] = {"type": "json_object"}
-
-        result = self.model_manager.execute_cloud_llm(model_data, prompt, execution_params)
-        # Result structure: {llm_output, input_tokens, output_tokens, metrics, error?}
-        result["interaction_type"] = interaction_type # Add interaction type for context
-        self.logger.debug(f"CloudLLM Interaction '{interaction_type}' complete. Error: {result.get('error')}")
+        # Delegate to the evaluation engine
+        result = self.evaluation_engine.evaluate_using_edge_llm(
+            validation_sequence_id=validation_sequence_id,
+            edge_llm_model_data=edge_llm_model_data,
+            question=question,
+            answer=answer,
+            teacher_request=teacher_request
+        )
+        
         return result
 
-    def _execute_edge_llm(self, model_data: Dict[str, Any], prompt: str,
-                       params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Helper to execute a task with EdgeLLM via ModelManager.
-        Returns full result dict.
-        """
-        self.logger.debug(f"Executing EdgeLLM task (prompt len {len(prompt)})... Params: {params}")
-        if not prompt:
-             self.logger.error("EdgeLLM execution requested with empty prompt.")
-             return {"error": "Empty prompt provided to EdgeLLM.", "generated_text": None, "metrics": {}}
-        result = self.model_manager.execute_edge_llm(model_data, prompt, params)
-        # Result structure: {generated_text, input_tokens, output_tokens, metrics, error?}
-        self.logger.debug(f"EdgeLLM task complete. Error: {result.get('error')}")
-        return result
-
-
-    # --- Other Helper Methods ---
+    # --- Helper Methods ---
 
     def _parse_json_from_llm_output(self, text: Optional[str]) -> Optional[Dict[str, Any]]:
         """
-        Robustly attempts to parse JSON from LLM text output using various patterns.
-        Returns dictionary on success, None on failure. Logs warnings on failure.
+        Parse JSON from LLM output text using a robust approach.
+        
+        Delegate to the evaluation engine's helper for consistency.
         """
-        if not text or not isinstance(text, str):
-            self.logger.warning("Attempted to parse JSON from empty or non-string input.")
+        if not text:
             return None
+            
+        return self.evaluation_engine.parse_json_from_llm_output(text)
 
-        # Clean potential wrapping quotes if the whole string is quoted JSON
-        if text.startswith('"') and text.endswith('"'):
-             text = text[1:-1].replace('\\"', '"').replace('\\\\', '\\')
-
-        # Strip leading/trailing whitespace
-        text = text.strip()
-
-        self.logger.debug(f"Attempting to parse JSON from output (first 150): {text[:150]}...")
-
-        # 1. Try direct parsing (most common case for compliant models)
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            self.logger.debug("Direct JSON parsing failed. Trying extraction patterns.")
-            pass # Continue to extraction patterns
-
-        # 2. Try extracting from markdown code blocks (```json ... ``` or ``` ... ```)
-        patterns = [
-            r'```(?:json)?\s*(\{.*?\})\s*```', # ```json { ... } ``` or ``` { ... } ``` (non-greedy)
-            r'```\s*(\[.*?\])\s*```'          # ``` [ ... ] ``` (for arrays)
-        ]
-        for pattern in patterns:
-             match = re.search(pattern, text, re.DOTALL)
-             if match:
-                 json_text = match.group(1)
-                 try:
-                     self.logger.debug(f"Found JSON in markdown block: {json_text[:100]}...")
-                     return json.loads(json_text)
-                 except json.JSONDecodeError:
-                     self.logger.warning(f"Extracted text from markdown looked like JSON but failed to parse: {json_text[:100]}...")
-                     # Continue searching, maybe there's another block or direct JSON later
-
-        # 3. Permissive: Find first top-level JSON object or array starting at the beginning
-        #    Handles cases where the LLM just outputs JSON without markdown
-        json_match_obj = re.match(r'^\s*(\{.*?\})\s*$', text, re.DOTALL)
-        json_match_arr = re.match(r'^\s*(\[.*?\])\s*$', text, re.DOTALL)
-        if json_match_obj:
-            json_text = json_match_obj.group(1)
-        elif json_match_arr:
-            json_text = json_match_arr.group(1)
-        else:
-             json_text = None
-
-        if json_text:
-            try:
-                 self.logger.debug(f"Found JSON object/array via start/end match: {json_text[:100]}...")
-                 # Final check: ensure it's a dict or list after parsing
-                 parsed_data = json.loads(json_text)
-                 if isinstance(parsed_data, (dict, list)):
-                     return parsed_data
-                 else:
-                      self.logger.warning(f"Permissive search found JSON-like text but result was not dict/list: {type(parsed_data)}")
-            except json.JSONDecodeError:
-                 self.logger.warning(f"Permissive search found JSON-like text but failed parse: {json_text[:100]}...")
-
-        self.logger.warning(f"Failed to find/parse valid JSON in text: {text[:150]}...")
-        return None # Failed to parse
-
-    def _create_run_data_struct(self, run_id: str, test_case_id: str, cloud_llm_id: str, edge_llm_id: str, hw_profile: str) -> Dict[str, Any]:
-        """Creates the initial dictionary structure for a single test run results."""
+    def _create_run_data_struct(self, run_id: str, test_case_id: str, cloud_llm_model_id: str, edge_llm_model_id: str, hardware_profile: str) -> Dict[str, Any]:
+        """Create the basic data structure for a run result."""
+        timestamp = datetime.now().isoformat()
+        
         return {
-            "id": run_id,
-            "timestamp": datetime.now().isoformat(),
+            "run_id": run_id,
+            "timestamp": timestamp,
             "test_case_id": test_case_id,
-            "cloud_llm_model_id": cloud_llm_id,
-            "edge_llm_model_id": edge_llm_id,
-            "hardware_profile": hw_profile,
-            "run_1": {"status": "pending"},
-            "run_2": {"status": "pending"},
-            "run_3": {"status": "pending"},
-            "run_4": {"status": "pending"}
+            "cloud_llm_model": cloud_llm_model_id,
+            "edge_llm_model": edge_llm_model_id,
+            "hardware_profile": hardware_profile,
+            "status": "initialized",
+            "mock_mode": self.mock_models
         }
-
-    def _create_analysis_summary(self, suite_id: str, run_count: int, results: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Creates a basic analysis summary dictionary (more detailed analysis in scripts)."""
-        summary = {
-            "test_suite_id": suite_id,
-            "total_runs_attempted": run_count,
-            "total_runs_logged": len(results),
-            "runs_with_errors": 0,
-            "runs_by_status": {
-                "run_1": {"completed": 0, "failed": 0, "pending": 0},
-                "run_2": {"completed": 0, "failed": 0, "pending": 0},
-                "run_3": {"completed": 0, "failed": 0, "pending": 0},
-                "run_4": {"completed": 0, "failed": 0, "pending": 0}
+        
+    def _verify_topic_consistency(self, run_data: Dict[str, Any], test_case: Dict[str, Any]) -> bool:
+        """Check if all runs use the same topic for valid comparison."""
+        teacher_request = test_case.get("shared_teacher_request", {})
+        original_topic = test_case.get("variables", {}).get("topic", "")
+        shared_topic = teacher_request.get("topic", "")
+        
+        # Get topics from each run output if they exist
+        run_1_topic = run_data.get("run_1", {}).get("output", "").split("\n")[0] if run_data.get("run_1") else ""
+        run_2_topic = run_data.get("run_2", {}).get("output", "").split("\n")[0] if run_data.get("run_2") else ""
+        run_3_topic = run_data.get("run_3", {}).get("output", "").split("\n")[0] if run_data.get("run_3") else ""
+        run_4_topic = run_data.get("run_4", {}).get("output", "").split("\n")[0] if run_data.get("run_4") else ""
+        
+        self.logger.debug(f"[Run {run_data.get('run_id')}] Topic consistency check:")
+        self.logger.debug(f"  - Original: {original_topic}")
+        self.logger.debug(f"  - Shared: {shared_topic}")
+        self.logger.debug(f"  - Run 1: {run_1_topic[:50]}...")
+        self.logger.debug(f"  - Run 2: {run_2_topic[:50]}...")
+        self.logger.debug(f"  - Run 3: {run_3_topic[:50]}...")
+        self.logger.debug(f"  - Run 4: {run_4_topic[:50]}...")
+        
+        # For now just log, could implement stricter checking
+        return True
+        
+    def _create_analysis_summary(self, suite_id: str, run_counter: int, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Create a basic analysis summary of the test suite results."""
+        error_count = sum(1 for r in results if "error" in r and r["error"])
+        successful_runs = sum(1 for r in results if r.get("status") == "completed")
+        
+        # Get some basic aggregate metrics 
+        total_metrics_runs = []
+        for run in results:
+            # Check for error-free runs
+            if run.get("status") == "completed":
+                # Collect metrics for comparisons
+                for run_type in ["run_1", "run_2", "run_3", "run_4"]:
+                    if run_type in run and "total_metrics" in run[run_type]:
+                        metrics = run[run_type]["total_metrics"]
+                        metrics["run_type"] = run_type
+                        metrics["edge_llm_model"] = run.get("edge_llm_model")
+                        total_metrics_runs.append(metrics)
+        
+        # Very simple metrics calculation for now
+        avg_latency = {}
+        avg_tokens = {}
+        for run_type in ["run_1", "run_2", "run_3", "run_4"]:
+            type_metrics = [m for m in total_metrics_runs if m.get("run_type") == run_type]
+            if type_metrics:
+                latencies = [m.get("latency_ms", 0) for m in type_metrics]
+                avg_latency[run_type] = sum(latencies) / len(latencies) if latencies else 0
+                
+                tokens = [m.get("output_tokens", 0) for m in type_metrics]
+                avg_tokens[run_type] = sum(tokens) / len(tokens) if tokens else 0
+        
+        return {
+            "suite_id": suite_id,
+            "timestamp": datetime.now().isoformat(),
+            "total_runs": run_counter,
+            "successful_runs": successful_runs,
+            "error_count": error_count,
+            "summary_metrics": {
+                "avg_latency_ms": avg_latency,
+                "avg_output_tokens": avg_tokens
             }
         }
-        
-        errors = 0
-        for res in results:
-            # Count top-level errors
-            if res.get("error"):
-                errors += 1
-            
-            # Count run-specific statuses
-            for run_key in ["run_1", "run_2", "run_3", "run_4"]:
-                run_data = res.get(run_key, {})
-                status = run_data.get("status", "pending")
                 
-                if status == "completed":
-                    summary["runs_by_status"][run_key]["completed"] += 1
-                elif status == "failed" or run_data.get("error"):
-                    summary["runs_by_status"][run_key]["failed"] += 1
-                    errors += 1
-                else:
-                    summary["runs_by_status"][run_key]["pending"] += 1
-        
-        summary["runs_with_errors"] = errors
-        self.logger.info(f"Analysis Summary: Attempted={run_count}, Logged={len(results)}, Errors={errors}")
-        
-        return summary 
-
-    def _verify_topic_consistency(self, run_data: Dict[str, Any], test_case: Dict[str, Any]) -> None:
-        """
-        Verify topic consistency across all runs and log the results.
-        This helps identify when runs are not following the same topic.
-        """
-        self.logger.info("-- Topic Consistency Verification --")
-        
-        # Get the expected topic
-        expected_topic = test_case.get("shared_teacher_request", {}).get("topic", 
-                           test_case.get("variables", {}).get("topic", "unknown"))
-        
-        self.logger.info(f"Expected topic: {expected_topic}")
-        
-        # Extract the first 100 chars of generated questions for inspection
-        for run_num in range(1, 5):
-            run_key = f"run_{run_num}"
-            if run_key in run_data:
-                question_data = run_data[run_key].get("steps", {}).get("generated_question", {})
-                question_text = question_data.get("llm_output", question_data.get("generated_text", ""))
-                if question_text:
-                    preview = question_text[:100].replace("\n", " ")
-                    self.logger.info(f"{run_key} question preview: \"{preview}...\"")
-        
-        self.logger.info("-- End Verification --")
-
-    def _log_and_return_error(self, message: str, exception: Optional[Exception] = None) -> Dict[str, str]:
-        """Logs a critical error and returns an error dictionary for run_test_suite exit."""
+    def _log_and_return_error(self, message: str, exception: Exception = None) -> Dict[str, Any]:
+        """Log an error and return a standardized error result."""
+        error_message = message
         if exception:
-             # Log full traceback for exceptions
-             self.logger.critical(f"{message}: {exception}", exc_info=True)
-             return {"error": f"{message}: {exception}"}
+            error_message += f" Error: {str(exception)}"
+            self.logger.error(error_message, exc_info=True)
         else:
-             self.logger.critical(message)
-             return {"error": message}
+            self.logger.error(error_message)
+            
+        return {
+            "status": "failed",
+            "error": error_message,
+            "error_count": 1
+        }

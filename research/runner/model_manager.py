@@ -33,6 +33,7 @@ except ImportError:
 # Local application imports
 from .config_loader import ConfigLoader
 from .metrics_collector import MetricsCollector
+from .edge_runners import EdgeLLMRunner, LMStudioRunner, OllamaRunner
 
 class MockModel:
     """
@@ -139,6 +140,7 @@ class ModelManager:
     
     def __init__(self, config_loader: ConfigLoader, metrics_collector: MetricsCollector,
                  lm_studio_url: Optional[str] = None,
+                 ollama_url: Optional[str] = None,
                  openai_api_key: Optional[str] = None,
                  anthropic_api_key: Optional[str] = None):
         """
@@ -147,7 +149,8 @@ class ModelManager:
         Args:
             config_loader: Instance of ConfigLoader to fetch model configs.
             metrics_collector: Instance of MetricsCollector for timing/token counts.
-            lm_studio_url: URL for LM Studio API (for some EdgeLLM).
+            lm_studio_url: URL for LM Studio API (for EdgeLLM with LM Studio).
+            ollama_url: URL for Ollama API (for EdgeLLM with Ollama).
             openai_api_key: OpenAI API key (for CloudLLM).
             anthropic_api_key: Anthropic API key (for CloudLLM).
         """
@@ -156,7 +159,8 @@ class ModelManager:
         self.metrics_collector = metrics_collector # Store the collector
         
         # Configure API endpoints and keys from args or environment
-        self.lm_studio_url = lm_studio_url or os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1") # Ensure /v1 for completions endpoint
+        self.lm_studio_url = lm_studio_url or os.environ.get("LM_STUDIO_URL", "http://localhost:1234/v1")
+        self.ollama_url = ollama_url or os.environ.get("OLLAMA_URL", "http://localhost:11434")
         self.openai_api_key = openai_api_key or os.environ.get("OPENAI_API_KEY")
         self.anthropic_api_key = anthropic_api_key or os.environ.get("ANTHROPIC_API_KEY")
         
@@ -170,7 +174,7 @@ class ModelManager:
         self.logger.info("ModelManager initialized.")
         if not self.openai_api_key: self.logger.warning("OpenAI API key not provided.")
         if not self.anthropic_api_key: self.logger.warning("Anthropic API key not provided.")
-        if not requests: self.logger.warning("`requests` library not installed, LM Studio interaction might fail.")
+        if not requests: self.logger.warning("`requests` library not installed, LLM interaction might fail.")
         
     def _get_openai_client(self):
         """Lazily initializes and returns the OpenAI client."""
@@ -241,15 +245,41 @@ class ModelManager:
             self.logger.info(f"Initialized CloudLLM ({provider}): {model_id}")
 
         elif model_type == "edge_llm":
-            # Currently primarily supports LM Studio compatible endpoints
-            if client_type == "lm_studio" or "local" in client_type: # Assume local means LM Studio for now
-                 # No specific client needed, will use requests in execute_edge_llm
-                 model_config["client_type"] = "lm_studio" # Standardize
-                 self.logger.info(f"Prepared EdgeLLM (LM Studio target): {model_id} at {self.lm_studio_url}")
-                 if not requests:
-                     self.logger.warning("`requests` library needed for LM Studio interaction.")
+            # Get runner_type from model config, defaulting to "lmstudio" for backward compatibility
+            runner_type = model_config.get("runner_type", "lmstudio").lower()
+            
+            # Create the appropriate runner based on runner_type
+            if runner_type == "lmstudio":
+                if not self.lm_studio_url:
+                    raise ValueError(f"LM Studio URL is required for model {model_id} with runner_type 'lmstudio'")
+                
+                runner_instance = LMStudioRunner(
+                    lm_studio_url=self.lm_studio_url,
+                    model_data=model_config,
+                    metrics_collector=self.metrics_collector
+                )
+                self.logger.info(f"Initialized EdgeLLM with LMStudioRunner: {model_id}")
+                
+            elif runner_type == "ollama":
+                if not self.ollama_url:
+                    raise ValueError(f"Ollama URL is required for model {model_id} with runner_type 'ollama'")
+                
+                # Check if ollama_tag is present when runner_type is ollama
+                if not model_config.get("ollama_tag"):
+                    self.logger.warning(f"No 'ollama_tag' specified for model {model_id}. Will use model_id as fallback.")
+                
+                runner_instance = OllamaRunner(
+                    ollama_url=self.ollama_url,
+                    model_data=model_config,
+                    metrics_collector=self.metrics_collector
+                )
+                self.logger.info(f"Initialized EdgeLLM with OllamaRunner: {model_id}")
+                
             else:
-                 raise ValueError(f"Unsupported client_type for EdgeLLM model {model_id}: {client_type}")
+                raise ValueError(f"Unsupported runner_type '{runner_type}' for EdgeLLM model {model_id}")
+            
+            # Store the runner instance in the model_config
+            model_config["runner_instance"] = runner_instance
 
         else:
             raise ValueError(f"Unknown model type: {model_type}")
@@ -378,7 +408,7 @@ class ModelManager:
                      params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Execute EdgeLLM (edge model) task. Aligns with EdgeLLMExecution algorithm.
-        Currently assumes LM Studio compatible API endpoint.
+        Delegates to the appropriate runner implementation based on model configuration.
 
         Args:
             model_data: Model configuration dictionary (from initialize_edge_llm).
@@ -390,109 +420,37 @@ class ModelManager:
         """
         params = params or {}
         model_id = model_data.get("model_id", "unknown")
-        client_type = model_data.get("client_type", "").lower()
 
         # Handle mock execution first
         if model_data.get("mock"):
             mock_instance: MockModel = model_data.get("instance")
             return mock_instance.generate(prompt, **params)
 
-        # --- LM Studio Execution Logic ---
-        if client_type == "lm_studio":
-            if not requests:
-                 return {"error": "`requests` library not installed, cannot call LM Studio.", "generated_text": None, "metrics": {}}
-
-            # --- Ensure correct API endpoint construction ---
-            base_url = self.lm_studio_url
-            # Add /v1 if it seems missing (basic check)
-            if not base_url.endswith('/v1') and '/v1/' not in base_url:
-                 # Avoid double slashes if base_url already ends with /
-                 if base_url.endswith('/'):
-                      base_url += 'v1'
-                 else:
-                      base_url += '/v1' 
-            # Construct the final endpoint URL
-            api_url = f"{base_url}/chat/completions"
-            self.logger.debug(f"Constructed LM Studio API URL: {api_url}")
-            # --- End endpoint construction ---
-
-            # Prepare payload (OpenAI compatible)
-            payload = {
-                # Use model_id from config for LM Studio, assuming it matches loaded model ID
-                "model": model_id, 
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": params.get("temperature", 0.7),
-                "max_tokens": params.get("max_tokens", 256), # Typically smaller for edge
-                "stream": False # Expect single response
-            }
-            # Handle JSON format requestsj
-            json_format_requested = params.get("json_output", False) or (
-                isinstance(params.get("response_format"), dict) and 
-                params.get("response_format", {}).get("type") == "json_object"
-            )
-            
-            # Since LM Studio doesn't support response_format parameter,
-            # we'll modify the prompt to emphasize JSON output when requested
-            if json_format_requested and not "json" in prompt.lower():
-                # Add explicit JSON formatting instructions
-                prompt_addition = "\n\nIMPORTANT: Your response must be a valid JSON object only. Do not include any text outside the JSON object."
-                payload["messages"][0]["content"] = prompt + prompt_addition
-                self.logger.debug("Added JSON formatting instructions to prompt.")
-
-            headers = {"Content-Type": "application/json"}
-
-            def api_call() -> Tuple[str, int, int]:
-                response = requests.post(api_url, headers=headers, json=payload)
-                response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
-                data = response.json()
-                
-                # --- Added error handling and logging ---
-                try:
-                    # Extract response text
-                    output_text = data['choices'][0]['message']['content']
-                    
-                    # Extract token counts if available
-                    input_tokens = data.get('usage', {}).get('prompt_tokens', 0)
-                    output_tokens = data.get('usage', {}).get('completion_tokens', 0)
-                    
-                    return output_text, input_tokens, output_tokens
-                except KeyError as e:
-                    self.logger.error(f"LM Studio response missing expected key: {e}")
-                    self.logger.error(f"Full response data from LM Studio: {data}")
-                    raise # Re-raise the error after logging
-                # --- End added error handling ---
-
-            result = self._execute_model_call(
-                model_data=model_data,  # Pass the full model data dict
-                prompt=prompt, 
-                api_call_func=api_call,
-                result_key="generated_text" # Specify the correct output key for EdgeLLM
-            )
-            
-            # Check if JSON repair is needed
-            if json_format_requested and not result.get("error"):
-                generated_text = result.get("generated_text", "")
-                try:
-                    # Test if it's valid JSON
-                    json.loads(generated_text)
-                    # It's valid, no need to repair
-                except json.JSONDecodeError:
-                    # It's not valid JSON, attempt repair (limit to one attempt)
-                    self.logger.warning("EdgeLLM returned invalid JSON, attempting repair...")
-                    fixed_text = self.repair_json_output(generated_text, model_data, max_attempts=1)
-                    if fixed_text != generated_text:
-                        self.logger.info("JSON repaired successfully")
-                        result["generated_text"] = fixed_text
-                        result["json_repaired"] = True
-            
-            return result
-
-        else:
-            # Placeholder for other EdgeLLM clients (e.g., direct Transformers/llama.cpp)
-            self.logger.error(f"EdgeLLM client type '{client_type}' not implemented for execution.")
+        # Get the runner instance from model_data
+        runner_instance = model_data.get("runner_instance")
+        if not runner_instance:
+            error_msg = f"EdgeLLM runner for {model_id} not initialized."
+            self.logger.error(error_msg)
             return {
-                "error": f"EdgeLLM client type '{client_type}' execution not implemented.",
+                "error": error_msg,
                 "generated_text": None,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "metrics": {}
+            }
+        
+        # Delegate execution to the runner
+        try:
+            self.logger.debug(f"Delegating execution of {model_id} to runner type: {model_data.get('runner_type', 'unknown')}")
+            result = runner_instance.execute(prompt, params)
+            return result
+        except Exception as e:
+            self.logger.error(f"Error delegating to EdgeLLM runner for {model_id}: {str(e)}", exc_info=True)
+            return {
+                "error": str(e),
+                "generated_text": None,
+                "input_tokens": len(prompt.split()),  # Estimate
+                "output_tokens": 0,
                 "metrics": {}
             }
 

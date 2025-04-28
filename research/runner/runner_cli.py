@@ -115,7 +115,13 @@ def parse_args():
     parser.add_argument(
         '--lm-studio-url',
         type=str,
-        help='URL for LM Studio API (for LLM-S models). Overrides LM_STUDIO_URL environment variable.'
+        help='URL for LM Studio API (for EdgeLLM models). Overrides LM_STUDIO_URL environment variable.'
+    )
+    
+    parser.add_argument(
+        '--ollama-url',
+        type=str,
+        help='URL for Ollama API (for EdgeLLM models). Overrides OLLAMA_URL environment variable.'
     )
     
     parser.add_argument(
@@ -127,13 +133,13 @@ def parse_args():
     parser.add_argument(
         '--openai-api-key',
         type=str,
-        help='OpenAI API key (for LLM-L models). Overrides OPENAI_API_KEY environment variable.'
+        help='OpenAI API key (for CloudLLM models). Overrides OPENAI_API_KEY environment variable.'
     )
     
     parser.add_argument(
         '--anthropic-api-key',
         type=str,
-        help='Anthropic API key (for LLM-L models). Overrides ANTHROPIC_API_KEY environment variable.'
+        help='Anthropic API key (for CloudLLM models). Overrides ANTHROPIC_API_KEY environment variable.'
     )
     
     return parser.parse_args()
@@ -158,24 +164,33 @@ def main():
     
     # Get API configurations from args or environment variables
     lm_studio_url = args.lm_studio_url or os.environ.get('LM_STUDIO_URL')
+    ollama_url = args.ollama_url or os.environ.get('OLLAMA_URL')
     openai_api_key = args.openai_api_key or os.environ.get('OPENAI_API_KEY')
     anthropic_api_key = args.anthropic_api_key or os.environ.get('ANTHROPIC_API_KEY')
     
     # Log API configurations
     if lm_studio_url:
-        logger.info(f"Using LM Studio URL for LLM-S models")
+        logger.info(f"Using LM Studio URL for EdgeLLM models")
     else:
-        logger.warning("No LM Studio URL provided - will use mock mode or internal models for LLM-S")
+        logger.info("No LM Studio URL provided - will use Ollama or mock mode")
+    
+    if ollama_url:
+        logger.info(f"Using Ollama URL for EdgeLLM models")
+    else:
+        logger.info("No Ollama URL provided - will use LM Studio or mock mode")
+    
+    if not lm_studio_url and not ollama_url:
+        logger.warning("No LM Studio or Ollama URL provided - will use mock mode for EdgeLLM models")
     
     if openai_api_key:
-        logger.info("OpenAI API key found for LLM-L")
+        logger.info("OpenAI API key found for CloudLLM")
     else:
-        logger.warning("No OpenAI API key found - OpenAI LLM-L models will not work")
+        logger.warning("No OpenAI API key found - OpenAI CloudLLM models will not work")
     
     if anthropic_api_key:
-        logger.info("Anthropic API key found for LLM-L")
+        logger.info("Anthropic API key found for CloudLLM")
     else:
-        logger.warning("No Anthropic API key found - Anthropic LLM-L models will not work")
+        logger.warning("No Anthropic API key found - Anthropic CloudLLM models will not work")
     
     # Log mock mode status
     if args.mock_models:
@@ -193,6 +208,7 @@ def main():
             output_dir=args.output,
             log_level=args.log_level,
             lm_studio_url=lm_studio_url,
+            ollama_url=ollama_url,
             mock_models=args.mock_models,
             openai_api_key=openai_api_key,
             anthropic_api_key=anthropic_api_key
@@ -232,4 +248,4 @@ def main():
         return 1
 
 if __name__ == '__main__':
-    sys.exit(main()) 
+    sys.exit(main())

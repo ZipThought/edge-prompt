@@ -11,7 +11,7 @@
   ],
   "models": {
     "cloud_llm": "gpt-4o",
-    "edge_llm": ["gemma-3-4b-it"]
+    "edge_llm": ["gemma-3-4b-it-lmstudio", "gemma-3-4b-it-ollama"]
   },
   "run_parameters": {
     "run_1": {
@@ -96,6 +96,13 @@
       "metrics": ["avg_total_latency_run4", "avg_total_latency_run3"],
       "visualization": "table", 
       "table_name": "Table_Paper_LatencyCompare"
+    },
+    {
+      "name": "Backend Comparison (LM Studio vs Ollama)",
+      "description": "Compare the performance of different EdgeLLM backends (LM Studio vs. Ollama).",
+      "metrics": ["avg_total_latency_lmstudio", "avg_total_latency_ollama", "avg_total_tokens_lmstudio", "avg_total_tokens_ollama"],
+      "visualization": "table", 
+      "table_name": "Table_Backend_Comparison"
     }
   ]
 }

@@ -15,52 +15,103 @@
   ],
   "edge_llm_models": [
     {
-      "model_id": "gemma-3-12b-it",
+      "model_id": "gemma-3-12b-it-lmstudio",
       "base_model": "gemma-3-12b",
       "quantization": "GGUF",
       "context_window": 128000,
       "download_url": "https://model.lmstudio.ai/download/lmstudio-community/gemma-3-12b-it-GGUF",
       "api_identifier": "gemma-3-12b-it",
       "client_type": "local_gguf",
+      "runner_type": "lmstudio",
       "optimization": {
         "kv_cache": true,
         "flash_attention": true,
         "tensor_parallelism": false,
         "execution_provider": "CUDA"
       },
-      "notes": "Simulates higher-end edge capability" 
+      "notes": "Simulates higher-end edge capability (via LM Studio)"
     },
     {
-      "model_id": "gemma-3-4b-it",
+      "model_id": "gemma-3-4b-it-lmstudio",
       "base_model": "gemma-3-4b",
       "quantization": "GGUF",
       "context_window": 128000,
       "download_url": "https://model.lmstudio.ai/download/lmstudio-community/gemma-3-4b-it-GGUF",
       "api_identifier": "gemma-3-4b-it",
       "client_type": "local_gguf",
+      "runner_type": "lmstudio",
       "optimization": {
         "kv_cache": true,
         "flash_attention": true,
         "tensor_parallelism": false,
         "execution_provider": "CUDA"
       },
-      "notes": "Simulates mid-range edge capability"
+      "notes": "Simulates mid-range edge capability (via LM Studio)"
     },
     {
-      "model_id": "llama-3.2-3b-instruct",
+      "model_id": "llama-3.2-3b-instruct-lmstudio",
       "base_model": "llama-3.2-3b",
       "quantization": "Q8_0",
       "context_window": 128000,
       "download_url": "https://model.lmstudio.ai/download/hugging-quants/Llama-3.2-3B-Instruct-Q8_0-GGUF",
       "api_identifier": "llama-3.2-3b-instruct",
       "client_type": "local_gguf",
+      "runner_type": "lmstudio",
       "optimization": {
         "kv_cache": true,
         "flash_attention": true,
         "tensor_parallelism": false,
         "execution_provider": "CUDA"
       },
-      "notes": "Simulates low-end edge capability"
+      "notes": "Simulates low-end edge capability (via LM Studio)"
+    },
+    {
+      "model_id": "gemma-3-12b-it-ollama",
+      "base_model": "gemma-3-12b",
+      "quantization": "Q4_K_M",
+      "context_window": 128000,
+      "client_type": "local_gguf",
+      "runner_type": "ollama",
+      "ollama_tag": "gemma3:12b",
+      "optimization": {
+        "kv_cache": true,
+        "flash_attention": true,
+        "tensor_parallelism": false,
+        "execution_provider": "CUDA"
+      },
+      "notes": "Simulates higher-end edge capability (via Ollama)"
+    },
+    {
+      "model_id": "gemma-3-4b-it-ollama",
+      "base_model": "gemma-3-4b",
+      "quantization": "Q4_K_M",
+      "context_window": 128000,
+      "client_type": "local_gguf",
+      "runner_type": "ollama",
+      "ollama_tag": "gemma3:4b",
+      "optimization": {
+        "kv_cache": true,
+        "flash_attention": true,
+        "tensor_parallelism": false,
+        "execution_provider": "CUDA"
+      },
+      "notes": "Simulates mid-range edge capability (via Ollama)"
+    },
+    {
+      "model_id": "llama-3.2-3b-instruct-ollama",
+      "base_model": "llama-3.2-3b",
+      "quantization": "Q4_K_M",
+      "context_window": 128000,
+      "client_type": "local_gguf",
+      "runner_type": "ollama",
+      "ollama_tag": "llama3.2:3b",
+      "optimization": {
+        "kv_cache": true,
+        "flash_attention": true,
+        "tensor_parallelism": false,
+        "execution_provider": "CUDA"
+      },
+      "notes": "Simulates low-end edge capability (via Ollama)"
     }
   ]
 }
