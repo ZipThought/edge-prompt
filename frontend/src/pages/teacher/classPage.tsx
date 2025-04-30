@@ -27,7 +27,6 @@ const TeacherClassPage = () => {
 
   return (
     <>
-      {/* Header inside container-fluid */}
       <div className="container-fluid">
         <header className="bg-primary text-white p-3 mb-0">
           <div className="d-flex justify-content-between align-items-center">
@@ -35,40 +34,44 @@ const TeacherClassPage = () => {
               <i className="bi bi-braces"></i> EdgePrompt <span className="text-white">| Class Page</span>
             </h1>
             <nav className="ms-auto d-flex align-items-center gap-3">
-              <button
-                className="btn btn-outline-light btn-sm"
-                onClick={() => navigate("/dashboard/teacher")}
-              >
-                <i className="bi bi-arrow-left me-1"></i> Back to Dashboard
+              <button className="btn btn-light btn-sm" onClick={() => navigate("/dashboard/teacher")}>
+                Dashboard
+              </button>
+              <button className="btn btn-light btn-sm" onClick={() => navigate("/profile")}>
+                Profile
+              </button>
+              <button className="btn btn-outline-light btn-sm" onClick={() => navigate("/")}>
+                <i className="bi bi-box-arrow-right me-1"></i> Logout
               </button>
             </nav>
           </div>
         </header>
       </div>
   
-      {/* Main Content */}
+  
       <div className="container-fluid px-4 mt-4">
-        <div className="row mb-4">
-          <div className="col-md-8">
-            <h2 className="fw-bold">{classData.className}</h2>
-            <p className="text-muted mb-0">Manage your learning materials</p>
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h2 className="fw-bold mb-0">{classData.className}</h2>
           </div>
-          <div className="col-md-4 text-end">
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => navigate(`/dashboard/teacher/class/${id}/add-material`)}
-            >
-              <i className="bi bi-plus-lg me-1"></i> Add Material
-            </button>
-          </div>
+          <button className="btn btn-secondary btn-sm" onClick={() => navigate("/dashboard/teacher")}>
+            <i className="bi bi-arrow-left me-1"></i> Back
+          </button>
         </div>
+
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h5 className="mb-0">Learning Materials</h5>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => navigate(`/dashboard/teacher/class/${id}/add-material`)}
+          >
+            <i className="bi bi-plus-lg me-1"></i> Add Material
+          </button>
+        </div>
+
   
         <div className="row">
-          {/* Main Content */}
           <div className="col-md-9">
-            <div className="mb-3">
-              <h5>Learning Materials</h5>
-            </div>
   
             {classData.learningMaterials.length === 0 ? (
               <div className="text-muted">No learning materials added yet.</div>
@@ -92,7 +95,6 @@ const TeacherClassPage = () => {
             )}
           </div>
   
-          {/* Sidebar */}
           <div className="col-md-3">
             <div className="card shadow-sm h-100">
               <div className="card-header bg-light">
