@@ -158,6 +158,16 @@ class ApiClient {
     });
   }
 
+  // Get classes by ID
+  async getClassById(classId: string) {
+    return this.request<{
+      classId: string;
+      className: string;
+      subjectName?: string;
+      learningMaterials: { id: string; title: string }[];
+    }>(`/class/${classId}`);
+  }
+
   // Add these methods to the ApiClient class in api.ts
   async getClassDetails(classId: string) {
     return this.request<Class>(`/classrooms/${classId}`);

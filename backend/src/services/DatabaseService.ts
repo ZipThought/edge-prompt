@@ -797,6 +797,28 @@ export class DatabaseService {
       return stmt.get(id);
   }
 
+  async getClassroomWithDetailsById(classId: string): Promise<any> {
+    const stmt = this.prepareStatement(`
+      SELECT id as classId, name as className
+      FROM classrooms
+      WHERE id = ?
+    `);
+  
+    const classData = stmt.get(classId);
+    if (!classData) return null;
+  
+    const materialStmt = this.prepareStatement(`
+      SELECT id, title FROM materials WHERE classroom_id = ?
+    `);
+    const learningMaterials = materialStmt.all(classId);
+  
+    return {
+      ...classData,
+      subjectName: classData.className, 
+      learningMaterials,
+    };
+  }
+
   async getClassroomsForTeacher(userId: string): Promise<any[]> {
       const stmt = this.prepareStatement(`
           SELECT c.* FROM classrooms c

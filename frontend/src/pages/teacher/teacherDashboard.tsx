@@ -86,10 +86,10 @@ const TeacherDashboard: React.FC = () => {
           </h1>
           <nav className="ms-auto d-flex align-items-center gap-3">
             <button className="btn btn-light btn-sm" onClick={() => navigate("/")}>
-            Home
+              Home
             </button>
             <button className="btn btn-light btn-sm" onClick={() => navigate("/profile")}>
-            Profile
+              Profile
             </button>
             <button className="btn btn-outline-light btn-sm" onClick={handleLogout}>
               <i className="bi bi-box-arrow-right me-1"></i> Logout
@@ -104,7 +104,7 @@ const TeacherDashboard: React.FC = () => {
           {successMessage}
         </div>
       )}
-
+  
       <div className="row">
         <div className="col-md-9">
           <div className="d-flex justify-content-between align-items-center mb-3">
@@ -113,34 +113,45 @@ const TeacherDashboard: React.FC = () => {
               <i className="bi bi-plus-lg me-1"></i> Create Class
             </button>
           </div>
+  
           <div className="row g-3">
             {classes.map((cls) => (
               <div className="col-md-6 col-lg-4" key={cls.id}>
                 <div className="card shadow-sm h-100">
                   <div className="card-body text-center">
                     <h5 className="card-title">{cls.name}</h5>
-                    <button
-                      className="btn btn-outline-primary btn-sm"
-                      onClick={() => handleManageClass(cls.id)}
-                    >
-                      Manage
-                    </button>
+                    <div className="d-flex justify-content-center gap-2 mt-2 flex-wrap">
+                      <button
+                        className="btn btn-outline-primary btn-sm"
+                        onClick={() => navigate(`/dashboard/teacher/class/${cls.id}`)}
+                      >
+                        View Materials
+                      </button>
+                      <button
+                        className="btn btn-outline-primary btn-sm"
+                        onClick={() => handleManageClass(cls.id)}
+                      >
+                        Manage
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
-          {classes.length === 0 && (
-            <div className="col-12 text-center text-muted mt-3">
-              No classes yet. Create your first class!
-            </div>
-          )}
+            {classes.length === 0 && (
+              <div className="col-12 text-center text-muted mt-3">
+                No classes yet. Create your first class!
+              </div>
+            )}
           </div>
         </div>
   
         <div className="col-md-3">
           <div className="card shadow-sm">
             <div className="card-header bg-light">
-              <h5 className="mb-0"><i className="bi bi-megaphone me-1"></i> Class Management</h5>
+              <h5 className="mb-0">
+                <i className="bi bi-megaphone me-1"></i> Class Management
+              </h5>
             </div>
             <div className="card-body">
               <p className="text-muted">This section will include announcements and tools in future.</p>
@@ -149,7 +160,7 @@ const TeacherDashboard: React.FC = () => {
         </div>
       </div>
     </div>
-  );
+  );  
 };
 
 export default TeacherDashboard;

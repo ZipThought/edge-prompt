@@ -285,6 +285,23 @@ app.get('/api/students', authMiddleware, async (_req, res) => {
   }
 });
 
+// Get full classroom details including subject and materials
+app.get('/api/class/:id', authMiddleware, async (req, res) => {
+  try {
+    const classId = req.params.id;
+    const classData = await db.getClassroomWithDetailsById(classId);
+
+    if (!classData) {
+      return res.status(404).json({ error: 'Class not found' });
+    }
+
+    res.json(classData);
+  } catch (error) {
+    console.error("Error fetching class details:", error);
+    res.status(500).json({ error: 'Failed to fetch class data' });
+  }
+});
+
 const classroomRouter = express.Router();
 
 // Classroom routes
