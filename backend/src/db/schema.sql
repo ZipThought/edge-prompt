@@ -128,6 +128,53 @@ CREATE TABLE IF NOT EXISTS classroom_students (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+--Creating question TABLE
+CREATE TABLE IF NOT EXISTS questions (
+    id TEXT PRIMARY KEY,
+    class_id TEXT NOT NULL,
+    teacher_id TEXT NOT NULL,
+    question_text TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (class_id) REFERENCES classrooms(id),
+    FOREIGN KEY (teacher_id) REFERENCES users(id)
+);
+
+--Creating response TABLE
+CREATE TABLE IF NOT EXISTS responses (
+    id TEXT PRIMARY KEY,
+    question_id TEXT NOT NULL,
+    student_id TEXT NOT NULL,
+    class_id TEXT NOT NULL,
+    answer_text TEXT NOT NULL,
+    submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (question_id) REFERENCES questions(id),
+    FOREIGN KEY (student_id) REFERENCES users(id),
+    FOREIGN KEY (class_id) REFERENCES classrooms(id)
+);
+
+--Creating rubric TABLE
+CREATE TABLE IF NOT EXISTS rubrics (
+    id TEXT PRIMARY KEY,
+    question_id TEXT NOT NULL,
+    rubric_text TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (question_id) REFERENCES questions(id)
+);
+
+--Creating feedback TABLE
+CREATE TABLE IF NOT EXISTS feedback (
+    id TEXT PRIMARY KEY,
+    response_id TEXT NOT NULL,
+    teacher_id TEXT NOT NULL,
+    feedback_text TEXT NOT NULL,
+    score REAL,
+    given_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (response_id) REFERENCES responses(id),
+    FOREIGN KEY (teacher_id) REFERENCES users(id)
+);
+
+
 
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_materials_project ON materials(project_id);
