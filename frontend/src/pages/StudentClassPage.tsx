@@ -12,6 +12,8 @@ type LearningMaterial = {
   title: string;
 };
 
+
+
 const ClassPage: React.FC = () => {
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
@@ -47,35 +49,27 @@ const ClassPage: React.FC = () => {
 
     const fetchMaterials = async () => {
       try {
-        const token = localStorage.getItem("token");
-
-        const response = await fetch(
-          `http://localhost:3001/api/classrooms/${classId}/materials`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (!response.ok) throw new Error("Materials fetch failed");
-        const data = await response.json();
-        setMaterials(
-          data.map((material: any) => ({
-            id: material.id,
-            title: material.title,
-          }))
-        );
+        const placeholderMaterials: LearningMaterial[] = [
+          { id: "1", title: "Material 1" },
+          { id: "2", title: "Material 2" },
+          { id: "3", title: "Material 3" },
+        ];
+    
+    
+        setMaterials(placeholderMaterials);
       } catch (err) {
         console.error("Failed to fetch learning materials:", err);
       }
     };
+    
 
     fetchClassData();
     fetchMaterials();
   }, [classId]);
 
   const handleMaterialClick = (materialId: string) => {
+    console.log("material clicked")
+    // navigates to home for now since material page hasnt been built
     navigate(`/dashboard/student/material/${materialId}`);
   };
 
@@ -96,19 +90,25 @@ const ClassPage: React.FC = () => {
 
       <h4>Learning Materials</h4>
       <div className="row g-3">
-        {materials.map((mat) => (
-          <div
-            className="col-sm-6 col-md-4"
-            key={mat.id}
-            onClick={() => handleMaterialClick(mat.id)}
-          >
-            <div className="card shadow-sm h-100 cursor-pointer">
-              <div className="card-body text-center">
-                <h6 className="card-title">{mat.title}</h6>
-              </div>
+      {materials.map((mat) => (
+        <div
+          className="col-sm-6 col-md-4"
+          key={mat.id}
+        >
+          <div className="card shadow-sm h-100">
+            <div className="card-body text-center">
+              <h6 className="card-title">{mat.title}</h6>
+              <button
+                className="btn btn-outline-primary btn-sm mt-2"
+                onClick={() => handleMaterialClick(mat.id)}
+              >
+                View Material
+              </button>
             </div>
           </div>
-        ))}
+        </div>
+      ))}
+
 
         {materials.length === 0 && (
           <p className="text-muted">No learning materials available.</p>
