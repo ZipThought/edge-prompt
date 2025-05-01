@@ -13,6 +13,7 @@ const MaterialDetailPage = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedQuestion, setEditedQuestion] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     const fetchMaterial = async () => {
@@ -47,7 +48,7 @@ const MaterialDetailPage = () => {
 
       const updatedQuestions = await api.getQuestions(id!);
       setQuestions(updatedQuestions);
-      alert("Questions generated successfully.");
+      setSuccessMessage("Questions generated successfully.");
     } catch (error) {
       console.error("Failed to generate questions", error);
       alert("Failed to generate questions");
@@ -127,6 +128,13 @@ const MaterialDetailPage = () => {
                   <li key={i}>{obj}</li>
                 ))}
               </ul>
+
+              {successMessage && (
+                <div className="alert alert-success alert-dismissible fade show" role="alert">
+                  {successMessage}
+                  <button type="button" className="btn-close" onClick={() => setSuccessMessage("")}></button>
+                </div>
+              )}
 
               <hr />
               <h5 className="mb-3">Generated Questions</h5>
