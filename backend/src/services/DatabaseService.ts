@@ -216,6 +216,7 @@ export class DatabaseService {
   // Material management methods
   async createMaterial(params: {
     projectId: string;
+    classroomId?: string;
     title: string;
     content: string;
     focusArea: string;
@@ -226,16 +227,17 @@ export class DatabaseService {
   }): Promise<string> {
     const stmt = this.db.prepare(`
       INSERT INTO materials (
-        id, project_id, title, content, focus_area, 
+        id, project_id, classroom_id, title, content, focus_area, 
         file_path, file_type, file_size, metadata, status
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);    
 
     const id = uuid();
     stmt.run(
       id,
       params.projectId,
+      params.classroomId || null,
       params.title,
       params.content,
       params.focusArea,
@@ -404,6 +406,20 @@ export class DatabaseService {
     return id;
   }
 
+  async updateQuestion(id: string, question: string, metadata: any) {
+    const stmt = this.db.prepare(`
+      UPDATE generated_questions 
+      SET question = ?, metadata = ?
+      WHERE id = ?
+    `);
+    stmt.run(question, JSON.stringify(metadata), id);
+  }
+  
+  async deleteQuestion(id: string) {
+    const stmt = this.db.prepare(`DELETE FROM generated_questions WHERE id = ?`);
+    stmt.run(id);
+  }  
+
   async getQuestionsByMaterial(materialId: string) {
     const stmt = this.db.prepare(`
       SELECT id, material_id, prompt_template_id, question, constraints, metadata
@@ -561,6 +577,36 @@ export class DatabaseService {
       materialId
     );
   }
+
+  async updateMaterialFields(id: string, data: { title?: string; content?: string; focusArea?: string }): Promise<void> {
+    const updates: string[] = [];
+    const params: any[] = [];
+  
+    if (data.title !== undefined) {
+      updates.push("title = ?");
+      params.push(data.title);
+    }
+    if (data.content !== undefined) {
+      updates.push("content = ?");
+      params.push(data.content);
+    }
+    if (data.focusArea !== undefined) {
+      updates.push("focus_area = ?");
+      params.push(data.focusArea);
+    }
+  
+    if (updates.length === 0) return;
+  
+    params.push(id);
+  
+    const stmt = this.prepareStatement(`
+      UPDATE materials
+      SET ${updates.join(", ")}
+      WHERE id = ?
+    `);
+  
+    stmt.run(...params);
+  }  
 
   async updateMaterialReprocessed(params: {
     id: string;
