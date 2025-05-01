@@ -7,13 +7,12 @@ import DOMPurify from 'dompurify';
 interface Props {
   onMaterialLoad: (material: MaterialSource) => void;
   projectId?: string;
+  classroomId?: string;
   showTitle?: boolean;
 }
 
 interface Metadata {
   title: string;
-  subject: string;
-  grade: string;
   chapter: string;
   focusArea: string;
   useSourceLanguage: boolean;
@@ -21,14 +20,12 @@ interface Metadata {
   templates?: ContentTemplate[];
 }
 
-export const MaterialUploader: React.FC<Props> = ({ onMaterialLoad, projectId, showTitle = false }) => {
+export const MaterialUploader: React.FC<Props> = ({ onMaterialLoad, projectId, classroomId, showTitle = false }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const focusAreaRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [metadata, setMetadata] = useState<Metadata>({
     title: '',
-    subject: '',
-    grade: '',
     chapter: '',
     focusArea: '',
     useSourceLanguage: false,
@@ -48,8 +45,6 @@ export const MaterialUploader: React.FC<Props> = ({ onMaterialLoad, projectId, s
     setFile(null);
     setMetadata({
       title: '',
-      subject: '',
-      grade: '',
       chapter: '',
       focusArea: '',
       useSourceLanguage: false,
@@ -90,12 +85,11 @@ export const MaterialUploader: React.FC<Props> = ({ onMaterialLoad, projectId, s
       // Always include projectId in metadata
       const metadataWithProject = { 
         title: DOMPurify.sanitize(metadata.title),
-        subject: DOMPurify.sanitize(metadata.subject),
-        grade: DOMPurify.sanitize(metadata.grade),
         chapter: DOMPurify.sanitize(metadata.chapter),
         focusArea: DOMPurify.sanitize(metadata.focusArea),
         useSourceLanguage: metadata.useSourceLanguage,
-        projectId: projectId  // Ensure projectId is included
+        projectId: projectId,
+        classroomId: classroomId
       };
       
       formData.append('metadata', JSON.stringify(metadataWithProject));
@@ -213,37 +207,6 @@ export const MaterialUploader: React.FC<Props> = ({ onMaterialLoad, projectId, s
                     value={metadata.title}
                     onChange={e => setMetadata({...metadata, title: e.target.value})}
                     placeholder="Enter material title"
-                  />
-                </div>
-              </div>
-              <div className="col-md-6">
-                <div className="mb-3">
-                  <label className="form-label">
-                    Subject <small className="text-muted">(Optional)</small>
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={metadata.subject}
-                    onChange={e => setMetadata({...metadata, subject: e.target.value})}
-                    placeholder="e.g., Computer Science"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="row">
-              <div className="col-md-6">
-                <div className="mb-3">
-                  <label className="form-label">
-                    Grade Level <small className="text-muted">(Optional)</small>
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={metadata.grade}
-                    onChange={e => setMetadata({...metadata, grade: e.target.value})}
-                    placeholder="e.g., K-12"
                   />
                 </div>
               </div>
