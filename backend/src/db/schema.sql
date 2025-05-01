@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS materials (
   file_size INTEGER,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'error')),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(project_id) REFERENCES projects(id)
+  FOREIGN KEY(project_id) REFERENCES projects(id),
   FOREIGN KEY(classroom_id) REFERENCES classrooms(id)
 );
 
