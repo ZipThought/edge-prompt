@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { api } from "../../services/api";
+import { SimplifiedMaterialUploader } from '../../components/teacher/SimplifiedMaterialUploader';
 
 const TeacherClassPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +22,10 @@ const TeacherClassPage = () => {
     };
     fetchClassData();
   }, [id]);
+
+  const refreshMaterials = () => {
+    api.getClassById(id!).then(setClassData);
+  };
 
   if (loading) return <div className="text-center mt-5">Loading class...</div>;
   if (!classData) return <div className="text-center mt-5 text-danger">Class not found</div>;
@@ -47,8 +52,7 @@ const TeacherClassPage = () => {
           </div>
         </header>
       </div>
-  
-  
+
       <div className="container-fluid px-4 mt-4">
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
@@ -61,18 +65,17 @@ const TeacherClassPage = () => {
 
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h5 className="mb-0">Learning Materials</h5>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => navigate(`/dashboard/teacher/class/${id}/add-material`)}
-          >
-            <i className="bi bi-plus-lg me-1"></i> Add Material
-          </button>
+          <div style={{ maxWidth: "180px" }}>
+            <SimplifiedMaterialUploader
+              projectId={classData.projectId}
+              classroomId = {id}
+              onMaterialUploaded={refreshMaterials}
+            />
+          </div>
         </div>
 
-  
         <div className="row">
           <div className="col-md-9">
-  
             {classData.learningMaterials.length === 0 ? (
               <div className="text-muted">No learning materials added yet.</div>
             ) : (
@@ -82,7 +85,9 @@ const TeacherClassPage = () => {
                     <div
                       className="card shadow-sm h-100"
                       style={{ cursor: "pointer" }}
-                      onClick={() => navigate(`/material/${material.id}`)}
+                      onClick={() => navigate(`/material/${material.id}`, {
+                        state: { classId: id }
+                      })}
                     >
                       <div className="card-body text-center">
                         <h5 className="card-title">{material.title}</h5>
@@ -94,7 +99,7 @@ const TeacherClassPage = () => {
               </div>
             )}
           </div>
-  
+
           <div className="col-md-3">
             <div className="card shadow-sm h-100">
               <div className="card-header bg-light">
@@ -113,7 +118,7 @@ const TeacherClassPage = () => {
         </div>
       </div>
     </>
-  );  
+  );
 };
 
 export default TeacherClassPage;
