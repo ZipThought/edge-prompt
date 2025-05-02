@@ -6,15 +6,17 @@ import DOMPurify from 'dompurify';
 interface Props {
   onClose: () => void;
   onSuccess: () => void;
+  classroom_id?: string;
 }
 
-export const ProjectForm: React.FC<Props> = ({ onClose, onSuccess }) => {
+export const ProjectForm: React.FC<Props> = ({ onClose, onSuccess, classroom_id }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
   
   const [formData, setFormData] = useState({
     name: '',
+    classroomId: '',
     description: '',
     modelName: 'Llama 3.2 3B', // Default model
     promptTemplateId: '',
@@ -40,6 +42,7 @@ export const ProjectForm: React.FC<Props> = ({ onClose, onSuccess }) => {
     try {
       const projectData = {
         name: DOMPurify.sanitize(formData.name),
+        classroomId: classroom_id,
         description: DOMPurify.sanitize(formData.description),
         modelName: formData.modelName,
         promptTemplateId: DOMPurify.sanitize(formData.promptTemplateId),
@@ -62,12 +65,12 @@ export const ProjectForm: React.FC<Props> = ({ onClose, onSuccess }) => {
   return (
     <div className="card">
       <div className="card-header">
-        <h5 className="mb-0">Create New Project</h5>
+        <h5 className="mb-0">Create New Module</h5>
       </div>
       <div className="card-body">
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
-            <label className="form-label">Project Name</label>
+            <label className="form-label">Module Name</label>
             <input
               type="text"
               className="form-control"
@@ -214,7 +217,7 @@ export const ProjectForm: React.FC<Props> = ({ onClose, onSuccess }) => {
               ) : (
                 <>
                   <i className="bi bi-check-circle me-2"></i>
-                  Create Project
+                  Create Module
                 </>
               )}
             </button>

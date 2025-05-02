@@ -165,7 +165,8 @@ app.post('/api/signout', authMiddleware, async (_req, res) => {
 // Delete Account
 app.delete('/api/delete-account', authMiddleware, async (req, res) => {
   const userId = req.user?.userId;  
-
+  console.log("Received delete account request for userId:", userId);
+  
   if (!userId) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
@@ -859,8 +860,28 @@ app.get('/api/projects', async (_req, res): Promise<void> => {
   }
 });
 
+app.get('/api/classes/:classId/projects', authMiddleware, async (req, res): Promise<void> => {
+  try {
+    const { classId } = req.params;
+
+
+    // Fetch projects associated with the class
+    const projects = await db.getProjectsForClass(classId);
+
+
+    res.json(projects);
+  } catch (error) {
+    console.error('Failed to get projects for class:', error);
+    res.status(500).json({
+      error: 'Failed to get projects for class',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 app.post('/api/projects', async (req, res): Promise<void> => {
   try {
+    console.log("Received project creation request:", req.body);
     const projectId = await db.createProject(req.body);
     const project = await db.getProject(projectId);
     res.json(project);
@@ -869,6 +890,16 @@ app.post('/api/projects', async (req, res): Promise<void> => {
     res.status(500).json({ error: 'Failed to create project' });
   }
 });
+
+app.get('/api/projects/:id', authMiddleware, async (req, res): Promise<void> => {
+  try {
+    const project = await db.getProject(req.params.id);
+    res.json(project);
+  } catch (error) {
+    console.error('Failed to get project:', error);
+    res.status(500).json({ error: 'Failed to get project' });
+  }
+ });
 
 app.put('/api/projects/:id', async (req, res): Promise<void> => {
   try {

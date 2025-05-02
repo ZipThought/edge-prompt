@@ -232,8 +232,16 @@ class ApiClient {
   }
   
   // Project endpoints
+  async getProject(id: string): Promise<Project> {  // Corrected: Added getProject method
+    return this.request<Project>(`/projects/${id}`);
+  }
+ 
   async getProjects() {
     return this.request<Project[]>('/projects');
+  }
+
+  async getProjectsForClass(classroomId: string) {
+    return this.request<Project[]>(`/classes/${classroomId}/projects`);
   }
 
   async createProject(project: Omit<Project, 'id' | 'createdAt'>) {
