@@ -51,7 +51,7 @@ We examine the early stage of EdgePrompt, a research to build an offline-capable
    - [EdgePrompt as a Socio-Technical Intervention with Moral Weight](#edgeprompt-as-a-socio-technical-intervention-with-moral-weight)
    - [EdgePrompt as a Work of Transition with Community Ownership and Generational Thinking](#edgeprompt-as-a-work-of-transition-with-community-ownership-and-generational-thinking)
    - [Final Thoughts: The Ongoing Work of Aligning AI with Human Flourishing in Education](#final-thoughts:-the-ongoing-work-of-aligning-ai-with-human-flourishing-in-education)
-- [Bibliography](#bibliography)
+- [References](#references)
    - [AI Guardrails and Prompt Engineering](#ai-guardrails-and-prompt-engineering)
    - [Educational AI Applications and Question Generation](#educational-ai-applications-and-question-generation)
    - [Resource-Constrained Environments and Indonesian Context](#resource-constrained-environments-and-indonesian-context)
@@ -63,15 +63,15 @@ We examine the early stage of EdgePrompt, a research to build an offline-capable
 
 In the rapidly evolving landscape of educational technology, artificial intelligence presents both unprecedented opportunity and profound risk. This duality becomes even more pronounced when we consider the stark inequalities that characterize global education—where connectivity, resources, and technical expertise are unevenly distributed, often along lines already marked by historical disadvantage.
 
-The 3T regions of Indonesia—"Terdepan, Terluar, Tertinggal" (Frontier, Outermost, Underdeveloped)—exemplify this reality. In these communities, the question is not just whether AI will enhance or diminish learning, but whether it will reach students at all. When reliable internet connectivity remains an unrealized promise, the cloud-based AI solutions dominating headlines and venture capital flows are effectively inaccessible. In such contexts, the march of technological progress risks widening existing gaps rather than closing them.
+The 3T regions of Indonesia—"Terdepan, Terluar, Tertinggal" (Frontier, Outermost, Underdeveloped)—exemplify this reality. These regions have been formally identified through Indonesian presidential regulation as priority areas for development efforts (Widodo 2020). In these communities, the question is not just whether AI will enhance or diminish learning, but whether it will reach students at all. When reliable internet connectivity remains an unrealized promise, the cloud-based AI solutions dominating headlines and venture capital flows are effectively inaccessible. UNESCO (2020) found that during COVID-19 school closures, 43% of students worldwide had no internet access at home, with this figure rising to 82% in low-income regions, highlighting the stark digital divide affecting educational access.
 
-EdgePrompt emerges in this context: an attempt to bring AI's educational potential to resource-constrained environments through offline-capable, teacher-controlled systems. Its ambition is significant—not merely to provide technical workarounds for connectivity barriers, but to reimagine the integration of AI into educational settings in ways that respect teacher agency, uphold safety standards, and adapt to local cultural and pedagogical realities.
+EdgePrompt emerges in this context: an attempt to bring AI's educational potential to resource-constrained environments through offline-capable, teacher-controlled systems. Its ambition is significant—not merely to provide technical workarounds for connectivity barriers, but to reimagine the integration of AI into educational settings in ways that respect teacher agency, uphold safety standards, and adapt to local cultural and pedagogical realities. This approach aligns with research on teacher agency in the age of generative AI, which emphasizes the importance of maintaining teachers' power to act, make decisions, and take educational stances (Frøsig & Romero 2024).
 
-However, we must approach such initiatives with both hope and skepticism. The history of educational technology is littered with solutions that promised revolution but delivered only incremental change, or worse, created new problems while failing to solve existing ones. Too often, technical capability has been conflated with educational value, and flashy demonstrations have obscured deeper questions about learning, agency, and equity.
+However, we must approach such initiatives with both hope and skepticism. The history of educational technology is littered with solutions that promised revolution but delivered only incremental change, or worse, created new problems while failing to solve existing ones. Too often, technical capability has been conflated with educational value, and flashy demonstrations have obscured deeper questions about learning, agency, and equity. Holmes et al. (2022) argue for a community-wide ethical framework that acknowledges the distinction between "doing ethical things" versus "doing things ethically" in AI educational applications.
 
 As we embark on this critical assessment of EdgePrompt, we are mindful that its development remains in early stages—more vision than reality, more potential than proof. Yet it is precisely at this formative stage that critical examination can be most valuable. By interrogating its premises, analyzing its design choices, and projecting its trajectory through various lenses, we can contribute to shaping both this specific project and the broader conversation about AI's role in education.
 
-The stakes could not be higher. Every student deserves access to the best educational tools and approaches we can collectively create. But technological advancement alone does not guarantee more equitable or effective learning. It is the thoughtful integration of technology into educational contexts—guided by sound pedagogy, ethical principles, and lived classroom realities—that will determine whether AI becomes a force for educational liberation or just another layer of stratification.
+The stakes could not be higher. Every student deserves access to the best educational tools and approaches we can collectively create. But technological advancement alone does not guarantee more equitable or effective learning. It is the thoughtful integration of technology into educational contexts—guided by sound pedagogy, ethical principles, and lived classroom realities—that will determine whether AI becomes a force for educational liberation or just another layer of stratification. As Swist and Gulson (2023) argue, we must view educational technologies within socio-technical assemblages that include not just the tools themselves but the social values and power structures around them.
 
 EdgePrompt represents one early attempt to navigate this territory. Let us examine it not just for what it is today, but for what it aspires to become—and what it might teach us about creating truly accessible, equitable, and effective AI-enhanced learning environments for all students, regardless of where they live or the resources at their disposal.
 
@@ -117,11 +117,11 @@ As you read, consider maintaining two parallel questions: "What is technically p
 
 ### The Allure of EdTech Solutions vs. Classroom Realities
 
-The educational technology landscape pulses with promises of transformation. AI-powered tutors that personalize learning for every student; intelligent assistants that reduce teacher workload; adaptive systems that identify and address learning gaps in real-time. These visions captivate policymakers, funders, and technologists alike. Yet the reality in classrooms—particularly those in resource-constrained environments—often stands in stark contrast to these glossy futures.
+The educational technology landscape pulses with promises of transformation. AI-powered tutors that personalize learning for every student; intelligent assistants that reduce teacher workload; adaptive systems that identify and address learning gaps in real-time. These visions captivate policymakers, funders, and technologists alike. Yet the reality in classrooms—particularly those in resource-constrained environments—often stands in stark contrast to these glossy futures. Research examining how generative AI is transforming teaching and educational practices highlights significant gaps between promises and implementation realities (Peres et al. 2023).
 
 Teachers face immediate, practical challenges: unreliable internet, outdated hardware, minimal technical support, and the constant pressure to cover curriculum requirements while addressing diverse student needs. The gap between what EdTech solutions promise and what classroom contexts can support grows wider as AI capabilities advance, with the latest innovations typically requiring robust cloud infrastructure, high-bandwidth connections, and significant computational resources.
 
-This is not merely a digital divide but an AI divide—one that threatens to further disadvantage already marginalized educational communities as AI becomes increasingly central to learning experiences in well-resourced settings. It is within this context that we must assess initiatives like EdgePrompt, which explicitly aim to bridge this growing chasm.
+This is not merely a digital divide but an AI divide—one that threatens to further disadvantage already marginalized educational communities as AI becomes increasingly central to learning experiences in well-resourced settings. In such contexts, the march of technological progress risks widening existing gaps rather than closing them.
 
 ### Introducing EdgePrompt: Vision, Core Claims, and the 3T Context
 
@@ -131,9 +131,11 @@ EdgePrompt presents itself as a framework for enabling safe, effective AI integr
 2. **Teacher agency**: Positioning teachers as the controllers and stewards of AI tools, ensuring pedagogical decisions remain in human hands rather than delegated to algorithms.  
 3. **Safety guardrails**: Implementing structured prompting and multi-stage validation processes to enforce appropriate, age-suitable content generation and assessment in educational contexts.
 
-Technically, EdgePrompt applies a neural-symbolic inspired approach to prompt engineering—creating structured templates and validation sequences that aim to govern LLM behavior without requiring model fine-tuning or constant cloud connectivity. The EdgePrompt method claims to improve safety and constraint adherence on small, edge-deployable language models while maintaining acceptable alignment with cloud-quality outputs.
+The 3T regions (Terdepan, Terluar, Tertinggal) are formally defined in Indonesian governmental policy as frontier, outermost, and underdeveloped areas requiring special development attention (Widodo 2020). Research on teacher agency in the age of generative AI emphasizes the importance of maintaining teachers' power to act, affect matters, make decisions, and take stances when implementing AI in classrooms (Frøsig & Romero 2024). The safety guardrails approach builds on research in building guardrails for large language models through structured prompting and validation stages to enhance safety in AI outputs (Dong et al. 2024).
 
-These claims deserve neither immediate acceptance nor dismissal, but rather careful, multidimensional evaluation. The 3T context—characterized by intermittent connectivity, limited technical infrastructure, and pressing educational needs—provides both the motivation for EdgePrompt's development and a challenging test case for its practicality.
+Technically, EdgePrompt applies a neural-symbolic inspired approach to prompt engineering—creating structured templates and validation sequences that aim to govern LLM behavior without requiring model fine-tuning or constant cloud connectivity. This approach draws from research on augmenting neural networks with symbolic educational knowledge to create more trustworthy and interpretable AI for education (Hooshyar, Azevedo & Yang 2024). The EdgePrompt method claims to improve safety and constraint adherence on small, edge-deployable language models while maintaining acceptable alignment with cloud-quality outputs.
+
+These claims deserve neither immediate acceptance nor dismissal, but rather careful, multidimensional evaluation. The 3T context—characterized by intermittent connectivity, limited technical infrastructure, and pressing educational needs—provides both the motivation for EdgePrompt's development and a challenging test case for its practicality. Current data shows Indonesia's internet penetration has reached 79.5%, but significant disparities remain in rural and remote areas (Adji 2024).
 
 ### Why a Deep, Transdisciplinary Assessment is Necessary
 
@@ -148,7 +150,7 @@ What we need, therefore, is a transdisciplinary approach—one that:
 * Evaluates both stated intentions and potential unintended consequences  
 * Balances both opportunity and risk across diverse contexts
 
-Such an assessment becomes even more crucial when examining early-stage work like EdgePrompt. By identifying tensions, gaps, and potential pitfalls early in the development process, we can help shape more thoughtful, effective, and equitable implementations.
+Such an assessment becomes even more crucial when examining early-stage work like EdgePrompt. By identifying tensions, gaps, and potential pitfalls early in the development process, we can help shape more thoughtful, effective, and equitable implementations. This approach aligns with research situating education technology within socio-technical assemblages that require examining not only the tools but the social values and power structures around them (Swist & Gulson 2023).
 
 ### Methodology: Technical Analysis, Educational Ideals, First Principles, and Adversarial Thinking
 
@@ -156,7 +158,7 @@ This assessment employs a multi-layered methodology that integrates diverse anal
 
 **Technical Analysis**: We will examine EdgePrompt's architecture, implementation choices, and research findings to understand its current capabilities, limitations, and engineering challenges. This includes analyzing the Phase 1 simulation methodology, the four-run comparison structure, and the specific technical hurdles encountered during implementation.
 
-**Educational Lens**: We will evaluate EdgePrompt against established educational theories and principles, considering questions of pedagogical alignment, potential impact on teaching practices, and capacity to support meaningful learning experiences. This includes assessing whether its current design truly supports productive struggle, higher-order thinking, and culturally responsive pedagogy.
+**Educational Lens**: We will evaluate EdgePrompt against established educational theories and principles, considering questions of pedagogical alignment, potential impact on teaching practices, and capacity to support meaningful learning experiences. This includes assessing whether its current design truly supports productive struggle, higher-order thinking, and culturally responsive pedagogy. This assessment draws on theory of culturally responsive teaching, which emphasizes incorporating students' cultural references in all aspects of learning (Gay 2018).
 
 **First Principles Examination**: Rather than accepting conventional frameworks, we will break down EdgePrompt into its fundamental components and assumptions—examining the nature of learning, teaching, large language models, edge computing, and structured control. This approach helps uncover deeper tensions and opportunities that might be obscured by domain-specific terminology.
 
@@ -186,7 +188,7 @@ Throughout this journey, we invite readers to maintain both optimism and skeptic
 
 #### The Problem: Connectivity, Equity, and Teacher Needs in 3T Regions (and beyond)
 
-The starting point for understanding EdgePrompt is recognizing the acute challenge of educational technology access in regions where connectivity cannot be taken for granted. Indonesia's 3T regions (Frontier, Outermost, Underdeveloped) exemplify this reality, but similar conditions exist across many parts of the globe.
+The starting point for understanding EdgePrompt is recognizing the acute challenge of educational technology access in regions where connectivity cannot be taken for granted. Indonesia's 3T regions (Frontier, Outermost, Underdeveloped) exemplify this reality, but similar conditions exist across many parts of the globe. These regions were formally identified through Presidential Regulation No. 63 of 2020, which designated specific areas requiring special development attention due to geographical isolation, limited infrastructure, and socioeconomic challenges (Widodo 2020).
 
 In these areas, internet connectivity is often:
 
@@ -195,7 +197,7 @@ In these areas, internet connectivity is often:
 * **Expensive**: Consuming a disproportionate share of limited educational budgets  
 * **Unreliable**: Subject to outages during critical educational activities
 
-This connectivity challenge creates a paradox: the places that might benefit most from educational technology innovations are often the least able to access them. As AI increasingly drives educational tool development, this paradox threatens to widen existing educational divides. While students in well-connected schools gain experience with the latest AI-enhanced learning tools, those in disconnected regions risk falling further behind—not just in technological familiarity, but in access to personalized learning experiences that could help address educational gaps.
+This connectivity challenge creates a paradox: the places that might benefit most from educational technology innovations are often the least able to access them. As AI increasingly drives educational tool development, this paradox threatens to widen existing educational divides. UNESCO research found that during pandemic-related school closures, 43% of students worldwide lacked internet access at home, with this figure reaching 82% in low-income regions (UNESCO 2020). While students in well-connected schools gain experience with the latest AI-enhanced learning tools, those in disconnected regions risk falling further behind—not just in technological familiarity, but in access to personalized learning experiences that could help address educational gaps.
 
 Beyond connectivity, teachers in these regions face additional challenges:
 
@@ -217,12 +219,16 @@ In response to these challenges, EdgePrompt proposes a distinct vision for AI in
 * Designing for efficient operation within hardware constraints  
 * Implementing intelligent synchronization for intermittent connectivity
 
+This approach builds on educational edge computing frameworks that demonstrate how local edge servers can handle intensive tasks with minimal latency, improving throughput for remote and rural learners (Chen et al. 2022).
+
 **Teacher Agency**: EdgePrompt positions teachers as the primary agents and decision-makers, not passive recipients of AI outputs. This principle manifests in:
 
 * Teacher-defined content generation parameters and constraints  
 * Human-in-the-loop review for flagged content or edge cases  
 * Tools that augment rather than replace teacher expertise  
 * Interfaces designed for non-technical educators
+
+Research on teacher agency in ICT use shows that structured reflection time on technology use enhances teachers' sense of agency, helping them align technology with local context and values rather than passively adopting standardized tools (Novoa-Echaurren 2024).
 
 **Safety Guardrails**: Recognizing the particular sensitivity of K-12 educational contexts, EdgePrompt prioritizes:
 
@@ -244,7 +250,7 @@ EdgePrompt draws on several foundational principles that inform its approach:
 * Explicit representation of educational requirements in machine-actionable formats  
 * Combining statistical language models with rule-based guardrails
 
-This hybrid approach aims to leverage the fluency and adaptability of language models while imposing the structure and safety boundaries needed for educational applications.
+This hybrid approach aims to leverage the fluency and adaptability of language models while imposing the structure and safety boundaries needed for educational applications. Recent systematic reviews of neuro-symbolic AI highlight the potential of these approaches for combining the strengths of neural networks with symbolic reasoning capabilities (Colelough & Regli 2025).
 
 **Prompt Engineering Focus**: Rather than relying on model fine-tuning (which requires significant data, expertise, and computational resources), EdgePrompt centers on prompt engineering as the primary mechanism for controlling model behavior:
 
@@ -253,7 +259,7 @@ This hybrid approach aims to leverage the fluency and adaptability of language m
 * Implementing rubric formalization and transformation for assessment  
 * Engineering robust fallback mechanisms when models deviate from expected outputs
 
-This approach makes EdgePrompt potentially more adaptable to different models and more accessible to implementation in resource-constrained environments.
+This approach makes EdgePrompt potentially more adaptable to different models and more accessible to implementation in resource-constrained environments. Systematic surveys of prompt engineering techniques demonstrate how different prompting strategies can guide model behavior through instructions rather than parameter updates (Sahoo et al. 2025).
 
 **Educational Philosophy**: Beyond its technical approach, EdgePrompt embodies specific educational principles:
 
@@ -261,6 +267,8 @@ This approach makes EdgePrompt potentially more adaptable to different models an
 * Supporting higher-order thinking rather than just information retrieval  
 * Respecting cultural and linguistic diversity in educational contexts  
 * Treating pedagogy as the driver of technology, not vice versa
+
+These principles align with Vygotsky's concept of the Zone of Proximal Development, which emphasizes the gap between what learners can do independently and what they can achieve with assistance (Vygotsky 1978). They also connect to research on harnessing AI for constructivist learning, which positions students as "active architects" of their own knowledge building rather than passive recipients (Grubaugh, Levitt & Deever 2023).
 
 These principles suggest that EdgePrompt aims to be more than just an offline version of existing AI educational tools—it seeks to rethink how AI and education interact in ways that center human relationships, educational values, and local contexts.
 
@@ -276,9 +284,9 @@ This hypothesis made several key assumptions:
 
 As implementation progressed, this hypothesis needed refinement based on real-world findings:
 
-**JSON Reliability Challenges**: Implementation revealed that smaller edge models struggled significantly with reliable JSON output generation—a critical issue since structured output was essential for the validation pipeline. This necessitated extensive robustness engineering through fallback mechanisms, repair utilities, and simplified templates.
+**JSON Reliability Challenges**: Implementation revealed that smaller edge models struggled significantly with reliable JSON output generation—a critical issue since structured output was essential for the validation pipeline. This necessitated extensive robustness engineering through fallback mechanisms, repair utilities, and simplified templates. These challenges parallel findings from research on reliable code generation from pre-trained language models, which identified similar issues with structured output consistency (Poesia et al. 2022).
 
-**Efficiency-Robustness Tradeoff**: The multi-stage validation approach improved safety and constraint adherence but at a significant computational cost. This highlighted the need for careful optimization to make the approach truly viable on edge devices.
+**Efficiency-Robustness Tradeoff**: The multi-stage validation approach improved safety and constraint adherence but at a significant computational cost. This highlighted the need for careful optimization to make the approach truly viable on edge devices. This tradeoff reflects broader challenges identified in research on on-device language models, which emphasizes the need for efficient architectures and compression techniques for resource-constrained deployment (Xu et al. 2024).
 
 **Topic Consistency Issues**: Initial testing showed that baseline runs would frequently go off-topic, making fair comparisons difficult. This led to the implementation of a "shared teacher request" mechanism to ensure all test runs addressed the same task.
 
@@ -324,7 +332,7 @@ EdgePrompt's conceptual framework, as presented in the original paper, establish
 
 This conceptual framework demonstrates EdgePrompt's ambition to create a comprehensive system spanning content generation, evaluation, and adaptive refinement. However, it's important to note that the current implementation focuses primarily on the first two components (content generation and evaluation), with the adaptation components largely reserved for future development.
 
-The framework's formalization through mathematical notation reflects its neural-symbolic inspiration—attempting to bring structured, symbolic representation to the otherwise black-box behavior of language models. This approach aims to create more transparent, controllable, and educationally aligned AI systems.
+The framework's formalization through mathematical notation reflects its neural-symbolic inspiration—attempting to bring structured, symbolic representation to the otherwise black-box behavior of language models. This approach aims to create more transparent, controllable, and educationally aligned AI systems. This multi-stage approach parallels research on AI system evaluation frameworks that span the entire model lifecycle, implementing component-level checks and system-level validation mapped to different stakeholders and development stages (Xia et al. 2024).
 
 #### Implemented Architecture: Backend Services, Frontend Components, Research Runner
 
@@ -373,7 +381,7 @@ Several key design choices shape EdgePrompt's current implementation:
 * Centralizes logging and monitoring of LLM interactions  
 * Creates a clear boundary between user interface and AI processing
 
-This approach represents a fundamental safety principle—ensuring that users interact with AI capabilities through well-defined interfaces rather than directly manipulating model inputs.
+This approach represents a fundamental safety principle—ensuring that users interact with AI capabilities through well-defined interfaces rather than directly manipulating model inputs. This security-focused architecture aligns with research on cybersecurity in generative AI, which highlights the importance of controlled access patterns to prevent misuse (Gupta et al. 2023).
 
 **SQLite for Data Persistence**: The choice of SQLite as the database technology reflects EdgePrompt's offline-first orientation:
 
@@ -471,7 +479,7 @@ This structure creates a controlled experimental design with two key variables:
 
 By isolating these variables, the methodology enables direct comparison between Run 4 (EdgeLLM with EdgePrompt) and Run 3 (EdgeLLM baseline) to assess the specific impact of the EdgePrompt approach on edge-deployable models. Meanwhile, Run 1 (CloudLLM baseline) serves as a quality reference point for assessing how close edge outputs can get to state-of-the-art performance.
 
-This methodological design reflects careful research planning, creating a framework for empirical validation rather than relying solely on theoretical arguments or anecdotal observations. It enables quantitative measurement of EdgePrompt's impact on key metrics like safety violations, constraint adherence, and output quality, while also capturing performance data on latency and token usage.
+This methodological design reflects careful research planning, creating a framework for empirical validation rather than relying solely on theoretical arguments or anecdotal observations. It enables quantitative measurement of EdgePrompt's impact on key metrics like safety violations, constraint adherence, and output quality, while also capturing performance data on latency and token usage. This systematic approach parallels red-teaming methods used to identify harmful AI outputs, applying structured evaluation techniques to measure safety enhancements (Ganguli et al. 2022).
 
 #### Operationalizing Key Concepts: CloudLLM vs. EdgeLLM Roles, Orchestrator Function
 
@@ -524,7 +532,7 @@ Implementing this comparative methodology required operationalizing several key 
 
 This operationalization translates the conceptual methodology into executable code, enabling systematic testing of EdgePrompt's hypotheses. The implementation includes careful attention to fair comparison (through shared inputs), robust measurement (via consistent metrics collection), and reliable output processing (with fallback mechanisms for edge cases).
 
-It's important to note that this represents a simulation strategy rather than real-world deployment—CloudLLM simulates teacher/student personas and provides quality reference points, while EdgeLLM simulates the edge execution environment. Future phases would need to replace this simulation with actual hardware testing and human evaluation to fully validate EdgePrompt's real-world effectiveness.
+It's important to note that this represents a simulation strategy rather than real-world deployment—CloudLLM simulates teacher/student personas and provides quality reference points, while EdgeLLM simulates the edge execution environment. Future phases would need to replace this simulation with actual hardware testing and human evaluation to fully validate EdgePrompt's real-world effectiveness. This approach of using more capable models to simulate different personas and evaluate outputs shares methodological elements with research on training models to follow instructions with human feedback (Ouyang et al. 2022).
 
 #### Metrics and Evaluation Criteria for Phase 1
 
@@ -603,7 +611,7 @@ However, simulation also has inherent limitations that must be acknowledged:
 3. **Limited Scope**: Phase 1 testing focuses narrowly on the guardrail effectiveness rather than broader educational value or usability.  
 4. **Idealized Conditions**: Testing occurs under more controlled conditions than would be found in actual deployment scenarios.
 
-These limitations highlight why Phase 1 represents only an initial validation step. Future phases will need to move beyond simulation to hardware testing, human evaluation, and real-world deployment to fully validate EdgePrompt's effectiveness and value. Nevertheless, simulation provides a crucial foundation—enabling systematic testing of core hypotheses before committing to more resource-intensive evaluation approaches.
+These limitations highlight why Phase 1 represents only an initial validation step. Future phases will need to move beyond simulation to hardware testing, human evaluation, and real-world deployment to fully validate EdgePrompt's effectiveness and value. Nevertheless, simulation provides a crucial foundation—enabling systematic testing of core hypotheses before committing to more resource-intensive evaluation approaches. This methodological approach parallels research on AI system evaluation frameworks, which emphasize the importance of component-level checks before moving to system-level validation (Xia et al. 2024).
 
 ## Part 2: The Crucible of Implementation – Reality Checks and Engineering Responses
 
@@ -626,7 +634,7 @@ Further investigation revealed the root cause: the baseline approach used more o
 
 This discovery represented a critical methodological flaw. Without addressing it, the research couldn't validly claim that differences in metrics were due to the EdgePrompt approach rather than simply the topics being addressed. The very foundation of the experimental design—systematic comparison holding all variables constant except the approach—was compromised.
 
-This crisis exemplifies the challenges of empirical AI research: apparently minor implementation details can dramatically affect results, and theoretical frameworks must often be adapted in the face of real-world behavior. It also highlights the importance of methodological rigor in validating claims about AI performance, particularly when comparing different approaches.
+This crisis exemplifies the challenges of empirical AI research: apparently minor implementation details can dramatically affect results, and theoretical frameworks must often be adapted in the face of real-world behavior. It also highlights the importance of methodological rigor in validating claims about AI performance, particularly when comparing different approaches. Such challenges reflect broader findings in prompt engineering research, which highlight how different prompting strategies can significantly impact model adherence to specified tasks and constraints (Sahoo et al. 2025).
 
 #### The Fix: The "Shared Teacher Request" Mechanism
 
@@ -649,7 +657,7 @@ This solution elegantly balanced two competing needs:
 
 The "shared teacher request" mechanism created a fair comparison environment while maintaining the essential differences between approaches that the research sought to evaluate. It ensured that any measured differences in safety, constraint adherence, or quality could be more confidently attributed to the prompting approach rather than simply different topics.
 
-This fix represents an important methodological refinement that wasn't anticipated in the original research design. It highlights the iterative nature of AI research, where initial theoretical frameworks often need practical adaptation when implemented. It also demonstrates the research team's commitment to methodological rigor—identifying and addressing a potential validity threat rather than proceeding with a flawed comparison.
+This fix represents an important methodological refinement that wasn't anticipated in the original research design. It highlights the iterative nature of AI research, where initial theoretical frameworks often need practical adaptation when implemented. It also demonstrates the research team's commitment to methodological rigor—identifying and addressing a potential validity threat rather than proceeding with a flawed comparison. This approach parallels research on chain-of-thought prompting, which emphasizes the importance of clear task specification in evaluating model reasoning capabilities (Wei et al. 2022).
 
 #### Implication: The Necessity of Controlling Context in Comparative AI Evaluation
 
@@ -687,7 +695,7 @@ For EdgePrompt specifically, this insight reinforces the value of the structured
 
 The shared teacher request mechanism represents a methodological innovation that could be valuable for other comparative AI evaluations. By ensuring consistent starting points while maintaining the essential differences between approaches, it enables more valid and meaningful comparisons.
 
-This experience also highlights the importance of iterative refinement in research methodology—being willing to adapt approaches when initial implementations reveal unforeseen challenges. Such adaptability, combined with commitment to evaluation validity, is essential for developing reliable knowledge about AI system performance.
+This experience also highlights the importance of iterative refinement in research methodology—being willing to adapt approaches when initial implementations reveal unforeseen challenges. Such adaptability, combined with commitment to evaluation validity, is essential for developing reliable knowledge about AI system performance. These findings align with research on AI system evaluation frameworks that emphasize the importance of systematic assessment processes throughout model development lifecycles (Xia et al. 2024).
 
 ### Chapter 5: The JSON Reliability Gauntlet – When LLMs Don't Follow Rules
 
@@ -697,7 +705,7 @@ This experience also highlights the importance of iterative refinement in resear
 
 As implementation of the EdgePrompt research framework progressed, the team encountered what they would later describe as the "MAJOR ISSUE" that fundamentally challenged their approach: smaller edge-deployable language models (like Gemma 3 4B and Llama 3.2 3B) proved highly unreliable at consistently generating properly formatted structured outputs, particularly JSON.
 
-This issue struck at the heart of EdgePrompt's multi-stage validation approach, which relied on each validation stage returning structured outputs (like `{"passed": true, "score": 0.8, "feedback": "..."}`) that could be parsed and used to drive subsequent stages.
+This issue struck at the heart of EdgePrompt's multi-stage validation approach, which relied on each validation stage returning structured outputs (like `{"passed": true, "score": 0.8, "feedback": "..."}`) that could be parsed and used to drive subsequent stages. This challenge parallels findings from research on reliable code generation from pre-trained language models, which identified similar issues with structured outputs and proposed techniques like Target Similarity Tuning and Constrained Semantic Decoding to enforce syntactic and semantic constraints (Poesia et al. 2022).
 
 The problem manifested in multiple ways:
 
@@ -757,7 +765,7 @@ Faced with this existential challenge to their approach, the EdgePrompt team dev
 
 This comprehensive approach transformed a potential showstopper into a manageable engineering challenge. While not eliminating the underlying issue—that smaller models struggle with structured output—it created robust mechanisms to handle the reality of model behavior rather than assuming ideal performance.
 
-These solutions demonstrate a key principle of practical AI system development: building systems that work with actual model capabilities rather than theoretically ideal behavior. By explicitly acknowledging and addressing the limitations of current models, EdgePrompt could maintain its multi-stage validation approach even with the constraints of edge deployment.
+These solutions demonstrate a key principle of practical AI system development: building systems that work with actual model capabilities rather than theoretically ideal behavior. By explicitly acknowledging and addressing the limitations of current models, EdgePrompt could maintain its multi-stage validation approach even with the constraints of edge deployment. This approach aligns with research on prompt-driven safeguarding for large language models, which has investigated how safety prompts affect model behavior and proposed techniques to improve safeguarding without compromising general performance (Zheng et al. 2024).
 
 #### Implication: The Hidden Costs and Engineering Demands of Using Imperfect AI
 
@@ -800,7 +808,7 @@ For EdgePrompt specifically, this experience points to several key lessons:
 
 These insights have implications beyond EdgePrompt, serving as a caution for any project deploying AI in production settings, particularly with resource constraints. The "hidden tax" of robustness engineering should be anticipated and accounted for, rather than discovered as a surprise during implementation.
 
-The success of the EdgePrompt team in addressing these challenges demonstrates that such issues can be overcome with appropriate engineering approaches. However, it also highlights that the path from conceptual design to working implementation is rarely straightforward when working with AI systems that exhibit probabilistic rather than deterministic behavior.
+The success of the EdgePrompt team in addressing these challenges demonstrates that such issues can be overcome with appropriate engineering approaches. However, it also highlights that the path from conceptual design to working implementation is rarely straightforward when working with AI systems that exhibit probabilistic rather than deterministic behavior. This aligns with findings from research on on-device language models, which highlights the various challenges in deploying LLMs on resource-constrained devices and the technical strategies needed to address them (Xu et al. 2024).
 
 ### Chapter 6: Efficiency vs. Robustness – The Edge Computing Tightrope
 
@@ -835,7 +843,7 @@ Additional analysis revealed that different validation stages contributed differ
 * Detailed assessment against rubric criteria typically consumed the most resources  
 * JSON parsing and format handling added further overhead, especially with repair attempts
 
-These findings provide crucial context for evaluating EdgePrompt's approach. While the Phase 1 research confirmed that EdgePrompt's structured prompting and multi-stage validation could improve safety and constraint adherence, it also revealed that this improvement comes at a significant efficiency cost that must be addressed for practical deployment.
+These findings provide crucial context for evaluating EdgePrompt's approach. While the Phase 1 research confirmed that EdgePrompt's structured prompting and multi-stage validation could improve safety and constraint adherence, it also revealed that this improvement comes at a significant efficiency cost that must be addressed for practical deployment. This efficiency-robustness tradeoff aligns with findings from research on LLMs for forecasting and anomaly detection, which notes the computational resource requirements as a significant challenge when deploying these models in resource-constrained environments (Su et al. 2024).
 
 #### The Inherent Trade-off: Deeper Validation vs. Edge Feasibility
 
@@ -868,7 +876,7 @@ This trade-off cannot be eliminated entirely—more thorough checking will alway
 
 The research findings suggest that the current implementation may be too heavily weighted toward validation depth at the expense of edge feasibility. While this makes sense for the research phase—where thoroughly validating the approach is the priority—a more balanced approach will likely be needed for practical deployment.
 
-This tension reflects a broader challenge in edge AI: the most capable models (which provide the best quality) are also the most resource-intensive, while the models that run efficiently on edge devices often have more limited capabilities. EdgePrompt's multi-stage approach attempts to get high-quality validation from smaller models through structured prompting, but still faces this fundamental tension between capability and efficiency.
+This tension reflects a broader challenge in edge AI: the most capable models (which provide the best quality) are also the most resource-intensive, while the models that run efficiently on edge devices often have more limited capabilities. EdgePrompt's multi-stage approach attempts to get high-quality validation from smaller models through structured prompting, but still faces this fundamental tension between capability and efficiency. This challenge is well-documented in research on educational edge computing frameworks, which demonstrate how educational applications must balance performance requirements with resource constraints (Chen et al. 2022).
 
 The resolution of this trade-off will be crucial for EdgePrompt's future development. Finding the right balance—providing sufficient validation to ensure safety and quality while maintaining acceptable performance on target devices—represents one of the key challenges for moving from research to practical deployment.
 
@@ -921,7 +929,7 @@ This dual focus on optimization and hardware expectations acknowledges the reali
 
 The need for this work highlights a broader point about AI deployment in resource-constrained environments: theoretical approaches must be rigorously tested against actual resource constraints, and development must include substantial optimization efforts specifically for target environments. This requirement adds to the already significant engineering demands of working with imperfect AI systems, further emphasizing the gap between conceptual design and practical implementation.
 
-For EdgePrompt specifically, this points to a critical Phase 2 priority: measuring and optimizing performance on actual target hardware rather than simulated environments. Only through such testing can the team determine whether the approach can meet both the safety/quality goals and the performance requirements necessary for practical deployment in resource-constrained educational settings.
+For EdgePrompt specifically, this points to a critical Phase 2 priority: measuring and optimizing performance on actual target hardware rather than simulated environments. Only through such testing can the team determine whether the approach can meet both the safety/quality goals and the performance requirements necessary for practical deployment in resource-constrained educational settings. This aligns with research on on-device language models, which reviews strategies for efficient deployment including architecture optimization, compression techniques, and hardware acceleration (Xu et al. 2024).
 
 ## Part 3: Assessing EdgePrompt Through Critical Lenses
 
@@ -937,17 +945,23 @@ To meaningfully assess EdgePrompt's potential educational impact, we must evalua
 * The goal of promoting productive struggle rather than simply providing answers  
 * The emphasis on feedback that guides further exploration
 
+This approach aligns with research by Grubaugh, Levitt and Deever (2023), who argue that AI tools can amplify constructivist pedagogy when designed to support learners as "active architects" of their own knowledge building rather than passive recipients of information.
+
 However, tensions emerge in the current implementation:
 
 * The Q\&A loop focus may inadvertently reinforce transmission models of learning  
 * Automated validation could prioritize correctness over process or creative thinking  
 * The structured approach might constrain the open-ended exploration central to constructivism
 
+These tensions reflect broader concerns about maintaining epistemic agency in educational technology, which Elgin (2013) defines as the capacity for learners to actively evaluate and construct knowledge rather than passively receive it.
+
 **Support for Higher-Order Thinking**: Referencing Bloom's Taxonomy (which progresses from lower-order skills like remembering and understanding to higher-order skills like analyzing, evaluating, and creating), EdgePrompt's alignment varies:
 
 * *Potential Strengths*: The framework could support analysis and evaluation through well-designed prompts and feedback  
 * *Current Limitations*: The implementation primarily addresses lower-order skills through direct question-answering and basic assessment  
 * *Future Opportunity*: Templates could be designed specifically to scaffold progression toward higher-order thinking
+
+Research on educational question generation at different Bloom's skill levels using large language models suggests approaches for crafting questions that target varying cognitive demands, from basic recall to complex analysis and evaluation (Scaria, Dharani Chenna & Subramani 2024).
 
 **Vygotskian Scaffolding and Zone of Proximal Development**: Vygotsky's theory emphasizes learning as a social process where novices progress with appropriate scaffolding within their Zone of Proximal Development (ZPD):
 
@@ -956,12 +970,16 @@ However, tensions emerge in the current implementation:
 * However, the current system lacks mechanisms to identify individual students' ZPDs  
 * Without adaptation capabilities, scaffolding remains static rather than responsive
 
+This theoretical framework, developed by Vygotsky (1978), highlights the gap between what learners can do independently and what they can achieve with assistance, emphasizing the role of social interaction and scaffolding in cognitive development.
+
 **Cultural Responsiveness and Inclusion**: Educational ideals increasingly emphasize culturally responsive pedagogy that values diverse perspectives:
 
 * EdgePrompt's vision includes adaptability to different cultural and linguistic contexts  
 * The offline capability addresses infrastructural inequities  
 * However, base models may contain biases that affect content generation  
 * True cultural responsiveness would require significant localization efforts
+
+Culturally responsive teaching requires incorporating students' cultural references in all aspects of learning, validating and affirming diverse cultural identities, which becomes particularly important when integrating technology in multicultural classrooms (Gay 2018).
 
 This assessment reveals that EdgePrompt's current implementation remains some distance from fully embodying educational ideals. While its vision shows alignment with constructivist principles and the potential to support higher-order thinking, the present Q\&A and validation focus operates primarily at lower cognitive levels. The gap between educational ideals and current implementation highlights areas for future development—particularly in supporting more diverse learning activities, adapting to individual learners, and integrating more explicitly constructivist approaches.
 
@@ -1075,6 +1093,8 @@ Their outputs are:
 * Context-sensitive but without stable mental models  
 * Impressive but fundamentally different from human cognition
 
+Research on the scope and limits of passive AI highlights this fundamental distinction between generating meaning through active inference (as humans do) and the pattern-matching nature of language models, with significant implications for educational applications (Pezzulo et al. 2024).
+
 **The Fundamental Tension**:
 
 This creates a profound tension: how can a system based on probabilistic pattern matching effectively support the deeply human process of meaning construction? This is not merely a technical question but a philosophical one that goes to the heart of what learning is and how it can be supported.
@@ -1123,6 +1143,8 @@ The current EdgePrompt user interface must be evaluated against the lived realit
    * *Current State*: The system introduces new concepts (templates, validation sequences) unfamiliar to most educators.  
    * *Workload Impact*: Time must be invested in learning these concepts before productive use.  
    * *Stress Factor*: Complex interfaces may create anxiety about correct usage, especially under time pressure.
+
+Research on teacher agency in generative AI contexts emphasizes the importance of maintaining teachers' power to act, affect matters, make decisions, and take stances in educational settings (Frøsig & Romero 2024). Additionally, studies of teacher agency in pedagogical uses of ICT show that structured reflection time on technology use enhances teachers' sense of agency, helping them align technology with local context and values rather than passively adopting standardized tools (Novoa-Echaurren 2024).
 
 **Positive Aspects of the Current Design**:
 
@@ -1176,6 +1198,8 @@ One of the most significant HCI challenges for EdgePrompt lies in balancing simp
 * *Current State*: Backend-first approach shields from direct prompt management but may feel like a black box  
 * *Balance Challenge*: How to provide intuitive control without requiring technical AI knowledge
 
+Recent research with middle and high school teachers has uncovered their specific information needs for classroom integration of ChatGPT, revealing significant gaps in understanding how to explore AI capabilities for specific learning tasks and the need for interactive model documentation that supports teacher empowerment (Tan & Subramoniam 2024).
+
 **Potential Approaches to Balancing Simplicity and Control**:
 
 1. **Progressive Disclosure**: Implement interfaces that reveal complexity progressively as users become more comfortable  
@@ -1226,6 +1250,8 @@ Trust is foundational to effective educational technology adoption, particularly
    * Straightforward mechanisms to override or correct problems  
    * Logging of issues for systematic improvement  
    * Demonstration of learning from mistakes over time
+
+Research on trust in AI-assisted decision-making has shown that cognitive forcing functions can reduce overreliance on AI by prompting users to think independently before accepting AI recommendations (Buçinca, Malaya & Gajos 2021). Additionally, work on formalizing trust in artificial intelligence defines the prerequisites, causes, and goals of human trust in AI systems, providing frameworks for designing trustworthy AI interactions (Jacovi et al. 2021).
 
 **Transparency in AI-Mediated Educational Activities**:
 
@@ -1333,6 +1359,8 @@ For EdgePrompt to truly fulfill its mission of enhancing educational equity, acc
    * *Needed Improvements*: Options to simplify interfaces, break tasks into smaller steps, and provide additional scaffolding.  
    * *Impact*: Teachers or students with attention or executive function challenges may struggle without these accommodations.
 
+Research on algorithmic bias in education has shown that AI systems can inadvertently disadvantage students from various groups, including those with disabilities, unless specifically designed with accessibility and inclusivity in mind (Baker & Hawn 2022). 
+
 **Implementation Path**:
 
 Addressing these accessibility concerns should follow a structured approach:
@@ -1362,7 +1390,7 @@ Phase 1 findings show promising results for EdgePrompt's guardrail approach:
 3. **Quality Maintenance**: Despite using smaller models, EdgePrompt's approach produced outputs that more closely aligned with high-quality reference standards than baseline approaches with the same models.  
 4. **Decomposed Checking**: Breaking validation into distinct stages allowed for more thorough assessment of different aspects of generated content.
 
-These findings suggest that EdgePrompt's guardrail approach can effectively improve the safety and reliability of edge-deployed language models, at least within the contexts tested in Phase 1\. This is significant because it indicates that prompt engineering alone—without requiring model fine-tuning or constant cloud connectivity—can meaningfully improve model behavior for educational contexts.
+These findings suggest that EdgePrompt's guardrail approach can effectively improve the safety and reliability of edge-deployed language models, at least within the contexts tested in Phase 1\. This is significant because it indicates that prompt engineering alone—without requiring model fine-tuning or constant cloud connectivity—can meaningfully improve model behavior for educational contexts. This aligns with research on building guardrails for large language models through structured prompting and validation stages to enhance safety in AI outputs (Dong et al. 2024).
 
 **Revealed Brittleness**:
 
@@ -1373,6 +1401,8 @@ However, implementation also exposed several forms of brittleness in the current
 3. **Context Limitations**: Edge models' more limited context windows constrain the amount of information that can be included in prompts, potentially limiting the sophistication of guardrails that can be implemented.  
 4. **Efficiency-Robustness Tradeoff**: More thorough checking requires more computational resources, creating tension between guardrail effectiveness and edge deployment feasibility.  
 5. **Unexpected Edge Cases**: Testing revealed that models sometimes produce unexpected outputs that bypass intended constraints in ways difficult to anticipate—suggesting that no guardrail system will be perfectly comprehensive.
+
+Recent research on prompt-driven safeguarding for large language models has investigated how safety prompts affect LLM behavior in the representation space, proposing techniques to improve safeguarding without compromising general performance (Zheng et al. 2024).
 
 **Implications for Educational Use**:
 
@@ -1408,6 +1438,8 @@ Data privacy in educational contexts is not merely a compliance issue or technic
    * Educational exploration requires freedom from excessive surveillance  
    * Trust enables authentic engagement rather than strategic performance
 
+Research on learning analytics ethics provides a socio-critical perspective on student data ethics, identifying challenges around informed consent, privacy, data ownership, and transparency, while emphasizing that students should be active agents of their data, not mere data points (Slade & Prinsloo 2013).
+
 **EdgePrompt's Current Privacy Posture**:
 
 The existing EdgePrompt implementation shows both promising foundations and significant gaps related to data privacy:
@@ -1428,6 +1460,8 @@ The existing EdgePrompt implementation shows both promising foundations and sign
    * *Data Synchronization*: Future sync mechanisms will need careful privacy design  
    * *Model Interaction*: Local LLM usage reduces but doesn't eliminate privacy concerns  
    * *Template Management*: Templates may contain confidential educational content
+
+Recent research on the impact of generative AI in cybersecurity and privacy has examined the implications for student data protection in educational contexts, highlighting the need for robust security and privacy measures in AI-enhanced educational tools (Gupta et al. 2023). Additionally, research on AI misuse and information privacy concerns has validated new constructs for measuring privacy concerns related to AI systems and emphasized the importance of robust safety guardrails in addressing these concerns (Menard & Bott 2024).
 
 **The Privacy-Trust Implementation Gap**:
 
@@ -1477,6 +1511,8 @@ EdgePrompt, like any system built on large language models, faces significant ch
    * Educational norms and examples may reflect Western educational traditions  
    * Culturally specific knowledge and perspectives may be underrepresented  
    * Indonesian 3T region contexts may be particularly underrepresented in model training
+
+Research on algorithmic bias in education has examined how biases enter educational AI at multiple stages, connecting fairness definitions to the ML pipeline and documenting evidence of bias affecting racial, gender, and socioeconomic groups (Baker & Hawn 2022). Additionally, comprehensive surveys of bias and fairness in machine learning have reviewed techniques for identifying and mitigating various forms of bias in AI systems (Mehrabi et al. 2022).
 
 **Current Mitigation Approaches and Limitations**:
 
@@ -1543,6 +1579,8 @@ Beyond explicit educational content, technologies used in classrooms convey impl
    * *Implicit Message*: Speed and efficiency are primary virtues in learning  
    * *Educational Implication*: May devalue slower, more reflective learning processes
 
+Research on socio-technical education futures examines how educational technologies operate within socio-technical assemblages, highlighting the importance of examining social values and power structures alongside the technical tools themselves. This perspective emphasizes that technology and society co-evolve in schools, with educational technology influencing how students understand knowledge, authority, and learning itself (Swist & Gulson 2023).
+
 **Ethical Dimensions of the Implicit Curriculum**:
 
 The values modeled by educational technology raise several ethical questions:
@@ -1552,6 +1590,8 @@ The values modeled by educational technology raise several ethical questions:
 3. **Diversity**: Does the system accommodate diverse value systems and cultural contexts?  
 4. **Agency**: Do students and teachers have the ability to shape or challenge the implicit curriculum?  
 5. **Development**: How do the modeled values influence student character and intellectual development?
+
+Research on the ethics of AI in education has emphasized the importance of transparency in how AI makes decisions, safeguarding student autonomy and trust, and adherence to principles of fairness, accountability, and pedagogical soundness (Holmes et al. 2022).
 
 **Potential Value Realignment Strategies**:
 
@@ -1598,6 +1638,8 @@ Educational systems worldwide, while diverse in implementation, often share cert
 
 These values often exist in tension with one another and are interpreted differently across cultural contexts, but they provide essential orientation for educational practice.
 
+Research on artificial intelligence, values, and alignment provides philosophical frameworks for understanding how AI systems can be aligned with human values, offering approaches for thinking about how technologies like EdgePrompt can be designed to uphold educational values (Gabriel 2020).
+
 **Alignment Mechanisms in EdgePrompt**:
 
 EdgePrompt employs several mechanisms that could potentially align AI behavior with these educational values:
@@ -1618,6 +1660,8 @@ EdgePrompt employs several mechanisms that could potentially align AI behavior w
    * *Mechanism*: System design can encourage value-aligned usage patterns  
    * *Example*: Templates structured to promote exploration rather than just information delivery  
    * *Limitation*: Users may adapt tools in ways that undermine intended alignment
+
+Research on AI moral enhancement examines the socio-technical systems of moral engagement, proposing modular approaches to AI ethics that complement multi-stage validation architectures like EdgePrompt's (Volkman & Gabriels 2023).
 
 **Alignment Challenges from First Principles**:
 
@@ -1657,7 +1701,7 @@ Educational equity faces a multi-layered digital divide:
 4. *Content relevance*: Available digital resources often lack cultural relevance  
 5. *Language barriers*: Educational technology predominantly favors major languages
 
-These divides risk creating a two-tiered educational future—one where well-resourced schools benefit from AI advances while under-resourced schools fall further behind. EdgePrompt's offline capability directly addresses the first challenge, potentially enabling more equitable access to AI-enhanced education across connectivity barriers.
+These divides risk creating a two-tiered educational future—one where well-resourced schools benefit from AI advances while under-resourced schools fall further behind. EdgePrompt's offline capability directly addresses the first challenge, potentially enabling more equitable access to AI-enhanced education across connectivity barriers. This approach aligns with research on AI for Sustainable Development Goals, which examines how artificial intelligence can be applied to address educational equity and other development challenges (Singh et al. 2024).
 
 **Potential Equity Benefits**:
 
@@ -1720,6 +1764,8 @@ While EdgePrompt aims to bridge educational divides through offline capability, 
    * *Risk Amplification*: Power stability often correlates with other resource advantages, potentially reinforcing existing divides  
    * *Current Status*: Limited attention to power management and low-energy operation modes
 
+Research on on-device language models has highlighted the various challenges in deploying LLMs on resource-constrained devices and proposed strategies including efficient architectures, compression techniques, and hardware acceleration (Xu et al. 2024).
+
 **Digital Literacy Divides**:
 
 1. **Teacher Technical Capabilities**: EdgePrompt assumes basic technical literacy for system management:  
@@ -1749,6 +1795,8 @@ While EdgePrompt aims to bridge educational divides through offline capability, 
    * *Potential Impact*: Schools with stronger instructional leadership integrate more meaningfully  
    * *Risk Amplification*: Surface-level adoption in some schools versus transformative use in others  
    * *Current Status*: Limited integration guidance addressing diverse pedagogical contexts
+
+Research on educational 5G edge computing has demonstrated how edge computing architectures can support educational applications in resource-constrained environments, highlighting the potential for local edge servers to improve throughput and latency for remote learners when properly implemented (Chen et al. 2022).
 
 **Mitigation Strategies**:
 
@@ -1796,7 +1844,7 @@ The current implementation offers language selection but lacks the comprehensive
 * **Multiple knowledge traditions representation**: Different cultures have distinct knowledge traditions and epistemological frameworks. Implementation requires mechanisms for respecting and incorporating diverse approaches to knowledge beyond Western academic traditions.  
 * **Bias detection and mitigation**: EdgePrompt's reliance on LLMs trained predominantly on Western content necessitates implementation of bias detection and mitigation mechanisms specifically for multicultural educational contexts.
 
-The current template system theoretically allows for cultural customization but lacks explicit adaptation mechanisms or culturally diverse template collections.
+The current template system theoretically allows for cultural customization but lacks explicit adaptation mechanisms or culturally diverse template collections. Research on culturally responsive teaching emphasizes incorporating students' cultural references in all aspects of learning, validating and affirming diverse cultural identities (Gay 2018). Additionally, work on culturally adaptive thinking in education for AI highlights the importance of localizing AI curricula and tools to align with local cultural norms and languages to avoid cultural bias and resistance (Samuel et al. 2023).
 
 #### Pedagogical Alignment Implementation
 
@@ -1850,6 +1898,8 @@ EdgePrompt's dual nature creates tension between empowerment and dependency:
 * **Student agency implications**: The current generation-validation approach primarily positions students as responders to AI-generated questions rather than co-creators of knowledge. This pedagogical model may reinforce traditional epistemic hierarchies rather than fostering student agency.  
 * **Framework adaptability vs. prescribed patterns**: While EdgePrompt theoretically enables adaptation to diverse educational approaches, the structured prompt-validation architecture potentially normalizes specific interaction patterns that originate from particular educational philosophies, potentially marginalizing alternative knowledge construction approaches.  
 * **Knowledge validation power dynamics**: The multi-stage validation system, while technically impressive, centralizes evaluative authority in pre-defined criteria and AI assessment—potentially reinforcing dominant epistemologies rather than creating space for diverse ways of knowing.
+
+Research on epistemic agency in education emphasizes the importance of viewing learners as active agents capable of evaluating and constructing knowledge, shifting educational focus from passive reception to active engagement (Elgin 2013). Additionally, socio-critical perspectives on learning analytics ethics highlight that students should be active agents of their data, not mere data points, requiring policies that protect student identity and rights (Slade & Prinsloo 2013).
 
 The critical question remains: does EdgePrompt's technical approach to AI guardrails inadvertently constrain epistemic exploration in its pursuit of safety and structure? The answer likely depends on implementation choices that either emphasize control or prioritize flexible knowledge co-construction.
 
@@ -1933,6 +1983,8 @@ EdgePrompt acknowledges these constraints philosophically, particularly in its o
 
 EdgePrompt's security model theoretically recognizes educational environments' unique characteristics. The security model document outlines an architecture designed for offline operation, minimal resource requirements, and appropriate user authentication. However, this theoretical model has minimal implementation in the current codebase. The project's security posture reflects a vision-implementation gap typical of early-stage development—sophisticated in conception but nascent in execution.
 
+Research on the impact of generative AI in cybersecurity and privacy has examined security implications for educational contexts, highlighting the importance of protecting student data and implementing appropriate safeguards (Gupta et al. 2023). Additionally, work on regulating large generative AI models provides context for understanding emerging regulatory frameworks that might affect AI safety requirements in educational applications (Hacker, Engel & Mauer 2023).
+
 #### Adversarial Scenarios: Cheating, Misuse, Sabotage, Social Harm
 
 K-12 environments present distinctive adversarial scenarios that traditional security models rarely address. These scenarios reflect the unique motivations, capabilities, and opportunities present in educational settings.
@@ -1980,6 +2032,8 @@ Privacy threats in educational settings have distinct characteristics:
 * **Cross-boundary data exposure**: Educational data inappropriately shared across classroom, administrative, and home boundaries creates unique privacy risks.
 
 The current EdgePrompt implementation lacks the robust user separation and role-based access control described in the security specification. While the architecture conceptually supports these protections, the implementation reflects early-stage development priorities focused on core functionality over comprehensive security controls.
+
+Research on AI misuse and information privacy concerns has validated new constructs for measuring privacy concerns related to AI systems and emphasized the importance of robust safety guardrails in addressing these concerns (Menard & Bott 2024).
 
 **Analysis: EdgePrompt's Adversarial Readiness**:
 
@@ -2161,6 +2215,8 @@ The functional gaps between EdgePrompt's conceptual vision and current implement
 
 These functional gaps reflect reasonable development prioritization for early-stage research software—validating core concepts before implementing sophisticated features. However, they represent critical limitations for any near-term deployment in actual educational settings.
 
+A comprehensive survey of large language models for education highlights the various applications, challenges, and future research directions in this domain, providing context for understanding EdgePrompt's development gaps within the broader educational AI landscape (Wang S. et al. 2024).
+
 #### AI Capability Gaps: Model Reality vs. Conceptual Needs
 
 EdgePrompt's design reveals tensions between what current AI models can reliably deliver and what the conceptual framework requires:
@@ -2172,6 +2228,8 @@ EdgePrompt's design reveals tensions between what current AI models can reliably
 * **Inherent Pedagogical Understanding**: Current models lack deep understanding of pedagogical concepts, requiring explicit encoding of educational principles that might ideally emerge more naturally from the models' knowledge base.
 
 These AI capability gaps reflect the fundamental challenge of deploying sophisticated AI capabilities in resource-constrained environments using current technology. While engineering workarounds can address some limitations, others may require fundamental advances in model architecture or training approaches.
+
+Research on implementing Constitutional AI with smaller models like LLaMA 3-8B has found that increasing harmlessness often comes at the cost of helpfulness, with smaller models showing signs of collapse—highlighting the technical challenges of implementing safety features in edge-deployable models (Zhang 2025).
 
 #### Deployment Gaps: From Simulation to Real-World Implementation
 
@@ -2185,6 +2243,8 @@ EdgePrompt's transition from simulation to real-world implementation faces sever
 
 These deployment gaps highlight the distance between a functioning research prototype and classroom-ready educational technology. Bridging this gap requires significant investment in implementation refinement, user experience optimization, and deployment infrastructure.
 
+Research on on-device language models has reviewed strategies for deploying LLMs on resource-constrained devices, including efficient architectures, compression techniques, and hardware acceleration—approaches that could help address EdgePrompt's deployment challenges (Xu et al. 2024).
+
 #### Pedagogical Gaps: Design Intentions vs. Learning Realities
 
 Several gaps exist between EdgePrompt's pedagogical vision and its current implementation:
@@ -2196,6 +2256,8 @@ Several gaps exist between EdgePrompt's pedagogical vision and its current imple
 * **Metacognitive Development vs. Content Delivery**: The current focus on content generation and assessment provides limited support for metacognitive development or reflection, despite their importance for deep learning.
 
 These pedagogical gaps require attention not just to technical implementation but to fundamental design questions about how EdgePrompt can genuinely support varied learning processes rather than simply automating traditional educational activities.
+
+Research on harnessing AI for constructivist learning argues that modern AI tools can amplify constructivist pedagogy when designed to support learners as "active architects" of their own knowledge building (Grubaugh, Levitt & Deever 2023). Additionally, Vygotsky's work on the Zone of Proximal Development emphasizes the importance of appropriate scaffolding that supports learning in the gap between independent and assisted achievement (Vygotsky 1978).
 
 #### Ethical Gaps: Stated Values vs. Implemented Safeguards
 
@@ -2209,6 +2271,8 @@ EdgePrompt's ethical vision requires implementation of concrete safeguards that 
 
 These ethical gaps reflect the challenge of translating ethical principles into concrete technical implementations. Addressing them requires both enhanced technical controls and deeper integration of ethical considerations into the development process.
 
+Research on the ethics of AI in education emphasizes the importance of transparency in AI decision-making, safeguarding student autonomy and trust, and adherence to principles of fairness, accountability, and pedagogical soundness (Holmes et al. 2022). Additionally, philosophical work on artificial intelligence, values, and alignment provides frameworks for understanding how AI systems can be designed to uphold human values (Gabriel 2020).
+
 #### Infrastructure Gaps: Vision Requirements vs. Implementation Realities
 
 EdgePrompt's infrastructure vision faces several implementation challenges:
@@ -2221,6 +2285,8 @@ EdgePrompt's infrastructure vision faces several implementation challenges:
 
 These infrastructure gaps highlight the challenges of developing sophisticated systems for resource-constrained environments. While the conceptual architecture acknowledges these challenges, the implementation requires additional refinement to fully address them.
 
+Research on educational edge computing frameworks demonstrates how local edge servers can handle intensive tasks with minimal latency, improving throughput for remote and rural learners—approaches that could inform EdgePrompt's infrastructure optimization (Chen et al. 2022).
+
 #### Nature of the Gaps: Technical Limits, Engineering Challenges, Socio-Technical Complexity
 
 Understanding the nature of these gaps informs prioritization and resolution approaches:
@@ -2231,6 +2297,8 @@ Understanding the nature of these gaps informs prioritization and resolution app
 * **Resource Constraint Gaps**: Several gaps reflect the inherent challenge of implementing sophisticated AI capabilities within significant resource constraints. These gaps require creative optimization and potential compromise rather than straightforward implementation.
 
 This nuanced understanding of gap types highlights that resolution requires diverse approaches—from technical research to stakeholder engagement to resource optimization—rather than simply more development time.
+
+Research on AI system evaluation frameworks has proposed comprehensive approaches that span the entire model lifecycle, implementing component-level checks and system-level validation mapped to different stakeholders and development stages (Xia et al. 2024).
 
 #### Prioritization Framework: Critical Path vs. Enhancement Opportunities
 
@@ -2267,6 +2335,8 @@ Perhaps the most fundamental tension in EdgePrompt's design is between ensuring 
 
 This tension cannot be "solved" but must be continually navigated through deliberate design choices that acknowledge the inherent trade-offs between safety and capability in educational AI.
 
+Research on building guardrails for large language models through structured prompting and validation stages provides approaches for enhancing safety in AI outputs while maintaining usability (Dong et al. 2024). Additionally, studies on implementing Constitutional AI with smaller models highlight the tradeoffs between harmlessness and helpfulness, noting that increasing safety constraints can sometimes lead to reduced model utility (Zhang 2025).
+
 #### Efficiency vs. Robustness
 
 EdgePrompt's deployment in resource-constrained environments creates inherent tension between computational efficiency and system robustness:
@@ -2286,6 +2356,8 @@ EdgePrompt's deployment in resource-constrained environments creates inherent te
   * Progressive enhancement based on available resources
 
 This tension requires continuous balancing between ensuring system reliability and maintaining acceptable performance in resource-constrained environments, with no single optimal balance point across all contexts.
+
+Research on educational edge computing frameworks demonstrates approaches for balancing performance requirements with resource constraints in educational applications, showing how edge setups can improve throughput and latency for remote learners (Chen et al. 2022). Additionally, comprehensive reviews of on-device language models highlight strategies for efficient deployment on resource-constrained devices, including architecture optimization and compression techniques (Xu et al. 2024).
 
 #### Standardization vs. Contextualization
 
@@ -2308,6 +2380,8 @@ EdgePrompt faces tension between standardizing approaches for consistency and co
 
 This tension requires ongoing negotiation between standardization for scalability and contextualization for effectiveness, ideally finding balance through modular design that enables customization within consistent architectural patterns.
 
+Research on culturally adaptive thinking in education for AI highlights the importance of localizing AI curricula and tools to align with local cultural norms and languages to avoid cultural bias and resistance (Samuel et al. 2023). Additionally, work on culturally responsive teaching emphasizes incorporating students' cultural references in all aspects of learning, validating and affirming diverse cultural identities (Gay 2018).
+
 #### Automation vs. Human Agency (Teacher & Student)
 
 EdgePrompt embodies the fundamental tension between automating educational processes for efficiency and preserving human agency for pedagogical effectiveness:
@@ -2328,6 +2402,8 @@ EdgePrompt embodies the fundamental tension between automating educational proce
   * Co-creative rather than replacement-oriented automation
 
 This tension requires ongoing reflection about which aspects of education benefit from automation and which require human judgment, with the understanding that this balance may shift across contexts and over time.
+
+Research on teacher agency in the age of generative AI emphasizes the importance of maintaining teachers' power to act, affect matters, make decisions, and take stances in educational settings (Frøsig & Romero 2024). Additionally, work on epistemic agency in education highlights the value of viewing learners as active agents capable of evaluating and constructing knowledge rather than passive recipients (Elgin 2013).
 
 #### Openness vs. Sustainability
 
@@ -2381,6 +2457,8 @@ These tensions cannot be permanently resolved but require continuous, contextual
 * **Transparency of Trade-offs**: Making trade-off rationales transparent helps users understand why certain balances were chosen.  
 * **Adaptation Capability**: Building systems that allow recalibration of these balances based on experience and changing needs.  
 * **Values-Based Decision Frameworks**: Developing explicit frameworks connecting design decisions to educational values.
+
+Research on socio-technical education futures emphasizes examining educational technology within broader socio-technical assemblages that include social values and power structures, acknowledging that technology and society co-evolve in educational settings (Swist & Gulson 2023). Additionally, work on new cybernetics provides systems thinking approaches for understanding educational environments as complex systems requiring adaptive and responsive design (Bell 2022).
 
 EdgePrompt's long-term success depends not on finding perfect resolution to these tensions but on building architecture that supports their thoughtful, contextually appropriate navigation across diverse educational settings. This requires moving beyond technical optimization toward values-based design that centers educational priorities even while acknowledging technical constraints.
 
@@ -2514,7 +2592,7 @@ EdgePrompt's architecture can benefit from cybernetic insights about system beha
 * **System Boundary Management**: Defining appropriate boundaries between technical systems and human educational processes.  
 * **Homeostatic Balance**: Maintaining system stability while enabling appropriate adaptation and growth.
 
-Cybernetic perspectives help ensure that EdgePrompt functions as an effective component within broader educational systems rather than an isolated technological artifact.
+Cybernetic perspectives help ensure that EdgePrompt functions as an effective component within broader educational systems rather than an isolated technological artifact. Research on new cybernetics provides systems thinking approaches for understanding educational environments as complex systems requiring adaptive and responsive design (Bell 2022).
 
 ##### Philosophical and Ethical Frameworks
 
@@ -2592,6 +2670,8 @@ EdgePrompt represents a promising approach to bringing AI-enhanced education to 
 
 This path involves not just technical development but ongoing negotiation of the inherent tensions identified in EdgePrompt's design. Success will be measured not merely by functional completeness but by genuine contribution to educational equity and effectiveness in the communities it aims to serve.
 
+A comprehensive survey of large language models for education provides context for understanding EdgePrompt's place within the broader educational AI landscape, highlighting applications, challenges, and future research directions in this domain (Wang S. et al. 2024). Additionally, research on AI system evaluation frameworks offers approaches for comprehensive assessment spanning the entire model lifecycle (Xia et al. 2024).
+
 ### Chapter 15: Open Questions – The Dialectic of Further Research
 
 #### Beyond Answers to Deeper Questions
@@ -2620,6 +2700,8 @@ Each section presents a fundamental tension, explores its manifestations across 
 
 **Opposing Perspectives**: Consider how different stakeholders conceptualize this tension: Security professionals might prioritize comprehensive protection against all threats, regardless of usability impact. Community advocates might prioritize removing barriers to participation, even at some security cost. Teachers might seek a middle ground where security remains invisible until genuinely needed. What new approaches emerge when we refuse to accept either perspective as complete?
 
+Research on the impact of generative AI in cybersecurity and privacy has examined security implications for educational contexts, highlighting the importance of protecting student data and implementing appropriate safeguards (Gupta et al. 2023). Additionally, work on AI misuse and information privacy concerns has emphasized the importance of robust safety guardrails in addressing these concerns (Menard & Bott 2024).
+
 #### The Technical-Pedagogical Dialectic: Capability vs. Educational Value
 
 **The Tension**: A persistent tension exists between technical capabilities (what AI systems can do) and pedagogical value (what enhances learning). Technical optimization often prioritizes measurable metrics like efficiency, accuracy, and reliability. Educational effectiveness, however, sometimes benefits from productive struggle, ambiguity, and personalized approaches resistant to standardization. How should EdgePrompt navigate between technical excellence and pedagogical wisdom?
@@ -2637,6 +2719,8 @@ Each section presents a fundamental tension, explores its manifestations across 
 | How can teacher epistemological beliefs be better reflected in AI-assisted educational activities? | Analysis of template customization patterns; modeling of pedagogical value expression in prompts | Design guidelines for aligning AI-assisted activities with diverse teaching philosophies |
 
 **Opposing Perspectives**: Technical and educational stakeholders often speak different languages about the same system. Engineers might focus on optimizing token efficiency and response accuracy, viewing education as an application domain. Educators might focus on learning outcomes and student engagement, viewing technology as merely a tool. What happens when we refuse to privilege either perspective and instead seek approaches that transform both our understanding of education and our implementation of technology?
+
+Research on harnessing AI for constructivist learning argues that modern AI tools can amplify constructivist pedagogy when designed to support learners as "active architects" of their own knowledge building (Grubaugh, Levitt & Deever 2023). Additionally, work on epistemic agency in education emphasizes the importance of viewing learners as active agents capable of evaluating and constructing knowledge rather than passive recipients (Elgin 2013).
 
 #### The Global-Local Dialectic: Universal Technology vs. Contextual Knowledge
 
@@ -2656,6 +2740,8 @@ Each section presents a fundamental tension, explores its manifestations across 
 
 **Opposing Perspectives**: Consider the perspective of global technology developers seeking universal solutions versus local communities with specific needs and traditions. Technologists might argue that fundamental patterns transcend cultural differences and enable efficiency through standardization. Cultural advocates might counter that meaningful education must emerge from specific cultural contexts and knowledge traditions. What approaches emerge when we refuse to see either universal or contextual approaches as inherently superior?
 
+Research on culturally adaptive thinking in education for AI highlights the importance of localizing AI curricula and tools to align with local cultural norms and languages to avoid cultural bias and resistance (Samuel et al. 2023). Additionally, work on culturally responsive teaching emphasizes incorporating students' cultural references in all aspects of learning, validating and affirming diverse cultural identities (Gay 2018).
+
 #### The Efficiency-Robustness Dialectic: Resource Constraints vs. System Reliability
 
 **The Tension**: EdgePrompt's deployment in resource-constrained environments creates inherent tension between computational efficiency and system robustness. More thorough safety mechanisms, validation processes, and adaptation capabilities require additional computational resources. Yet these same environments offer the least resource availability, creating a paradoxical situation where those most in need of reliable systems have the least capacity to support resource-intensive robustness.
@@ -2674,6 +2760,8 @@ Each section presents a fundamental tension, explores its manifestations across 
 
 **Opposing Perspectives**: Consider how different priorities shape approaches to this tension. Resource optimization proponents might argue for the minimal viable system that functions within constraints, even if less robust. Safety advocates might argue that compromising on validation creates unacceptable risks, regardless of resource costs. What approaches emerge when we refuse to accept either efficiency or robustness as the dominant priority?
 
+Research on educational edge computing frameworks demonstrates approaches for balancing performance requirements with resource constraints in educational applications, showing how edge setups can improve throughput and latency for remote learners (Chen et al. 2022). Additionally, comprehensive reviews of on-device language models highlight strategies for efficient deployment on resource-constrained devices, including architecture optimization and compression techniques (Xu et al. 2024).
+
 #### The Human-AI Dialectic: Automation vs. Agency
 
 **The Tension**: Perhaps the most profound tension in EdgePrompt lies between automation (using AI to handle educational tasks for efficiency and consistency) and human agency (preserving teacher and student control over the educational process). This tension manifests across multiple dimensions: teacher vs. system control, standardized vs. personalized approaches, algorithmic vs. human judgment, and efficiency vs. relationship.
@@ -2691,6 +2779,8 @@ Each section presents a fundamental tension, explores its manifestations across 
 | What accessibility approaches best address the diverse needs of teachers and students in target regions? | Accessibility requirement analysis across deployment contexts; adaptive interface simulation | Comprehensive accessibility framework addressing regional variation in ability needs |
 
 **Opposing Perspectives**: Automation advocates might argue that AI can handle routine tasks more efficiently, freeing humans for higher-value activities. Agency defenders might counter that seemingly routine educational tasks often contain subtle judgment opportunities essential to the learning relationship. What approaches emerge when we refuse to see automation and human agency as necessarily opposed, seeking instead their appropriate balance in specific educational contexts?
+
+Research on teacher agency in the age of generative AI emphasizes the importance of maintaining teachers' power to act, affect matters, make decisions, and take stances in educational settings (Frøsig & Romero 2024). Additionally, work on trust in AI-assisted decision-making has shown that cognitive forcing functions can reduce overreliance on AI by prompting users to think independently before accepting AI recommendations (Buçinca, Malaya & Gajos 2021).
 
 #### The Theory-Practice Dialectic: Research vs. Implementation
 
@@ -2723,6 +2813,8 @@ These dialectical tensions cannot be resolved through a single synthesis but req
 These meta-questions suggest that EdgePrompt's most important contribution may ultimately lie not in its technical architecture but in its exploration of how AI can be thoughtfully integrated into diverse educational contexts. By explicitly acknowledging and navigating these tensions rather than seeking to eliminate them, EdgePrompt can contribute to a deeper understanding of technology's appropriate role in human learning—a question that transcends any single implementation while being concretely manifested in each design decision.
 
 The research directions outlined in this chapter offer not merely topics for investigation but opportunities for navigating these fundamental tensions. By approaching these questions with both technical rigor and philosophical depth, EdgePrompt can continue evolving from promising concept toward meaningful educational contribution.
+
+Research on the ethics of AI in education emphasizes the importance of transparency in AI decision-making, safeguarding student autonomy and trust, and adherence to principles of fairness, accountability, and pedagogical soundness (Holmes et al. 2022). Additionally, work on socio-technical education futures examines educational technology within broader socio-technical assemblages, highlighting the importance of involving diverse stakeholders in "technical democracy" (Swist & Gulson 2023).
 
 ## Conclusion: Revolution, Hype, or Foundation Stone?
 
@@ -2774,292 +2866,154 @@ The ultimate test of EdgePrompt will not be whether it revolutionizes education 
 
 In this light, EdgePrompt is best understood neither as revolution nor hype but as a serious contribution to the ongoing work of aligning artificial intelligence with human flourishing in education—work that requires technical innovation, ethical reflection, and community engagement across generations. The project has laid a foundation; building upon it responsibly requires continued commitment to both technological excellence and educational purpose.
 
-## Bibliography
+# References
 
 ### AI Guardrails and Prompt Engineering
 
 **Dong Y, Mu R, Jin G, Qi Y, Hu J, Zhao X, Meng J, Ruan W and Huang X** (2024) 'Building Guardrails for Large Language Models', [arXiv:2402.01822](https://arxiv.org/abs/2402.01822)
 
-> Critical for understanding EdgePrompt's approach to implementing guardrails through structured prompting and validation stages. Provides theoretical foundations for enhancing safety in LLM outputs.
-
 **Ganguli D, Lovitt L, Kernion J, Askell A, Bai Y, Kadavath S, Mann B, Perez E, Schiefer N, Ndousse K et al.** (2022) 'Red Teaming Language Models to Reduce Harms: Methods, Scaling Behaviors, and Lessons Learned', [arXiv:2209.07858](https://arxiv.org/abs/2209.07858)
-
-> Details systematic approaches to identifying harmful AI outputs, directly relevant to EdgePrompt's safety validation methodologies in educational contexts.
 
 **Gil De Zúñiga H, Goyanes M and Durotoye T** (2024) 'A Scholarly Definition of Artificial Intelligence (AI): Advancing AI as a Conceptual Framework in Communication Research', *Political Communication*, 41(2):317-334, [doi:10.1080/10584609.2023.2290497](https://doi.org/10.1080/10584609.2023.2290497).
 
-> Provides a foundational scholarly definition of AI that helps contextualize EdgePrompt within broader AI frameworks and communication research, offering conceptual clarity around terms that are often used inconsistently in discussions of educational AI.
-
 **Gupta A, Akiri C, Aryal K, Parker E and Praharaj L** (2023) 'From ChatGPT to ThreatGPT: Impact of Generative AI in Cybersecurity and Privacy', *IEEE Access*, 11:80218-80245, [doi:10.1109/ACCESS.2023.3300381](https://doi.org/10.1109/ACCESS.2023.3300381).
-
-> Examines security and privacy implications of generative AI, highly relevant to EdgePrompt's implementation of guardrails and safety considerations in educational contexts where student data protection is paramount.
 
 **Frøsig TB and Romero M** (2024) 'Teacher agency in the age of generative AI: towards a framework of hybrid intelligence for learning design', [arXiv:2407.06655](https://arxiv.org/abs/2407.06655).
 
-> Examines how generative AI impacts teacher agency across multiple dimensions, including teachers' power to act, affect matters, make decisions, and take stances. The proposed hybrid intelligence framework aligns with EdgePrompt's emphasis on teacher-AI collaboration while maintaining teacher agency in educational settings.
-
 **Hacker P, Engel A and Mauer M** (2023) 'Regulating ChatGPT and other Large Generative AI Models', *2023 ACM Conference on Fairness, Accountability, and Transparency*, ACM, pp. 1112-1123, [doi:10.1145/3593013.3594067](https://doi.org/10.1145/3593013.3594067).
-
-> Explores regulatory approaches to generative AI models, providing useful context for how EdgePrompt's validation architecture aligns with emerging regulatory frameworks for AI safety in educational applications.
 
 **Ouyang L, Wu J, Jiang X, Almeida D, Wainwright CL, Mishkin P, Zhang C, Agarwal S, Slama K, Ray A et al.** (2022) 'Training language models to follow instructions with human feedback', [arXiv:2203.02155](https://arxiv.org/abs/2203.02155)
 
-> Provides important context on instruction-tuning approaches that inform EdgePrompt's structured prompt templates.
-
 **Sahoo P, Singh S, Kala CSR, Mukherjee A, Shrimal M, Hota C and Raychoudhury V** (2025) 'A Systematic Survey of Prompt Engineering in Large Language Models: Techniques and Applications', [arXiv:2402.07927](https://arxiv.org/abs/2402.07927)
-
-> This survey categorizes prompt engineering methods that guide models via instructions or examples rather than parameter updates. It reviews how different prompting strategies (e.g. zero-/few-shot, chain-of-thought prompts) enable control over an LLM's responses across tasks, effectively "programming" the model's behavior through language. Such techniques improve model reliability and alignment with user goals in educational applications.
 
 **Wei J, Wang X, Schuurmans D, Bosma M, Ichter B, Xia F, Chi E, Le Q and Zhou D** (2022) 'Chain-of-Thought Prompting Elicits Reasoning in Large Language Models', [arXiv:2201.11903](https://arxiv.org/abs/2201.11903)
 
-> Demonstrates how generating intermediate reasoning steps significantly improves large language models' complex reasoning abilities. This technique directly informs EdgePrompt's multi-stage validation architecture and structured prompting approach to enhance smaller models' safety and capability.
-
 **White J, Fu Q, Hays S, Sandborn M, Olea C, Gilbert H, Elnashar A, Spencer-Smith J and Schmidt DC** (2023) 'A Prompt Pattern Catalog to Enhance Prompt Engineering with ChatGPT', [arXiv:2302.11382](http://arxiv.org/abs/2302.11382)
-
-> Documents reusable prompt patterns similar to EdgePrompt's template-based approach, offering complementary techniques for educational contexts.
 
 **Xia B, Lu Q, Zhu L and Xing Z** (2024) 'An AI System Evaluation Framework for Advancing AI Safety: Terminology, Taxonomy, Lifecycle Mapping', [arXiv:2404.05388](https://arxiv.org/abs/2404.05388)
 
-> Xia et al. propose a comprehensive AI evaluation framework that spans the entire model lifecycle. They identify component-level checks (data, model, and safety guardrail evaluation) and system-level validation, mapping these to stakeholders and stages of development. This multi-stage approach ensures that an educational AI system's outputs are vetted at several points – from dataset bias analysis to post-deployment human review – to uphold safety and reliability.
-
 **Yao S, Yu D, Zhao J, Shafran I, Griffiths TL, Cao Y and Narasimhan K** (2023) 'Tree of Thoughts: Deliberate Problem Solving with Large Language Models', [arXiv:2305.10601](https://arxiv.org/abs/2305.10601)
-
-> Extends chain-of-thought approaches with a framework for exploring multiple reasoning paths, relevant to EdgePrompt's validation architecture.
 
 **Zheng C, Yin F, Zhou H, Meng F, Zhou J, Chang KW, Huang M and Peng N** (2024) 'On Prompt-Driven Safeguarding for Large Language Models', [arXiv:2401.18018](https://arxiv.org/abs/2401.18018).
 
-> Investigates how safety prompts affect LLM behavior in the representation space and proposes Directed Representation Optimization (DRO) to improve safeguarding without compromising general performance. These findings are directly applicable to EdgePrompt's safety guardrails and structured prompting techniques.
-
 **Zhang X** (2025) 'Constitution or Collapse? Exploring Constitutional AI with Llama 3-8B', [arXiv:2504.04918](https://arxiv.org/abs/2504.04918).
-
-> Explores implementing Constitutional AI with smaller models like LLaMA 3-8B, finding increased harmlessness comes at the cost of helpfulness, with smaller models showing signs of collapse. This research provides important context for EdgePrompt's approach to implementing safety in edge-deployable models.
 
 ### Educational AI Applications and Question Generation
 
 **Bastani H, Bastani O, Sungu A, Ge H, Kabakcı Ö and Mariman R** (2024) 'Generative AI Can Harm Learning', *The Wharton School Research Paper*, [doi:10.2139/ssrn.4895486](https://doi.org/10.2139/ssrn.4895486).
 
-> This field experiment with nearly a thousand students revealed that while GPT-4 temporarily improved performance, it harmed learning outcomes when access was removed. Students who had used GPT-4 performed worse than those who never had access, highlighting the importance of EdgePrompt's teacher-centered approach.
-
 **Bhowmick AK, Jagmohan A, Vempaty A, Dey P, Hall L, Hartman J, Kokku R and Maheshwari H** (2023) 'Automating Question Generation From Educational Text', in Bramer M and Stahl F (eds) *Artificial Intelligence XL*, Springer Nature Switzerland, pp. 437–450, [doi:10.1007/978-3-031-47994-6\_38](https://link.springer.com/10.1007/978-3-031-47994-6_38)
-
-> Explores techniques for automated educational content generation, directly relevant to EdgePrompt's content generation capabilities.
 
 **Bubeck S, Chandrasekaran V, Eldan R, Gehrke J, Horvitz E, Kamar E, Lee P, Lee YT, Li Y, Lundberg S et al.** (2023) 'Sparks of Artificial General Intelligence: Early experiments with GPT-4', [arXiv:2303.12712](https://arxiv.org/abs/2303.12712).
 
-> This foundational paper documents capabilities of GPT-4 across multiple domains including education, providing context for understanding the potential and limitations of using large language models like those underlying EdgePrompt in educational settings.
-
 **Furze L, Perkins M, Roe J and MacVaugh J** (2024) 'The AI Assessment Scale (AIAS) in action: A pilot implementation of GenAI-supported assessment', *Australasian Journal of Educational Technology*, 40(2), [doi:10.14742/ajet.9434](https://ajet.org.au/index.php/AJET/article/view/9434)
-
-> Presents a framework for AI integration in educational assessment that complements EdgePrompt's validation approach.
 
 **Fui-Hoon Nah F, Zheng R, Cai J, Siau K and Chen L** (2023) 'Generative AI and ChatGPT: Applications, challenges, and AI-human collaboration', *Journal of Information Technology Case and Application Research*, 25(3):277-304, [doi:10.1080/15228053.2023.2233814](https://doi.org/10.1080/15228053.2023.2233814).
 
-> Offers a comprehensive overview of generative AI applications and challenges, with particular focus on AI-human collaboration relevant to EdgePrompt's teacher-centered design philosophy and emphasis on maintaining teacher agency.
-
 **Grubaugh S, Levitt G and Deever D** (2023) 'Harnessing AI to Power Constructivist Learning: An Evolution in Educational Methodologies', *Journal of Effective Teaching Methods*, 1(3), [doi:10.59652/jetm.v1i3.43](https://doi.org/10.59652/jetm.v1i3.43)
-
-> Grubaugh et al. argue that modern AI tools (like ChatGPT and other adaptive platforms) can amplify constructivist pedagogy. AI's adaptive capabilities align with learners' prior knowledge and experiences, offering personalized challenges and feedback. The article emphasizes maintaining humanistic, learner-centered values even as AI provides dynamic and enriching learning avenues, so that students remain "active architects" of their own knowledge building.
 
 **Hang CN, Wei Tan C and Yu PD** (2024) 'MCQGen: A Large Language Model-Driven MCQ Generator for Personalized Learning', *IEEE Access*, 12:102261–102273, [doi:10.1109/ACCESS.2024.3420709](https://ieeexplore.ieee.org/document/10577164/)
 
-> Demonstrates an LLM-based approach to educational content generation similar to EdgePrompt's content generation capabilities.
-
 **Magana Vsevolodovna RI and Monti M** (2025) 'Enhancing Large Language Models through Neuro-Symbolic Integration and Ontological Reasoning', [arXiv:2504.07640](https://arxiv.org/abs/2504.07640).
-
-> Presents a neuro-symbolic approach that integrates ontological reasoning with machine learning to improve LLM consistency and reduce hallucinations. This research directly supports EdgePrompt's neural-symbolic inspired approach to enhance interpretability and reasoning in educational AI.
 
 **Niknazar M, Haley PV, Ramanan L, Truong ST, Shrinivasan Y, Bhowmick AK, Dey P, Jagmohan A, Maheshwari H, Ponoth S et al.** (2024) 'Building a Domain-specific Guardrail Model in Production', [arXiv:2408.01452](https://arxiv.org/abs/2408.01452)
 
-> Details implementing guardrails for educational contexts, providing valuable insights directly applicable to EdgePrompt.
-
 **Novoa-Echaurren Á** (2024) 'Teacher Agency in the Pedagogical Uses of ICT: A Holistic Perspective Emanating from Reflexive Practice', *Education Sciences (MDPI)*, 14(3):254, [doi:10.3390/educsci14030254](https://doi.org/10.3390/educsci14030254)
-
-> Novoa-Echaurren's case study of a Chilean school shows that giving teachers structured reflection time on their use of technology bolsters their sense of agency. Through collaborative reflexive practice, teachers aligned tech use with their local context and values, rather than passively adopting tools. The study underscores that teacher decision-making, supported by peer dialogue and institutional trust, is key to effective, context-appropriate EdTech integration.
 
 **Peres R, Schreier M, Schweidel D and Sorescu A** (2023) 'On ChatGPT and beyond: How generative artificial intelligence may affect research, teaching, and practice', *International Journal of Research in Marketing*, 40(2):269-275, [doi:10.1016/j.ijresmar.2023.03.001](https://doi.org/10.1016/j.ijresmar.2023.03.001).
 
-> Examines how generative AI is transforming teaching and educational practices, providing valuable insights into the types of impacts that systems like EdgePrompt might have in educational contexts.
-
 **Riza LS, Firdaus Y, Sukamto RA, Wahyudin and Abu Samah KAF** (2023) 'Automatic generation of short-answer questions in reading comprehension using NLP and KNN', *Multimedia Tools and Applications*, 82(27):41913–41940, [doi:10.1007/s11042-023-15191-6](https://link.springer.com/10.1007/s11042-023-15191-6)
-
-> Explores techniques for generating educational questions that complement EdgePrompt's content generation approach.
 
 **Scaria N, Dharani Chenna S and Subramani D** (2024) 'Automated Educational Question Generation at Different Bloom's Skill Levels Using Large Language Models: Strategies and Evaluation', in Olney AM, Chounta IA, Liu Z, Santos OC and Bittencourt IG (eds) *Artificial Intelligence in Education*, Springer Nature Switzerland, pp. 165–179, [doi:10.1007/978-3-031-64299-9\_12](https://link.springer.com/10.1007/978-3-031-64299-9_12)
 
-> Addresses generating questions at various cognitive levels using Bloom's taxonomy, aligning with EdgePrompt's educational objectives.
-
 **Tan M and Subramoniam H** (2024) 'More than Model Documentation: Uncovering Teachers' Bespoke Information Needs for Informed Classroom Integration of ChatGPT', *Proceedings of the 2024 CHI Conference on Human Factors in Computing Systems*, Article No. 269, pp. 1-19, [doi:10.1145/3613904.3642592](https://doi.org/10.1145/3613904.3642592).
-
-> Examines middle and high school teachers' information needs when assessing and integrating ChatGPT, finding significant gaps in understanding how to explore AI capabilities for specific learning tasks. Proposes a framework for interactive model documentation that directly informs EdgePrompt's approach to teacher empowerment.
 
 **Wang S, Xu T, Li H, Zhang C, Liang J, Tang J, Yu PS and Wen Q** (2024) 'Large Language Models for Education: A Survey and Outlook', [arXiv:2403.18105](https://arxiv.org/abs/2403.18105).
 
-> Provides a comprehensive survey of LLM applications in education, including student and teacher assistance, adaptive learning, and commercial tools. Identifies risks, challenges, and future research directions that contextualize EdgePrompt within the broader educational AI landscape.
-
 **Wang X, Fan S, Houghton J and Wang L** (2022) 'Towards Process-Oriented, Modular, and Versatile Question Generation that Meets Educational Needs', *Proceedings of the 2022 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies*, Association for Computational Linguistics, Seattle, USA, pp. 291–302, [doi:10.18653/v1/2022.naacl-main.22](https://aclanthology.org/2022.naacl-main.22)
-
-> Examines question generation approaches that align with educational requirements, relevant to EdgePrompt's content generation goals.
 
 ### Resource-Constrained Environments and Indonesian Context
 
 **Adji LK** (2024) 'Indonesia's internet penetration hits 79.5 percent, trend continues', *Antara News*, [https://en.antaranews.com/news/304593/indonesias-internet-penetration-hits-795-percent-trend-continues](https://en.antaranews.com/news/304593/indonesias-internet-penetration-hits-795-percent-trend-continues)
 
-> Provides current statistics on Indonesian internet connectivity, essential context for EdgePrompt's target deployment environment.
-
 **Arifin AA and Lennerfors TT** (2022) 'Ethical aspects of voice assistants: a critical discourse analysis of Indonesian media texts', *Journal of Information, Communication and Ethics in Society*, 20(1):18-36, [doi:10.1108/JICES-12-2020-0118](https://doi.org/10.1108/JICES-12-2020-0118).
-
-> This Indonesia-specific study of AI media coverage and ethics provides valuable cultural context for EdgePrompt's implementation in Indonesia's 3T areas, highlighting how ethical issues around AI are perceived within Indonesian media discourse.
 
 **Chen Q, Zhao W, Wang Z, Luo T, Jian X and Zheng L** (2022) 'Educational 5G Edge Computing: Framework and Experimental Study', *Electronics (MDPI)*, 11(17):2727, [doi:10.3390/electronics11172727](https://doi.org/10.3390/electronics11172727)
 
-> Chen et al. design an **eMEC** (educational multi-access edge computing) architecture to support smart campuses. It consists of local 5G edge servers that handle intensive tasks like AR/VR interactive lessons with minimal latency. Field tests showed that this edge setup meets education-specific needs (real-time responsiveness, data privacy) and significantly improves throughput and latency for remote and rural learners. This demonstrates how edge computing can bridge connectivity gaps by processing learning applications locally.
-
 **Kementerian Desa** (2025) 'Official Website of the Ministry of Villages', [https://www.kemendesa.go.id](https://www.kemendesa.go.id/)
-
-> Official resource on Indonesian rural development initiatives, providing context for EdgePrompt's deployment in 3T regions.
 
 **Singh A, Kanaujia A, Singh VK and Vinuesa R** (2024) 'Artificial intelligence for Sustainable Development Goals: Bibliometric patterns and concept evolution trajectories', *Sustainable Development*, 32(1):724–754, [doi:10.1002/sd.2706](https://onlinelibrary.wiley.com/doi/10.1002/sd.2706)
 
-> Analyzes AI applications for sustainable development, relevant to EdgePrompt's goals of addressing educational equity.
-
 **UNESCO** (2020) 'Startling digital divides in distance learning emerge', UNESCO Press Release, 21 April 2020, [https://en.unesco.org/news/startling-digital-divides-distance-learning-emerge](https://en.unesco.org/news/startling-digital-divides-distance-learning-emerge)
 
-> UNESCO reported during the COVID-19 school closures that **43%** of students (over 700 million worldwide) had no internet access at home, and in low-income regions like sub-Saharan Africa, **82%** lacked even household computers. This stark digital divide meant many learners were excluded from online AI-powered instruction. The findings underscore that achieving AI-driven education for all will require massive investment in connectivity and offline solutions (radio, TV, local devices) to reach marginalized communities – otherwise, AI benefits will skew toward the already-connected.
-
 **Widodo J** (2020) 'Peraturan Presiden (PERPRES) Nomor 63 Tahun 2020 Penetapan Daerah Tertinggal Tahun 2020-2024', *Database Peraturan | JDIH BPK*, [https://peraturan.bpk.go.id/Details/136563/perpres-no-63-tahun-2020](https://peraturan.bpk.go.id/Details/136563/perpres-no-63-tahun-2020)
-
-> Official presidential regulation identifying Indonesia's underdeveloped regions, providing formal context for EdgePrompt's target deployment areas.
 
 ### AI Alignment, Educational Philosophy, Ethics, and Trust
 
 **Baker RS and Hawn A** (2022) 'Algorithmic Bias in Education', *International Journal of Artificial Intelligence in Education*, 32(4), [doi:10.1007/s40593-021-00285-9](https://doi.org/10.1007/s40593-021-00285-9)
 
-> Baker and Hawn review how biases enter educational AI at multiple stages. They connect fairness definitions to the ML pipeline and survey evidence of bias affecting racial, gender, socioeconomic groups, etc.. For example, prediction algorithms for student performance may under-serve minority groups due to biased training data. The paper proposes moving from "unknown" to "known" biases and suggests strategies (like better data representation and bias audits) to ensure AI systems promote equity.
-
 **Bell G** (2022) 'The New Cybernetics: Systems Thinking for the 21st Century', ANU School of Cybernetics, [URL: https://cybernetics.anu.edu.au/news/2022/03/28/the-new-cybernetics-systems-thinking-for-21st-century/](https://cybernetics.anu.edu.au/news/2022/03/28/the-new-cybernetics-systems-thinking-for-21st-century/)
-
-> Bell discusses the evolution of cybernetics and its application in contemporary education. By viewing educational environments as complex systems, educators can better design adaptive and responsive learning experiences that account for technological, human, and environmental factors.
 
 **Buçinca Z, Malaya MB and Gajos KZ** (2021) 'To Trust or to Think: Cognitive Forcing Functions Can Reduce Overreliance on AI in AI-assisted Decision-making', *Proceedings of the ACM on Human-Computer Interaction*, 5(CSCW1):1–21, [doi:10.1145/3449287](https://dl.acm.org/doi/10.1145/3449287)
 
-> Examines trust dynamics in human-AI interaction, relevant to EdgePrompt's teacher-AI relationship model.
-
 **Dwivedi YK, Kshetri N, Hughes L, Slade E, Jeyaraj A, Kar AK, Baabdullah AM, Koohang A, Raghavan V, Ahuja M et al.** (2023) 'Opinion Paper: "So what if ChatGPT wrote it?" Multidisciplinary perspectives on opportunities, challenges and implications of generative conversational AI for research, practice and policy', *International Journal of Information Management*, 71:102642, [doi:10.1016/j.ijinfomgt.2023.102642](https://doi.org/10.1016/j.ijinfomgt.2023.102642).
-
-> This multidisciplinary examination of generative AI implications provides valuable perspectives on ethical, educational, and policy considerations directly relevant to EdgePrompt's implementation in educational contexts.
 
 **Elgin CZ** (2013) 'Epistemic Agency', *Theory and Research in Education*, 11(2):135-152, [doi:10.1177/1477878513485171](https://journals.sagepub.com/doi/10.1177/1477878513485171)
 
-> Elgin explores the concept of epistemic agency, arguing that learners should be seen as active agents capable of evaluating and constructing knowledge. This perspective shifts the educational focus from passive reception to active engagement, fostering deeper understanding and critical thinking.
-
 **Gabriel I** (2020) 'Artificial Intelligence, Values, and Alignment', *Minds and Machines*, 30(3):411–437, [doi:10.1007/s11023-020-09539-2](https://link.springer.com/10.1007/s11023-020-09539-2)
-
-> Provides philosophical framework for AI alignment that underlies EdgePrompt's approach to educational values.
 
 **Gay G** (2018) 'Culturally Responsive Teaching: Theory, Research, and Practice', Teachers College Press, [URL: https://www.tcpress.com/culturally-responsive-teaching-9780807758762](https://www.tcpress.com/culturally-responsive-teaching-9780807758762)
 
-> Gay emphasizes the necessity of incorporating students' cultural references in all aspects of learning. This approach enhances the effectiveness of teaching by validating and affirming diverse cultural identities, which is crucial when integrating technology in multicultural classrooms.
-
 **Hendrycks D, Mazeika M and Woodside T** (2023) 'An Overview of Catastrophic AI Risks', [arXiv:2306.12001](https://arxiv.org/abs/2306.12001)
-
-> Examines serious AI risks, providing context for EdgePrompt's focus on safety guardrails in educational applications.
 
 **Holmes W, Porayska-Pomsta K, Holstein K, Sutherland E, Baker T, Buckingham Shum S, Santos OC, Rodrigo MMT, Cukurova M, Bittencourt II and Koedinger KR** (2022) 'Ethics of AI in Education: Towards a Community-Wide Framework', *International Journal of Artificial Intelligence in Education*, 32(4), [doi:10.1007/s40593-021-00295-8](https://doi.org/10.1007/s40593-021-00295-8)
 
-> Holmes and colleagues survey AI-in-education experts to chart ethical priorities for aligning AI with what educators value. Key themes include the distinction between *doing ethical things vs. doing things ethically*, transparency in how AI makes decisions, and safeguarding student autonomy and trust. Notably, the paper found that the AIED field lacked a unified code of ethics. It calls for developing community guidelines so that AI tools adhere to principles like fairness, accountability, and pedagogical soundness – effectively aligning AI with human-centric educational values.
-
 **Jacovi A, Marasović A, Miller T and Goldberg Y** (2021) 'Formalizing Trust in Artificial Intelligence: Prerequisites, Causes and Goals of Human Trust in AI', *Proceedings of the 2021 ACM Conference on Fairness, Accountability, and Transparency*, ACM, Virtual Event Canada, pp. 624–635, [doi:10.1145/3442188.3445923](https://dl.acm.org/doi/10.1145/3442188.3445923)
-
-> Presents framework for understanding trust in AI systems, relevant to EdgePrompt's teacher-centered design.
 
 **Kumar D and Suthar N** (2024) 'Ethical and legal challenges of AI in marketing: an exploration of solutions', *Journal of Information, Communication and Ethics in Society*, 22(1):124-144, [doi:10.1108/JICES-05-2023-0068](https://doi.org/10.1108/JICES-05-2023-0068).
 
-> Though focused on marketing, this paper's comprehensive examination of AI ethics, privacy concerns, and potential solutions offers valuable frameworks applicable to EdgePrompt's educational implementation and ethical guardrails.
-
 **Mehrabi N, Morstatter F, Saxena N, Lerman K and Galstyan A** (2022) 'A Survey on Bias and Fairness in Machine Learning', *ACM Computing Surveys*, 54(6):1–35, [doi:10.1145/3457607](https://dl.acm.org/doi/10.1145/3457607)
-
-> Comprehensively reviews bias in AI systems, supporting EdgePrompt's ethical assessment considerations.
 
 **Menard P and Bott GJ** (2024) 'Artificial intelligence misuse and concern for information privacy: New construct validation and future directions', *Information Systems Journal*, [doi:10.1111/isj.12544](https://doi.org/10.1111/isj.12544).
 
-> Explores privacy concerns related to AI misuse, validating a new scale for measuring such concerns which is highly relevant to EdgePrompt's focus on implementing robust safety guardrails in educational AI applications.
-
 **Samuel Y, Mvogo A, Akinyemi T, Segun F, Smith E, Ajilore I and Okolo CT** (2023) 'Cultivation of Human Centered Artificial Intelligence: Culturally Adaptive Thinking in Education (CATE) for AI', *Frontiers in Artificial Intelligence*, 6:1198180, [doi:10.3389/frai.2023.1198180](https://doi.org/10.3389/frai.2023.1198180)
-
-> Samuel et al. introduce *CATE-AI*, a framework for embedding cultural adaptivity into AI education. They argue that current AI education efforts often assume Western contexts; without localization, students can become confused or "AI-phobic." The paper analyzes media and bias incidents, concluding that aligning AI curricula and tools with local cultural norms and languages is critical to avoid cultural bias and resistance. This human-centered approach aims to make AI in education globally relevant and fair.
 
 **Slade S and Prinsloo P** (2013) 'Learning Analytics: Ethical Issues and Dilemmas', *American Behavioral Scientist*, 57(10), [doi:10.1177/0002764213479366](https://doi.org/10.1177/0002764213479366)
 
-> Slade & Prinsloo offer a seminal socio-critical take on student data ethics in learning analytics. They highlight challenges around informed consent, privacy, data ownership, and transparency in educational data mining. The paper sets out six key principles (e.g. students should be active agents of their data, not mere data points) to guide institutions in using AI/analytics responsibly. These principles anticipate the need for policies ensuring that any AI system protects student identity, secures data, and respects the learner's rights.
-
 **Swist T and Gulson KN** (2023) 'Instituting Socio-Technical Education Futures: Encounters with/through Technical Democracy, Data Justice, and Imaginaries', *Learning, Media and Technology*, 48(2), [doi:10.1080/17439884.2023.2205225](https://doi.org/10.1080/17439884.2023.2205225)
-
-> Swist and Gulson's editorial situates education technology within socio-technical assemblages, urging researchers to examine not only the tools but the social values and power structures around them. They discuss controversies like algorithmic grading as *socio-technical controversies*, arguing that resolving them requires involving diverse stakeholders (teachers, students, communities) in "technical democracy". This perspective links AI in education to issues of data justice and human agency, highlighting that technology and society co-evolve in schools.
 
 **Volkman R and Gabriels K** (2023) 'AI Moral Enhancement: Upgrading the Socio-Technical System of Moral Engagement', *Science and Engineering Ethics*, 29(2):11, [doi:10.1007/s11948-023-00428-2](https://link.springer.com/10.1007/s11948-023-00428-2)
 
-> Presents a modular approach to AI ethics that complements EdgePrompt's multi-stage validation architecture.
-
 **Vygotsky LS** (1978) 'Mind in Society: The Development of Higher Psychological Processes', Harvard University Press, [URL: https://www.hup.harvard.edu/catalog.php?isbn=9780674576292](https://www.hup.harvard.edu/catalog.php?isbn=9780674576292)
-
-> Vygotsky introduced the concept of the ZPD, highlighting the gap between what a learner can do independently and what they can achieve with assistance. This framework underscores the role of social interaction and scaffolding in cognitive development, suggesting that learning is a socially mediated process.
 
 ### Neural-Symbolic Approaches and Cognitive Models
 
 **Binz M and Schulz E** (2023) 'Turning large language models into cognitive models', [arXiv:2306.03917](https://arxiv.org/abs/2306.03917)
 
-> Explores adapting LLMs to model human cognition, relevant to EdgePrompt's approach to modeling educational interactions.
-
 **Colelough BC and Regli W** (2025) 'Neuro-Symbolic AI in 2024: A Systematic Review', [arXiv:2501.05435](https://arxiv.org/abs/2501.05435)
-
-> Provides comprehensive overview of neural-symbolic approaches that inform EdgePrompt's design philosophy.
 
 **Hooshyar D, Azevedo R and Yang Y** (2024) 'Augmenting Deep Neural Networks with Symbolic Educational Knowledge: Towards Trustworthy and Interpretable AI for Education', *Machine Learning and Knowledge Extraction (MDPI)*, 6(1), [doi:10.3390/make6010028](https://doi.org/10.3390/make6010028)
 
-> Hooshyar et al. introduce a neural-symbolic (NSAI) framework that injects domain knowledge (rules, causal relationships) into deep learning models for learner modeling. The result is an educational AI that generalizes better and can explain its decisions by extracting human-readable rules, thereby reducing spurious correlations and biases in student assessments.
-
 **Kaswan KS, Dhatterwal JS, Malik K and Baliyan A** (2023) 'Generative AI: A Review on Models and Applications', *2023 International Conference on Communication, Security and Artificial Intelligence (ICCSAI)*, IEEE, pp. 699-704, [doi:10.1109/ICCSAI59793.2023.10421601](https://doi.org/10.1109/ICCSAI59793.2023.10421601).
-
-> Reviews generative AI models and applications, providing technical context for EdgePrompt's implementation and potential applications in educational content generation.
 
 **Lewis P, Perez E, Piktus A, Petroni F, Karpukhin V, Goyal N, Küttler H, Lewis M, Yih WT, Rocktäschel T, Riedel S and Kiela D** (2020) 'Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks', *Advances in Neural Information Processing Systems*, 33:9459-9474.
 
-> Presents retrieval-augmentation techniques directly relevant to EdgePrompt's approach to educational content generation, demonstrating how combining parametric and non-parametric knowledge can enhance AI capabilities in knowledge-intensive tasks.
-
 **Mazzaglia P, Verbelen T, Çatal O and Dhoedt B** (2022) 'The Free Energy Principle for Perception and Action: A Deep Learning Perspective', *Entropy*, 24(2):301, [doi:10.3390/e24020301](https://www.mdpi.com/1099-4300/24/2/301)
-
-> Explores theoretical foundations relevant to EdgePrompt's neural-symbolic inspired approach.
 
 **Pezzulo G, Parr T, Cisek P, Clark A and Friston K** (2024) 'Generating meaning: active inference and the scope and limits of passive AI', *Trends in Cognitive Sciences*, 28(2):97–112, [doi:10.1016/j.tics.2023.10.002](https://linkinghub.elsevier.com/retrieve/pii/S1364661323002607)
 
-> Considers frameworks for understanding AI meaning-making capabilities, relevant to EdgePrompt's educational philosophy.
-
 **Rozenblit L and Keil F** (2002) 'The misunderstood limits of folk science: an illusion of explanatory depth', *Cognitive Science*, 26(5):521–562, [doi:10.1207/s15516709cog2605\_1](https://onlinelibrary.wiley.com/doi/10.1207/s15516709cog2605_1)
 
-> Explores human understanding limitations, providing psychological context for EdgePrompt's educational approach.
-
 **Su J, Jiang C, Jin X, Qiao Y, Xiao T, Ma H, Wei R, Jing Z, Xu J and Lin J** (2024) 'Large Language Models for Forecasting and Anomaly Detection: A Systematic Literature Review', [arXiv:2402.10350](https://arxiv.org/abs/2402.10350).
-
-> This systematic review identifies challenges in LLM implementation including reliance on historical data, generalizability issues, hallucinations, and computational resource requirements - all directly relevant to EdgePrompt's efficiency-focused approach for resource-constrained environments.
 
 ### Implementation Approaches and Retrieval-Augmentation
 
 **Lewis P, Perez E, Piktus A, Petroni F, Karpukhin V, Goyal N, Küttler H, Lewis M, Yih WT, Rocktäschel T, Riedel S and Kiela D** (2020) 'Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks', *Advances in Neural Information Processing Systems*, 33:9459-9474, [https://proceedings.neurips.cc/paper/2020/hash/6b493230205f780e1bc26945df7481e5-Abstract.html](https://proceedings.neurips.cc/paper/2020/hash/6b493230205f780e1bc26945df7481e5-Abstract.html)
 
-> Presents retrieval-augmentation techniques relevant to EdgePrompt's approach to educational content generation.
-
 **Poesia G, Polozov O, Le V, Tiwari A, Soares G, Meek C and Gulwani S** (2022) 'Synchromesh: Reliable code generation from pre-trained language models', [arXiv:2201.11227](https://arxiv.org/abs/2201.11227)
-
-> Addresses reliability challenges in structured output generation using Target Similarity Tuning and Constrained Semantic Decoding to enforce syntactic and semantic constraints. This approach directly parallels EdgePrompt's JSON reliability issues and validation architecture.
 
 **Wang H, Huang W, Deng Y, Wang R, Wang Z, Wang Y, Mi F, Pan JZ and Wong KF** (2024) 'UniMS-RAG: A Unified Multi-source Retrieval-Augmented Generation for Personalized Dialogue Systems', [arXiv:2401.13256](https://arxiv.org/abs/2401.13256)
 
-> Presents a retrieval-augmentation approach for personalization that complements EdgePrompt's educational content generation.
-
 **Xu J, Li Z, Chen W, Wang Q, Gao X, Cai Q and Ling Z** (2024) 'On-Device Language Models: A Comprehensive Review', [arXiv:2409.00088](https://arxiv.org/abs/2409.00088).
 
-> Comprehensively reviews strategies for deploying LLMs on resource-constrained devices, including efficient architectures, compression techniques, and hardware acceleration. This research is directly applicable to EdgePrompt's focus on edge deployment for regions with limited connectivity.
-
 **Yazaki M, Maki S, Furuya T, Inoue K, Nagai K, Nagashima Y, Maruyama J, Toki Y, Kitagawa K, Iwata S et al.** (2024) 'Emergency Patient Triage Improvement through a Retrieval-Augmented Generation Enhanced Large-Scale Language Model', *Prehospital Emergency Care*, 1–13, [doi:10.1080/10903127.2024.2374400](https://www.tandfonline.com/doi/full/10.1080/10903127.2024.2374400)
-
-> Demonstrates practical application of RAG for decision support, relevant to EdgePrompt's validation approach.
