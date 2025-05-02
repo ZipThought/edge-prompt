@@ -2794,6 +2794,10 @@ In this light, EdgePrompt is best understood neither as revolution nor hype but 
 
 > Examines security and privacy implications of generative AI, highly relevant to EdgePrompt's implementation of guardrails and safety considerations in educational contexts where student data protection is paramount.
 
+**Frøsig TB and Romero M** (2024) 'Teacher agency in the age of generative AI: towards a framework of hybrid intelligence for learning design', [arXiv:2407.06655](https://arxiv.org/abs/2407.06655).
+
+> Examines how generative AI impacts teacher agency across multiple dimensions, including teachers' power to act, affect matters, make decisions, and take stances. The proposed hybrid intelligence framework aligns with EdgePrompt's emphasis on teacher-AI collaboration while maintaining teacher agency in educational settings.
+
 **Hacker P, Engel A and Mauer M** (2023) 'Regulating ChatGPT and other Large Generative AI Models', *2023 ACM Conference on Fairness, Accountability, and Transparency*, ACM, pp. 1112-1123, [doi:10.1145/3593013.3594067](https://doi.org/10.1145/3593013.3594067).
 
 > Explores regulatory approaches to generative AI models, providing useful context for how EdgePrompt's validation architecture aligns with emerging regulatory frameworks for AI safety in educational applications.
@@ -2808,7 +2812,7 @@ In this light, EdgePrompt is best understood neither as revolution nor hype but 
 
 **Wei J, Wang X, Schuurmans D, Bosma M, Ichter B, Xia F, Chi E, Le Q and Zhou D** (2022) 'Chain-of-Thought Prompting Elicits Reasoning in Large Language Models', [arXiv:2201.11903](https://arxiv.org/abs/2201.11903)
 
-> Demonstrates how structured prompting can enhance reasoning capabilities in LLMs, supporting EdgePrompt's approach to multi-stage validation.
+> Demonstrates how generating intermediate reasoning steps significantly improves large language models' complex reasoning abilities. This technique directly informs EdgePrompt's multi-stage validation architecture and structured prompting approach to enhance smaller models' safety and capability.
 
 **White J, Fu Q, Hays S, Sandborn M, Olea C, Gilbert H, Elnashar A, Spencer-Smith J and Schmidt DC** (2023) 'A Prompt Pattern Catalog to Enhance Prompt Engineering with ChatGPT', [arXiv:2302.11382](http://arxiv.org/abs/2302.11382)
 
@@ -2822,7 +2826,19 @@ In this light, EdgePrompt is best understood neither as revolution nor hype but 
 
 > Extends chain-of-thought approaches with a framework for exploring multiple reasoning paths, relevant to EdgePrompt's validation architecture.
 
+**Zheng C, Yin F, Zhou H, Meng F, Zhou J, Chang KW, Huang M and Peng N** (2024) 'On Prompt-Driven Safeguarding for Large Language Models', [arXiv:2401.18018](https://arxiv.org/abs/2401.18018).
+
+> Investigates how safety prompts affect LLM behavior in the representation space and proposes Directed Representation Optimization (DRO) to improve safeguarding without compromising general performance. These findings are directly applicable to EdgePrompt's safety guardrails and structured prompting techniques.
+
+**Zhang X** (2025) 'Constitution or Collapse? Exploring Constitutional AI with Llama 3-8B', [arXiv:2504.04918](https://arxiv.org/abs/2504.04918).
+
+> Explores implementing Constitutional AI with smaller models like LLaMA 3-8B, finding increased harmlessness comes at the cost of helpfulness, with smaller models showing signs of collapse. This research provides important context for EdgePrompt's approach to implementing safety in edge-deployable models.
+
 ### Educational AI Applications and Question Generation
+
+**Bastani H, Bastani O, Sungu A, Ge H, Kabakcı Ö and Mariman R** (2024) 'Generative AI Can Harm Learning', *The Wharton School Research Paper*, [doi:10.2139/ssrn.4895486](https://doi.org/10.2139/ssrn.4895486).
+
+> This field experiment with nearly a thousand students revealed that while GPT-4 temporarily improved performance, it harmed learning outcomes when access was removed. Students who had used GPT-4 performed worse than those who never had access, highlighting the importance of EdgePrompt's teacher-centered approach.
 
 **Bhowmick AK, Jagmohan A, Vempaty A, Dey P, Hall L, Hartman J, Kokku R and Maheshwari H** (2023) 'Automating Question Generation From Educational Text', in Bramer M and Stahl F (eds) *Artificial Intelligence XL*, Springer Nature Switzerland, pp. 437–450, [doi:10.1007/978-3-031-47994-6\_38](https://link.springer.com/10.1007/978-3-031-47994-6_38)
 
@@ -2848,6 +2864,10 @@ In this light, EdgePrompt is best understood neither as revolution nor hype but 
 
 > Demonstrates an LLM-based approach to educational content generation similar to EdgePrompt's content generation capabilities.
 
+**Magana Vsevolodovna RI and Monti M** (2025) 'Enhancing Large Language Models through Neuro-Symbolic Integration and Ontological Reasoning', [arXiv:2504.07640](https://arxiv.org/abs/2504.07640).
+
+> Presents a neuro-symbolic approach that integrates ontological reasoning with machine learning to improve LLM consistency and reduce hallucinations. This research directly supports EdgePrompt's neural-symbolic inspired approach to enhance interpretability and reasoning in educational AI.
+
 **Niknazar M, Haley PV, Ramanan L, Truong ST, Shrinivasan Y, Bhowmick AK, Dey P, Jagmohan A, Maheshwari H, Ponoth S et al.** (2024) 'Building a Domain-specific Guardrail Model in Production', [arXiv:2408.01452](https://arxiv.org/abs/2408.01452)
 
 > Details implementing guardrails for educational contexts, providing valuable insights directly applicable to EdgePrompt.
@@ -2867,6 +2887,14 @@ In this light, EdgePrompt is best understood neither as revolution nor hype but 
 **Scaria N, Dharani Chenna S and Subramani D** (2024) 'Automated Educational Question Generation at Different Bloom's Skill Levels Using Large Language Models: Strategies and Evaluation', in Olney AM, Chounta IA, Liu Z, Santos OC and Bittencourt IG (eds) *Artificial Intelligence in Education*, Springer Nature Switzerland, pp. 165–179, [doi:10.1007/978-3-031-64299-9\_12](https://link.springer.com/10.1007/978-3-031-64299-9_12)
 
 > Addresses generating questions at various cognitive levels using Bloom's taxonomy, aligning with EdgePrompt's educational objectives.
+
+**Tan M and Subramoniam H** (2024) 'More than Model Documentation: Uncovering Teachers' Bespoke Information Needs for Informed Classroom Integration of ChatGPT', *Proceedings of the 2024 CHI Conference on Human Factors in Computing Systems*, Article No. 269, pp. 1-19, [doi:10.1145/3613904.3642592](https://doi.org/10.1145/3613904.3642592).
+
+> Examines middle and high school teachers' information needs when assessing and integrating ChatGPT, finding significant gaps in understanding how to explore AI capabilities for specific learning tasks. Proposes a framework for interactive model documentation that directly informs EdgePrompt's approach to teacher empowerment.
+
+**Wang S, Xu T, Li H, Zhang C, Liang J, Tang J, Yu PS and Wen Q** (2024) 'Large Language Models for Education: A Survey and Outlook', [arXiv:2403.18105](https://arxiv.org/abs/2403.18105).
+
+> Provides a comprehensive survey of LLM applications in education, including student and teacher assistance, adaptive learning, and commercial tools. Identifies risks, challenges, and future research directions that contextualize EdgePrompt within the broader educational AI landscape.
 
 **Wang X, Fan S, Houghton J and Wang L** (2022) 'Towards Process-Oriented, Modular, and Versatile Question Generation that Meets Educational Needs', *Proceedings of the 2022 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies*, Association for Computational Linguistics, Seattle, USA, pp. 291–302, [doi:10.18653/v1/2022.naacl-main.22](https://aclanthology.org/2022.naacl-main.22)
 
@@ -3022,11 +3050,15 @@ In this light, EdgePrompt is best understood neither as revolution nor hype but 
 
 **Poesia G, Polozov O, Le V, Tiwari A, Soares G, Meek C and Gulwani S** (2022) 'Synchromesh: Reliable code generation from pre-trained language models', [arXiv:2201.11227](https://arxiv.org/abs/2201.11227)
 
-> Addresses reliability challenges in structured output generation that parallel EdgePrompt's JSON reliability issues.
+> Addresses reliability challenges in structured output generation using Target Similarity Tuning and Constrained Semantic Decoding to enforce syntactic and semantic constraints. This approach directly parallels EdgePrompt's JSON reliability issues and validation architecture.
 
 **Wang H, Huang W, Deng Y, Wang R, Wang Z, Wang Y, Mi F, Pan JZ and Wong KF** (2024) 'UniMS-RAG: A Unified Multi-source Retrieval-Augmented Generation for Personalized Dialogue Systems', [arXiv:2401.13256](https://arxiv.org/abs/2401.13256)
 
 > Presents a retrieval-augmentation approach for personalization that complements EdgePrompt's educational content generation.
+
+**Xu J, Li Z, Chen W, Wang Q, Gao X, Cai Q and Ling Z** (2024) 'On-Device Language Models: A Comprehensive Review', [arXiv:2409.00088](https://arxiv.org/abs/2409.00088).
+
+> Comprehensively reviews strategies for deploying LLMs on resource-constrained devices, including efficient architectures, compression techniques, and hardware acceleration. This research is directly applicable to EdgePrompt's focus on edge deployment for regions with limited connectivity.
 
 **Yazaki M, Maki S, Furuya T, Inoue K, Nagai K, Nagashima Y, Maruyama J, Toki Y, Kitagawa K, Iwata S et al.** (2024) 'Emergency Patient Triage Improvement through a Retrieval-Augmented Generation Enhanced Large-Scale Language Model', *Prehospital Emergency Care*, 1–13, [doi:10.1080/10903127.2024.2374400](https://www.tandfonline.com/doi/full/10.1080/10903127.2024.2374400)
 
