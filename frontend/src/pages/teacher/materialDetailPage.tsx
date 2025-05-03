@@ -59,7 +59,7 @@ const MaterialDetailPage = () => {
         templates.map((template: any, index: number) => {
           const payload = {
             materialId: id!,
-            promptTemplateId: defaultPromptTemplateId,
+            promptTemplateId: template.promptTemplateId || defaultPromptTemplateId,
             templateIndex: index,
             useSourceLanguage: material.metadata?.useSourceLanguage || false,
           };
