@@ -70,7 +70,7 @@ const ProjectDetailPage: React.FC = () => {
            <i className="bi bi-braces"></i> EdgePrompt | Module: {project.name}
          </h1>
          <button className="btn btn-light btn-sm" onClick={() => navigate("/dashboard/teacher")}>
-           <i className="bi bi-arrow-left me-1"></i> Back to Dashboard
+           <i className="bi bi-arrow-left me-1"></i> Back to Class
          </button>
        </div>
      </header>

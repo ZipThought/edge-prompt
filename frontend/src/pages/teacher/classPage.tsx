@@ -66,68 +66,6 @@ const TeacherClassPage = () => {
         </div>
      
 
-        <div className="row">
-          <div className="col-md-9">
-        {/* Existing class-specific content */}
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h5 className="mb-0">Learning Materials</h5>
-          <div style={{ maxWidth: "180px" }}>
-            <SimplifiedMaterialUploader
-          projectId={classData.projectId}
-          classroomId = {id}
-          onMaterialUploaded={refreshMaterials}
-            />
-          </div>
-        </div>
-     
-
-        <div className="row">
-          <div className="col-md-12">
-            {classData.learningMaterials.length === 0 ? (
-          <div className="text-muted">No learning materials added yet.</div>
-            ) : (
-          <div className="row g-3">
-            {classData.learningMaterials.map((material: any) => (
-              <div className="col-md-6 col-lg-4" key={material.id}>
-            <div
-              className="card shadow-sm h-100"
-              style={{ cursor: "pointer" }}
-              onClick={() => navigate(`/material/${material.id}`, {
-                state: { classId: id }
-              })}
-            >
-              <div className="card-body text-center">
-                <h5 className="card-title">{material.title}</h5>
-                <p className="text-muted small mb-0">Click to view or manage</p>
-              </div>
-            </div>
-              </div>
-            ))}
-          </div>
-            )}
-          </div>
-        </div>
-          </div>
-     
-
-          <div className="col-md-3">
-        <div className="card shadow-sm h-100">
-          <div className="card-header bg-light">
-            <h5 className="mb-0">
-          <i className="bi bi-tools me-1"></i> Class Tools
-            </h5>
-          </div>
-          <div className="card-body">
-            <p className="text-muted">
-          This space can be used for future tools like analytics,
-          announcements, or class-level actions.
-            </p>
-          </div>
-        </div>
-          </div>
-        </div>
-     
-
         <hr className="my-4" />
      
 

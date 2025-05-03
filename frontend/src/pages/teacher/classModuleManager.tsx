@@ -1,86 +1,84 @@
-import React, { useState, useEffect } from 'react';
- import { api } from '../../services/api';
- import { ProjectForm } from '../../components/project/ProjectForm'; // Assuming you still use ProjectForm
- import { useNavigate, useParams } from 'react-router-dom';
- 
+import React, { useState, useEffect, useCallback } from 'react';
+import { api } from '../../services/api';
+import { ProjectForm } from '../../components/project/ProjectForm'; // Assuming you still use ProjectForm
+import { useNavigate, useParams } from 'react-router-dom';
+import { PromptTemplate, Project } from '../../types'; // Import Project type for consistency
 
- interface Project {
-  id: string;
-  name: string;
-  // Add other properties as needed
- }
- 
 
- interface Props{
-    classroomId: string;
- }
+interface Props {
+ classroomId: string;
+}
 
- const ClassProjectManager: React.FC<Props> = ({classroomId}) => {
-  const { id: classId } = useParams<{ id: string }>(); // Get classId from URL
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isCreating, setIsCreating] = useState(false);
-  const navigate = useNavigate();
- 
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        // Fetch only projects associated with this class
-        const classProjects = await api.getProjectsForClass(classroomId); // Assuming you create this API endpoint
-        setProjects(classProjects);
-      } catch (error) {
-        console.error("Error fetching projects for class:", error);
-      }
-    };
- 
+const ClassProjectManager: React.FC<Props> = ({ classroomId }) => {
+ const { id: classId } = useParams<{ id: string }>(); // Get classId from URL (consider consistency)
+ const [projects, setProjects] = useState<Project[]>([]);
+ const [isCreating, setIsCreating] = useState(false);
+ const [error, setError] = useState<string | null>(null);
+ const navigate = useNavigate();
 
-    fetchProjects();
-  }, [classId]);
- 
 
-  const handleProjectCreated = () => {
-    setIsCreating(false);
-    window.location.reload();
-  };
- 
+ const fetchProjects = useCallback(async () => {
+   try {
+     const classProjects = await api.getProjectsForClass(classroomId); // Use classroomId prop
+     setProjects(classProjects);
+   } catch (error) {
+     console.error("Error fetching modules:", error);
+     setError("Failed to load modules for this class.");
+   }
+ }, [classroomId]); // Dependency array is crucial
 
-  return (
-    <div className="card">
-      <div className="card-header">
-        <h5>Modules for this Class</h5>
-        <button className="btn btn-sm btn-primary" onClick={() => setIsCreating(true)}>
-          Create Module for Class
-        </button>
-      </div>
-      <div className="card-body">
-        {isCreating && (
-          <ProjectForm
-            onSuccess={handleProjectCreated}
-            onClose={() => setIsCreating(false)}
-            classroom_id={classId} // Pass classId to ProjectForm
-          />
-        )}
-        {projects.length > 0 ? (
-          <ul>
-            {projects.map(project => (
-              <li key={project.id}>
-                <button
-                  key={project.id}
-                  className="list-group-item list-group-item-action"
-                  onClick={() => navigate(`/dashboard/teacher/project/${project.id}`)} // Adjust navigation as needed
-                >
-                  {project.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>No modules created for this class yet.</p>
-        )}
-      </div>
-    </div>
-  );
- };
- 
 
- export default ClassProjectManager;
+ useEffect(() => {
+   fetchProjects();
+ }, [fetchProjects]);
+
+
+ const handleProjectCreated = useCallback(async () => {
+   setIsCreating(false);
+   await fetchProjects(); // Refresh the list after creation
+ }, [fetchProjects]);
+
+
+ return (
+   <div className="card shadow-sm">
+     <div className="card-header bg-light d-flex justify-content-between align-items-center"> {/* Improved header */}
+       <h5 className="mb-0">Modules</h5>
+       <button className="btn btn-sm btn-primary" onClick={() => setIsCreating(true)} disabled={isCreating}> {/* Disabled during creation */}
+         {isCreating ? <span className="spinner-border spinner-border-sm me-1"></span> : <i className="bi bi-plus-circle me-1"></i>}
+         Create Module
+       </button>
+     </div>
+     <div className="card-body">
+       {error && <div className="alert alert-danger">{error}</div>}
+       {isCreating && (
+         <div className="mb-3"> {/* Added margin for spacing */}
+           <ProjectForm
+             onSuccess={handleProjectCreated}
+             onClose={() => setIsCreating(false)}
+             classroom_id={classId}
+           />
+         </div>
+       )}
+       {projects.length > 0 ? (
+         <div className="list-group">
+           {projects.map(project => (
+             <button
+               key={project.id}
+               className="list-group-item list-group-item-action"
+               onClick={() => navigate(`/dashboard/teacher/project/${project.id}`)}
+             >
+               {project.name}
+             </button>
+           ))}
+         </div>
+       ) : (
+         <div className="alert alert-info">No modules created for this class yet.</div>
+       )}
+     </div>
+   </div>
+ );
+};
+
+
+export default ClassProjectManager;
