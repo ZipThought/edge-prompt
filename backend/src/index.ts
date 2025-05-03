@@ -580,7 +580,6 @@ app.post('/api/generate', async (req, res): Promise<void> => {
     
     // Generate a UUID for the question
     const questionId = uuid();
-    
     // Save to database
     await db.createQuestion({
       materialId,

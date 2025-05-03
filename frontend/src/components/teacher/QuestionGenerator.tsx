@@ -81,7 +81,6 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
   };
 
   const handleGenerateAllQuestions = async () => {
-    console.log('Active project:', activeProject);
     if (!project?.promptTemplateId) {
       setError('Module has no prompt template configured');
       return;

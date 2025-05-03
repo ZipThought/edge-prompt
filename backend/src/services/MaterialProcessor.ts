@@ -244,7 +244,7 @@ ${truncatedContent}
 Focus Area:
 ${focusArea}
 
-Return format: ["objective1", "objective2", ...]
+Return format: ["string of objective 1", "string of objective 2", ...]
 `;
 
     try {
@@ -273,9 +273,7 @@ Return format: ["objective1", "objective2", ...]
     const truncatedContent = this.truncateContent(content);
     
     const prompt = `
-Based on the following content, learning objectives, and focus area, suggest question templates.
-${useSourceLanguage ? 'Respond in the same language as the content.' : 'Respond in English.'}
-Return ONLY a JSON array of question templates.
+You are an expert in curriculum design and assessment. Based on the following content, learning objectives, and focus area, generate a diverse set of question templates suitable for lesson questions.
 
 Content:
 ${truncatedContent}
@@ -286,14 +284,37 @@ ${objectives.join('\n')}
 Focus Area:
 ${focusArea}
 
-Return in this format:
+Consider generating question templates in various formats, including but not limited to:
+
+* Multiple Choice
+* Short Answer
+* Fill-in-the-Blanks
+* True/False
+* Matching
+
+For each question template, please specify:
+
+* **pattern:** The structure of the question, using bracketed placeholders (e.g., "What is the relationship between {concept1} and {concept2}?", "Choose the best definition of {term} from the options below.").
+* **constraints:** Any specific requirements or limitations for questions based on this template (e.g., "must include at least three distractors," "answer should be no more than two sentences," "requires a numerical answer").
+* **targetGrade:** The appropriate grade level(s) for this type of question.
+* **subject:** The relevant subject area(s).
+* **learningObjectives:** The specific learning objective(s) from the provided list that this question template is designed to assess.
+* **questionType:** The format of the question (e.g., "multiple choice", "short answer", "fill-in-the-blanks").
+
+Your ENTIRE response MUST be a valid JSON array. Do not include any introductory or concluding remarks outside of the JSON structure. The JSON array should begin with '[' and end with ']'. Each question template should be enclosed in '{}' and separated by a comma, except for the last one. Ensure the JSON array is fully closed with a ']' bracket at the very end of your response.
+
+Return ONLY a JSON array of question templates in the following format:
+
 [{
   "pattern": "Question pattern with {placeholders}",
   "constraints": ["constraint1", "constraint2"],
   "targetGrade": "grade level",
   "subject": "subject area",
-  "learningObjectives": ["specific objective1", "specific objective2"]
+  "learningObjectives": ["specific objective1", "specific objective2"],
+  "questionType": "question format"
 }]
+
+${useSourceLanguage ? 'Respond in the same language as the content.' : 'Respond in English.'}
 `;
 
     try {
