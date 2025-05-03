@@ -98,7 +98,8 @@ export const MaterialsManager: React.FC = () => {
       {/* Main Content */}
       <div className="col-md-9">
         {selectedMaterialId ? (
-          <MaterialDetailView 
+          <MaterialDetailView
+            project={activeProject}
             materialId={selectedMaterialId}
             onBack={() => setSelectedMaterialId(null)}
             onRefresh={loadMaterials}

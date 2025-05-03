@@ -81,6 +81,7 @@ const Dashboard: React.FC = () => {
       if (selectedMaterialId) {
         return (
           <MaterialDetailView
+            project={activeProject}
             materialId={selectedMaterialId}
             onBack={() => setSelectedMaterialId(null)}
             onRefresh={handleMaterialUploaded}

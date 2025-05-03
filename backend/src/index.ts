@@ -1277,6 +1277,10 @@ app.post('/api/materials/:id/reprocess', upload.single('file'), async (req, res)
       originalMaterial.focusArea,
       originalMaterial.metadata?.useSourceLanguage
     );
+
+    console.log('objectives:', objectives);
+    console.log('originalMaterial.focusArea:', originalMaterial.focusArea);
+    console.log('originalMaterial.metadata?.useSourceLanguage:', originalMaterial.metadata?.useSourceLanguage);
     
     const templates = await materialProcessor.suggestQuestionTemplates(
       content, 

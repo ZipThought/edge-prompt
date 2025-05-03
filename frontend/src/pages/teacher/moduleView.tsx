@@ -142,6 +142,7 @@ const ProjectDetailPage: React.FC = () => {
 
          {selectedMaterialId && (
            <MaterialDetailView
+             project={project}
              materialId={selectedMaterialId}
              onBack={() => setSelectedMaterialId(null)}
              onRefresh={handleMaterialUploaded}
