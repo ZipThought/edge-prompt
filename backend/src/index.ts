@@ -17,7 +17,6 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { authMiddleware } from './middleware/authMiddleware.js';
 import escape from 'escape-html';
-import crypto from 'crypto';
 import { validateUploadedFile } from './utils/fileValidation.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -580,8 +579,11 @@ app.post('/api/generate', async (req, res): Promise<void> => {
     
     // Generate a UUID for the question
     const questionId = uuid();
+    const rubricId = uuid();
+
     // Save to database
     await db.createQuestion({
+      questionId,
       materialId,
       promptTemplateId,
       question: questionText,
@@ -594,6 +596,12 @@ app.post('/api/generate', async (req, res): Promise<void> => {
       }
     });
     
+    await db.createRubric({
+      rubricId,
+      questionId,
+      rubric: JSON.stringify(rubric),
+    });
+
     // Return the complete question with its ID
     res.json({ 
       id: questionId,
@@ -995,25 +1003,23 @@ app.delete('/api/materials/:id', async (req, res): Promise<void> => {
 app.get('/api/questions', async (req, res): Promise<void> => {
   try {
     const { materialId } = req.query;
-    
+
     if (!materialId) {
       res.status(400).json({ error: 'Material ID is required' });
       return;
     }
-    
+    console.log('Received request to get questions for materialId:', materialId);
     const questions = await db.getQuestionsByMaterial(materialId as string);
+    console.log('Fetched questions:', questions);
+
     res.json(questions.map(q => ({
       id: q.id,
       materialId: q.materialId,
-      promptTemplateId: q.promptTemplateId,
-      question: q.question,
-      template: q.template,
-      rubric: q.rubric,
-      metadata: q.metadata
+      question: q.question
     })));
   } catch (error) {
     console.error('Failed to get questions:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to get questions',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -1098,6 +1104,36 @@ app.delete('/api/questions/:id', async (req, res) => {
   }
 });
 
+app.put('/api/responses/:questionId', async (req, res) => {
+  try {
+    const { questionId } = req.params;
+    const { response } = req.body;
+
+    // 1. Validate input
+    if (!questionId || !response) {
+      return res.status(400).json({ error: 'Response ID and response are required' });
+    }
+
+    // 2. (Optional) Check if the response exists before updating
+    const existingResponse = await db.getResponse(questionId); // Assuming db.getResponse exists
+    if (!existingResponse) {
+      return res.status(404).json({ error: 'Response not found' });
+    }
+
+    // 3. Update the response in the database
+    await db.updateResponse(questionId, response); // Assuming db.updateResponse exists
+
+    // 4. Fetch the updated response to send back
+    const updatedResponse = await db.getResponse(questionId);
+
+    // 5. Send the updated response back to the client
+    res.json(updatedResponse);
+  } catch (error) {
+    console.error('Error updating response:', error);
+    res.status(500).json({ error: 'Failed to update response', details: error.message });
+  }
+ });
+
 // Add response endpoints
 app.get('/api/responses', async (req, res): Promise<void> => {
   try {
@@ -1133,15 +1169,14 @@ app.post('/api/responses', async (req, res): Promise<void> => {
       return;
     }
     
+    console.log('Received response creation request:', req.body);
     const responseId = await db.createResponse({
       questionId,
       response,
-      score,
-      feedback,
-      metadata: metadata || {}
     });
-    
-    const createdResponse = await db.getResponse(responseId);
+    console.log('Created response with ID:', responseId);
+
+    const createdResponse = await db.getResponse(questionId);
     res.json(createdResponse);
   } catch (error) {
     console.error('Failed to create response:', error);

@@ -376,6 +376,13 @@ class ApiClient {
     });
   }
 
+  async updateResponse(questionId: string, response: string) {  // Add this function
+    return this.request<any>(`/responses/${questionId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ response }),
+    });
+  }
+
   // Content processing
   async processMaterial(material: MaterialSource, projectId: string) {
     return this.request<any>('/materials/process', {
