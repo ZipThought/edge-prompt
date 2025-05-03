@@ -10,6 +10,7 @@ const MaterialDetailPage = () => {
 
   const [material, setMaterial] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
+  const [promptTemplates, setPromptTemplates] = useState<any[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedQuestion, setEditedQuestion] = useState("");
@@ -22,6 +23,8 @@ const MaterialDetailPage = () => {
         setMaterial(data);
         const fetchedQuestions = await api.getQuestions(id!);
         setQuestions(fetchedQuestions);
+        const fetchedPromptTemplates = await api.getPromptTemplates();
+        setPromptTemplates(fetchedPromptTemplates);
       } catch (error) {
         console.error("Failed to fetch material", error);
       }
@@ -31,19 +34,43 @@ const MaterialDetailPage = () => {
 
   const handleLogout = () => navigate("/");
 
+  const getPromptTemplateName = (id: string) => {
+    const template = promptTemplates.find(t => t.id === id);
+    return template?.name || template?.title || "Unknown Template";
+  };
+
   const handleGenerateQuestions = async () => {
-    if (!material?.metadata?.templates) return;
+    if (!material?.metadata?.templates?.length) {
+      alert("No templates found for this material.");
+      return;
+    }
+
     setIsGenerating(true);
     try {
       const templates = material.metadata.templates;
-      const templateId = (await api.getPromptTemplates())[0].id;
+      const promptTemplates = await api.getPromptTemplates();
+      const defaultPromptTemplateId = promptTemplates[0]?.id;
+
+      if (!defaultPromptTemplateId) {
+        throw new Error("No prompt template found in the system.");
+      }
 
       await Promise.all(
-        templates.map((_: any, index: number) =>
-          api.generateQuestion(id!, templateId, index, {
+        templates.map((template: any, index: number) => {
+          const payload = {
+            materialId: id!,
+            promptTemplateId: defaultPromptTemplateId,
+            templateIndex: index,
             useSourceLanguage: material.metadata?.useSourceLanguage || false,
-          })
-        )
+          };
+
+          return api.generateQuestion(
+            payload.materialId,
+            payload.promptTemplateId,
+            payload.templateIndex,
+            { useSourceLanguage: payload.useSourceLanguage }
+          );
+        })
       );
 
       const updatedQuestions = await api.getQuestions(id!);
@@ -93,9 +120,7 @@ const MaterialDetailPage = () => {
             <button className="btn btn-light btn-sm" onClick={() => navigate(`/dashboard/teacher/class/${classId}`)}>
               Back
             </button>
-            <button className="btn btn-light btn-sm" onClick={() => navigate("/profile")}>
-              Profile
-            </button>
+            <button className="btn btn-light btn-sm" onClick={() => navigate("/profile")}>Profile</button>
             <button className="btn btn-outline-light btn-sm" onClick={handleLogout}>
               <i className="bi bi-box-arrow-right me-1"></i> Logout
             </button>
@@ -104,7 +129,6 @@ const MaterialDetailPage = () => {
       </header>
 
       <div className="row">
-        {/* Main Content */}
         <div className="col-lg-9">
           <div className="card shadow-sm mb-4">
             <div className="card-body">
@@ -164,6 +188,9 @@ const MaterialDetailPage = () => {
                         data-bs-parent="#questionsAccordion"
                       >
                         <div className="accordion-body">
+                          <p className="text-muted mb-2">
+                            <strong>Prompt Template:</strong> {getPromptTemplateName(q.promptTemplateId)}
+                          </p>
                           {editingId === q.id ? (
                             <>
                               <textarea
@@ -206,7 +233,6 @@ const MaterialDetailPage = () => {
                             </>
                           )}
 
-                          {/* Rubric Section */}
                           {q.rubric?.validationChecks && (
                             <>
                               <hr />
@@ -230,7 +256,6 @@ const MaterialDetailPage = () => {
           </div>
         </div>
 
-        {/* Sidebar */}
         <div className="col-lg-3">
           <div className="card shadow-sm">
             <div className="card-header bg-light">
@@ -241,7 +266,7 @@ const MaterialDetailPage = () => {
             <div className="card-body text-muted">
               <p><strong>File Name:</strong> {
                 material.filePath ? material.filePath.split('/').pop()?.replace(/^\d+-/, '') : "N/A"
-              } </p>
+              }</p>
               <p><strong>Type:</strong> {material.fileType || material.type || "N/A"}</p>
               <p><strong>Chapter:</strong> {material.metadata?.chapter || "N/A"}</p>
               <p><strong>Language:</strong> {material.metadata?.language || "N/A"}</p>
