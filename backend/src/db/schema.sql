@@ -55,9 +55,6 @@ CREATE TABLE IF NOT EXISTS responses (
   id TEXT PRIMARY KEY,
   question_id TEXT NOT NULL,
   response TEXT NOT NULL,
-  score REAL,
-  feedback TEXT,
-  metadata JSON,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(question_id) REFERENCES generated_questions(id)
 );
@@ -130,18 +127,6 @@ CREATE TABLE IF NOT EXISTS classroom_students (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
---Creating question TABLE
-CREATE TABLE IF NOT EXISTS questions (
-    id TEXT PRIMARY KEY,
-    class_id TEXT NOT NULL,
-    teacher_id TEXT NOT NULL,
-    question_text TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (class_id) REFERENCES classrooms(id),
-    FOREIGN KEY (teacher_id) REFERENCES users(id)
-);
-
 --Creating response TABLE
 CREATE TABLE IF NOT EXISTS responses (
     id TEXT PRIMARY KEY,
@@ -161,7 +146,7 @@ CREATE TABLE IF NOT EXISTS rubrics (
     question_id TEXT NOT NULL,
     rubric_text TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (question_id) REFERENCES questions(id)
+    FOREIGN KEY (question_id) REFERENCES generated_questions(id)
 );
 
 --Creating feedback TABLE
@@ -170,7 +155,7 @@ CREATE TABLE IF NOT EXISTS feedback (
     response_id TEXT NOT NULL,
     teacher_id TEXT NOT NULL,
     feedback_text TEXT NOT NULL,
-    score REAL,
+    score REAL NOT NULL,
     given_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (response_id) REFERENCES responses(id),
     FOREIGN KEY (teacher_id) REFERENCES users(id)

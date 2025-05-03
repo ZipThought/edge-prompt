@@ -14,14 +14,15 @@ import SignUpPage from "./pages/signup";
 import LoginPage from "./pages/signin";
 import ProfilePage from "./pages/profile";
 import Dashboard from "./pages/dashboard";
-import StudentDashboard from "./pages/studentDashboard";
+import StudentDashboard from "./pages/student/studentDashboard";
 import TeacherDashboard from "./pages/teacher/teacherDashboard";
 import CreateClass from "./pages/teacher/createClass";
 import ManageClass from "./pages/teacher/manageClass";
-import ClassPage from "./pages/StudentClassPage";
+import ClassPage from "./pages/student/StudentClassPage";
 import TeacherClassPage from "./pages/teacher/classPage";
 import MaterialDetailPage from "./pages/teacher/materialDetailPage";
 import ProjectDetailPage from "./pages/teacher/moduleView";
+import StudentModulePage from "./pages/student/StudentModulePage";
 
 const App: React.FC = () => {
   return (
@@ -39,8 +40,6 @@ const App: React.FC = () => {
 
             {/* Main dashboard */}
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/dashboard/student" element={<StudentDashboard />} />
-            <Route path="/class/:classId" element={<ClassPage />} />
 
             {/* Teacher dashboard */}
             <Route path="/dashboard/teacher" element={<TeacherDashboard />} />
@@ -49,6 +48,11 @@ const App: React.FC = () => {
             <Route path="/dashboard/teacher/manage-class/:classId" element={<ManageClass />} />
             <Route path="/material/:id" element={<MaterialDetailPage />} />
             <Route path="/dashboard/teacher/project/:id" element={<ProjectDetailPage />} />
+
+            {/*student dashboard*/}
+            <Route path="/dashboard/student" element={<StudentDashboard />} />
+            <Route path="/dashboard/student/class/:classId" element={<ClassPage />} />
+            <Route path="/dashboard/student/project/:projectId" element={<StudentModulePage />} />
 
             {/* Fallback route - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -398,8 +398,37 @@ export class DatabaseService {
       createdAt: q.created_at
     };
   }
+  
+  async createRubric(params: {rubricId: string; questionId: string; rubric: any}) {
+    const stmt = this.db.prepare(`
+      INSERT INTO rubrics (id, question_id, rubric_text)
+      VALUES (?, ?, ?)
+    `);
+    
+    stmt.run(params.rubricId, params.questionId, JSON.stringify(params.rubric));
+    return params.rubricId;
+  }
+
+  async getRubricFromQuestion(questionId: string) {
+    const stmt = this.db.prepare(`
+      SELECT * FROM rubrics 
+      WHERE question_id = ?
+    `);
+    
+    const r = stmt.get(questionId) as any;
+    if (!r) {
+      throw new Error(`Rubric not found for question: ${questionId}`);
+    }
+    
+    return {
+      id: r.id,
+      questionId: r.question_id,
+      rubric: r.rubric
+    };
+  }
 
   async createQuestion(params: {
+    questionId: string;
     materialId: string;
     promptTemplateId: string;
     question: string;
@@ -413,21 +442,22 @@ export class DatabaseService {
       )
       VALUES (?, ?, ?, ?, ?, ?)
     `);
-
-    const id = uuid();
-    stmt.run(
-      id,
-      params.materialId,
-      params.promptTemplateId,
-      params.question,
-      params.template,
-      params.metadata ? JSON.stringify({
-        ...params.metadata,
-        rules: params.rules
-      }) : null
-    );
     
-    return id;
+    if (params.rules !== "{}" && params.template !== "{}") {
+      stmt.run(
+        params.questionId,
+        params.materialId,
+        params.promptTemplateId,
+        params.question,
+        params.template,
+        params.metadata ? JSON.stringify({
+          ...params.metadata,
+          rules: params.rules
+        }) : null
+      );
+    }
+    
+    return params.questionId;
   }
 
   async updateQuestion(id: string, question: string, metadata: any) {
@@ -490,6 +520,11 @@ export class DatabaseService {
     });
   }
 
+  async updateResponse(id: string, response: string) {
+    const stmt = this.db.prepare('UPDATE responses SET response = ? WHERE question_id = ?');
+    stmt.run(response, id);
+   }
+
   // Response methods
   async getQuestionResponses(questionId: string) {
     const stmt = this.db.prepare(`
@@ -513,7 +548,7 @@ export class DatabaseService {
   async getResponse(id: string) {
     const stmt = this.db.prepare(`
       SELECT * FROM responses 
-      WHERE id = ?
+      WHERE question_id = ?
     `);
     
     const r = stmt.get(id) as any;
@@ -532,18 +567,20 @@ export class DatabaseService {
     };
   }
 
+  async deleteResponse(id: string) {
+    const stmt = this.db.prepare('DELETE FROM responses WHERE id = ?');
+    stmt.run(id);
+   }
+
   async createResponse(params: {
     questionId: string;
     response: string;
-    score?: number;
-    feedback?: string;
-    metadata?: any;
   }) {
     const stmt = this.db.prepare(`
       INSERT INTO responses (
-        id, question_id, response, score, feedback, metadata
+        id, question_id, response
       )
-      VALUES (?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?)
     `);
 
     const id = uuid();
@@ -551,9 +588,6 @@ export class DatabaseService {
       id,
       params.questionId,
       params.response,
-      params.score || null,
-      params.feedback || null,
-      params.metadata ? JSON.stringify(params.metadata) : null
     );
     
     return id;
@@ -954,6 +988,9 @@ export class DatabaseService {
   async deleteClassroom(id: string): Promise<void> {
     // Start transaction to ensure all related records are deleted
     const transaction = this.db.transaction(() => {
+      // Delete all materials associated with the classroom
+      this.prepareStatement(`DELETE FROM materials WHERE classroom_id = ?`).run(id);
+      
       // Delete classroom-student relationships
       this.prepareStatement(`DELETE FROM classroom_students WHERE classroom_id = ?`).run(id);
       

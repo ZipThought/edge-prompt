@@ -1,22 +1,24 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+ import { useNavigate, useParams } from "react-router-dom";
+ import { api } from "../../services/api";
+ import { Project } from "../../types";
 
-type Class = {
+ type Class = {
   id: string;
   name: string;
-};
+ };
 
-type LearningMaterial = {
+ type LearningMaterial = {
   id: string;
   title: string;
-};
+ };
 
-const ClassPage: React.FC = () => {
+ const StudentClassPage: React.FC = () => {
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
 
   const [classData, setClassData] = useState<Class | null>(null);
-  const [materials, setMaterials] = useState<LearningMaterial[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [studentName, setStudentName] = useState("Student");
 
   useEffect(() => {
@@ -44,30 +46,20 @@ const ClassPage: React.FC = () => {
       }
     };
 
-    const fetchMaterials = async () => {
+    const fetchModules = async () => {
       try {
-        const placeholderMaterials: LearningMaterial[] = [
-          { id: "1", title: "Week 1 material" },
-          { id: "2", title: "Week 2 material" },
-          { id: "3", title: "Week 3" },
-        ];
-        setMaterials(placeholderMaterials);
-      } catch (err) {
-        console.error("Failed to fetch learning materials:", err);
+        const modules = await api.getProjectsForClass(classId!);
+        setProjects(modules);
+      } catch (error) {
+        console.error("Failed to fetch modules:", error);
       }
     };
 
     const fetchStudentProfile = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch("http://localhost:3001/api/users/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!response.ok) throw new Error("Failed to fetch profile");
-        const data = await response.json();
-        setStudentName(`${data.firstname} ${data.lastname}`);
+        const response = await api.getProfile();
+        setStudentName(`${response.firstname} ${response.lastname}`);
       } catch (err) {
         console.error("Failed to fetch student profile:", err);
       }
@@ -75,11 +67,11 @@ const ClassPage: React.FC = () => {
 
     fetchStudentProfile();
     fetchClassData();
-    fetchMaterials();
+    fetchModules();
   }, [classId]);
 
-  const handleMaterialClick = (materialId: string) => {
-    navigate(`/dashboard/student/material/${materialId}`);
+  const handleModuleClick = (moduleId: string) => {
+    navigate(`/dashboard/student/project/${moduleId}`); // This line is the focus
   };
 
   const handleBack = () => {
@@ -101,14 +93,14 @@ const ClassPage: React.FC = () => {
       <header className="bg-primary text-white p-3 mb-4">
         <div className="d-flex justify-content-between align-items-center">
           <h1 className="h4 mb-0">
-            <i className="bi bi-braces"></i> EdgePrompt
+            <i className="bi bi-braces"></i> EdgePrompt | Class: {classData.name}
           </h1>
           <nav className="ms-auto d-flex align-items-center gap-3">
             <button className="btn btn-light btn-sm" onClick={handleBack}>
-              Dashboard
+              <i className="bi bi-arrow-left me-1"></i> Dashboard
             </button>
             <button className="btn btn-light btn-sm" onClick={handleProfile}>
-              Profile
+              <i className="bi bi-person-circle me-1"></i> Profile
             </button>
             <button
               className="btn btn-outline-light btn-sm"
@@ -120,37 +112,37 @@ const ClassPage: React.FC = () => {
         </div>
       </header>
 
-      <div className="d-flex justify-content-between align-items-center mb-3">
-          <h2 className="mb-0">{classData.name}</h2>
-        <button className="btn btn-secondary btn-sm" onClick={handleBack}>
-          <i className="bi bi-arrow-left me-1"></i> Back</button>
-      </div>
-
-
-      <h4 className="mb-3">Learning Materials</h4>
-      <div className="row g-3">
-        {materials.map((mat) => (
-          <div className="col-sm-6 col-md-4" key={mat.id}>
-            <div className="card shadow-sm h-100">
-              <div className="card-body text-center">
-                <h6 className="card-title">{mat.title}</h6>
-                <button
-                  className="btn btn-outline-primary btn-sm mt-2"
-                  onClick={() => handleMaterialClick(mat.id)}
-                >
-                  View Material
-                </button>
-              </div>
+      <div className="row">
+        <div className="col-12">
+          <h2>Modules</h2>
+          {projects.length === 0 ? (
+            <div className="alert alert-info">
+              No modules available for this class.
             </div>
-          </div>
-        ))}
-
-        {materials.length === 0 && (
-          <p className="text-muted">No learning materials available.</p>
-        )}
+          ) : (
+            <div className="row row-cols-1 row-cols-md-2 g-4">
+              {projects.map((module) => (
+                <div className="col" key={module.id}>
+                  <div className="card h-100">
+                    <div className="card-body">
+                      <h5 className="card-title">{module.name}</h5>
+                      <p className="card-text">{module.description}</p>
+                      <button
+                        onClick={() => handleModuleClick(module.id)}
+                        className="btn btn-secondary"
+                      >
+                        View Module
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
-};
+ };
 
-export default ClassPage;
+ export default StudentClassPage;
