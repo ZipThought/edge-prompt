@@ -3,13 +3,15 @@ import { Material } from '../../types';
 import { GeneratedQuestion } from '../../types/edgeprompt';
 import { api } from '../../services/api';
 import { useProject } from '../../contexts/ProjectContext';
+import { Project, PromptTemplate } from '../../types';
 import { QuestionGenerationService } from '../../services/QuestionGenerationService';
 
 interface Props {
+  project: Project;
   material: Material;
 }
 
-export const QuestionGenerator: React.FC<Props> = ({ material }) => {
+export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
   const { activeProject } = useProject();
   const [generatedQuestions, setGeneratedQuestions] = useState<{[templateIndex: string]: GeneratedQuestion}>({});
   const [generatingTemplate, setGeneratingTemplate] = useState<string | null>(null);
@@ -34,8 +36,8 @@ export const QuestionGenerator: React.FC<Props> = ({ material }) => {
   }, [material.id]);
 
   const handleGenerateQuestion = async (template: any, index: number) => {
-    if (!activeProject?.promptTemplateId) {
-      setError('Project has no prompt template configured');
+    if (!project?.promptTemplateId) {
+      setError('Module has no prompt template configured');
       return;
     }
 
@@ -46,7 +48,7 @@ export const QuestionGenerator: React.FC<Props> = ({ material }) => {
       // Only pass IDs to the service, not the full template
       const generatedQuestion = await QuestionGenerationService.generateQuestion(
         material.id,
-        activeProject.promptTemplateId,
+        project.promptTemplateId,
         index,
         material.metadata?.useSourceLanguage || false
       );
@@ -79,8 +81,8 @@ export const QuestionGenerator: React.FC<Props> = ({ material }) => {
   };
 
   const handleGenerateAllQuestions = async () => {
-    if (!activeProject?.promptTemplateId) {
-      setError('Project has no prompt template configured');
+    if (!project?.promptTemplateId) {
+      setError('Module has no prompt template configured');
       return;
     }
 
@@ -100,7 +102,7 @@ export const QuestionGenerator: React.FC<Props> = ({ material }) => {
         // Simply pass the original template to the backend
         const generatedQuestion = await QuestionGenerationService.generateQuestion(
           material.id,
-          activeProject.promptTemplateId,
+          project.promptTemplateId,
           i,
           material.metadata?.useSourceLanguage || false
         );

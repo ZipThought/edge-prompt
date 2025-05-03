@@ -1,12 +1,14 @@
 -- Core research tables
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,
+  classroom_id TEXT NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
   model_name TEXT NOT NULL,
   prompt_template_id TEXT NOT NULL,
   configuration JSON NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(classroom_id) REFERENCES classrooms(id)
 );
 
 CREATE TABLE IF NOT EXISTS prompt_templates (
@@ -33,7 +35,7 @@ CREATE TABLE IF NOT EXISTS materials (
   file_size INTEGER,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'error')),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(project_id) REFERENCES projects(id)
+  FOREIGN KEY(project_id) REFERENCES projects(id),
   FOREIGN KEY(classroom_id) REFERENCES classrooms(id)
 );
 

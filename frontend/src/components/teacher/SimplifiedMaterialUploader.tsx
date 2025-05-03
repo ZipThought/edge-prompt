@@ -7,12 +7,14 @@ interface Props {
   onMaterialLoad?: (material: MaterialSource) => void;
   onMaterialUploaded?: () => void;
   projectId?: string;
+  classroomId?: string;
 }
 
 export const SimplifiedMaterialUploader: React.FC<Props> = ({ 
   onMaterialLoad, 
   onMaterialUploaded, 
-  projectId: propProjectId 
+  projectId: propProjectId,
+  classroomId 
 }) => {
   const { activeProject } = useProject();
   const [showModal, setShowModal] = useState(false);
@@ -42,13 +44,12 @@ export const SimplifiedMaterialUploader: React.FC<Props> = ({
   
   return (
     <>
-      <div className="d-grid gap-2 mb-4">
+      <div className="mb-3">
         <button 
-          className="btn btn-primary btn-lg d-flex align-items-center justify-content-center"
+          className="btn btn-sm btn-primary"
           onClick={handleUploadClick}
         >
-          <i className="bi bi-cloud-upload me-2 fs-5"></i>
-          <span>Upload Learning Material</span>
+          <i className="bi bi-plus-lg me-1"></i> Add Material
         </button>
       </div>
       
@@ -110,6 +111,7 @@ export const SimplifiedMaterialUploader: React.FC<Props> = ({
                   <MaterialUploader 
                     onMaterialLoad={handleMaterialUploaded} 
                     projectId={projectId}
+                    classroomId = {classroomId}
                     showTitle={false}
                   />
                 </div>

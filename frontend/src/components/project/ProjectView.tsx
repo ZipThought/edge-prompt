@@ -68,6 +68,7 @@ export const ProjectView: React.FC<Props> = ({ project, onUpdate }) => {
   if (selectedMaterialId) {
     return (
       <MaterialDetailView 
+        project={project}
         materialId={selectedMaterialId} 
         onBack={() => setSelectedMaterialId(null)} 
         onRefresh={() => loadMaterials()}

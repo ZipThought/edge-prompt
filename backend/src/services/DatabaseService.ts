@@ -23,6 +23,7 @@ interface ProjectRow {
   prompt_template_id: string;
   configuration: string;
   created_at: string;
+  classroom_id?: string;
 }
 
 interface ColumnInfo {
@@ -129,19 +130,21 @@ export class DatabaseService {
 
   async createProject(params: {
     name: string;
+    classroomId?: string;
     description?: string;
     modelName: string;
     promptTemplateId: string;
     configuration: any;
   }) {
     const stmt = this.db.prepare(`
-      INSERT INTO projects (id, name, description, model_name, prompt_template_id, configuration)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO projects (id, classroom_id, name, description, model_name, prompt_template_id, configuration)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
     const id = uuid();
     stmt.run(
       id,
+      params.classroomId || null,
       params.name,
       params.description || null,
       params.modelName,
@@ -216,6 +219,7 @@ export class DatabaseService {
   // Material management methods
   async createMaterial(params: {
     projectId: string;
+    classroomId?: string;
     title: string;
     content: string;
     focusArea: string;
@@ -226,16 +230,17 @@ export class DatabaseService {
   }): Promise<string> {
     const stmt = this.db.prepare(`
       INSERT INTO materials (
-        id, project_id, title, content, focus_area, 
+        id, project_id, classroom_id, title, content, focus_area, 
         file_path, file_type, file_size, metadata, status
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);    
 
     const id = uuid();
     stmt.run(
       id,
       params.projectId,
+      params.classroomId || null,
       params.title,
       params.content,
       params.focusArea,
@@ -247,6 +252,25 @@ export class DatabaseService {
     );
 
     return id;
+  }
+
+  async getProjectsForClass(classroomId: string): Promise<Project[]> {
+    const stmt = this.prepareStatement(`
+      SELECT * FROM projects WHERE classroom_id = ?
+    `);
+    const projects = stmt.all(classroomId) as ProjectRow[];
+  
+  
+    return projects.map(project => ({
+      id: project.id,
+      name: project.name,
+      description: project.description || '',
+      modelName: project.model_name,
+      promptTemplateId: project.prompt_template_id,
+      configuration: JSON.parse(project.configuration) as ProjectConfiguration,
+      createdAt: project.created_at,
+      classroom_id: project.classroom_id
+    }));
   }
 
   async getMaterial(id: string): Promise<Material> {
@@ -316,13 +340,15 @@ export class DatabaseService {
 
   async deleteMaterial(id: string): Promise<void> {
     const material = await this.getMaterial(id);
-    
+    let stmt = this.prepareStatement('DELETE FROM generated_questions WHERE material_id = ?');
+    stmt.run(id);
+
     // Delete original file if it exists
     if (material.filePath) {
       await rm(material.filePath, { force: true });
     }
 
-    const stmt = this.db.prepare('DELETE FROM materials WHERE id = ?');
+    stmt = this.db.prepare('DELETE FROM materials WHERE id = ?');
     stmt.run(id);
   }
 
@@ -403,6 +429,20 @@ export class DatabaseService {
     
     return id;
   }
+
+  async updateQuestion(id: string, question: string, metadata: any) {
+    const stmt = this.db.prepare(`
+      UPDATE generated_questions 
+      SET question = ?, metadata = ?
+      WHERE id = ?
+    `);
+    stmt.run(question, JSON.stringify(metadata), id);
+  }
+  
+  async deleteQuestion(id: string) {
+    const stmt = this.db.prepare(`DELETE FROM generated_questions WHERE id = ?`);
+    stmt.run(id);
+  }  
 
   async getQuestionsByMaterial(materialId: string) {
     const stmt = this.db.prepare(`
@@ -562,6 +602,36 @@ export class DatabaseService {
     );
   }
 
+  async updateMaterialFields(id: string, data: { title?: string; content?: string; focusArea?: string }): Promise<void> {
+    const updates: string[] = [];
+    const params: any[] = [];
+  
+    if (data.title !== undefined) {
+      updates.push("title = ?");
+      params.push(data.title);
+    }
+    if (data.content !== undefined) {
+      updates.push("content = ?");
+      params.push(data.content);
+    }
+    if (data.focusArea !== undefined) {
+      updates.push("focus_area = ?");
+      params.push(data.focusArea);
+    }
+  
+    if (updates.length === 0) return;
+  
+    params.push(id);
+  
+    const stmt = this.prepareStatement(`
+      UPDATE materials
+      SET ${updates.join(", ")}
+      WHERE id = ?
+    `);
+  
+    stmt.run(...params);
+  }  
+
   async updateMaterialReprocessed(params: {
     id: string;
     content: string;
@@ -681,7 +751,10 @@ export class DatabaseService {
   }
 
   async deleteUserById(userId: string): Promise<void> {
-    await this.exec(`DELETE FROM users WHERE id = ?`, [userId]);
+    let stmt = this.prepareStatement('DELETE FROM user_roles WHERE user_id = ?');
+    stmt.run(userId);
+    stmt = this.db.prepare(`DELETE FROM users WHERE id = ?`);
+    stmt.run(userId);
   }
     
   //Function to create new role

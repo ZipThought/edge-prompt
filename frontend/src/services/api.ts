@@ -232,8 +232,16 @@ class ApiClient {
   }
   
   // Project endpoints
+  async getProject(id: string): Promise<Project> {  // Corrected: Added getProject method
+    return this.request<Project>(`/projects/${id}`);
+  }
+ 
   async getProjects() {
     return this.request<Project[]>('/projects');
+  }
+
+  async getProjectsForClass(classroomId: string) {
+    return this.request<Project[]>(`/classes/${classroomId}/projects`);
   }
 
   async createProject(project: Omit<Project, 'id' | 'createdAt'>) {
@@ -291,10 +299,16 @@ class ApiClient {
   }
 
   async uploadMaterial(formData: FormData) {
+    const token = localStorage.getItem('token');
+
     const response = await fetch(`${API_BASE}/materials/upload`, {
       method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: formData,
     });
+
 
     if (!response.ok) {
       const error: ApiError = await response.json();
@@ -384,11 +398,23 @@ class ApiClient {
     });
   }
 
+  async updateMaterial(id: string, data: { title?: string; content?: string; focusArea?: string }) {
+    return this.request<Material>(`/materials/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }  
   async reprocessMaterial(id: string, formData: FormData) {
+    const token = localStorage.getItem('token');
+
     const response = await fetch(`${API_BASE}/materials/${id}/reprocess`, {
       method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: formData,
     });
+
 
     if (!response.ok) {
       const error: ApiError = await response.json();
@@ -397,6 +423,22 @@ class ApiClient {
 
     return response.json();
   }
+
+  // Delete a question
+async deleteQuestion(questionId: string) {
+  return this.request<{ message: string }>(`/questions/${questionId}`, {
+    method: 'DELETE',
+  });
+}
+
+// Update a question
+async updateQuestion(questionId: string, updatedText: string) {
+  return this.request<{ message: string }>(`/questions/${questionId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ question: updatedText }),
+  });
+}
+
 }
 
 export const api = new ApiClient(); 

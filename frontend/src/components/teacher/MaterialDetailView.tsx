@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Material } from '../../types';
 import { api } from '../../services/api';
-import { useProject } from '../../contexts/ProjectContext';
+import { Project, PromptTemplate } from '../../types';
 import { QuestionGenerator } from './QuestionGenerator';
 
 interface Props {
+  project: Project | null;
   materialId: string;
   onBack: () => void;
   onRefresh: () => void;
 }
 
-export const MaterialDetailView: React.FC<Props> = ({ materialId, onBack, onRefresh }) => {
+export const MaterialDetailView: React.FC<Props> = ({ project, materialId, onBack, onRefresh }) => {
   const [material, setMaterial] = useState<Material | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -484,8 +485,10 @@ export const MaterialDetailView: React.FC<Props> = ({ materialId, onBack, onRefr
           </div>
         )}
 
-        {activeTab === 'questions' && (
-          <QuestionGenerator material={material} />
+        {activeTab === 'questions' && project && (
+          <QuestionGenerator 
+          project={project}
+          material={material} />
         )}
       </div>
 

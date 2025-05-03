@@ -76,6 +76,7 @@ const TeacherDashboard: React.FC = () => {
   const handleManageClass = (classId: string) => {
     navigate(`/dashboard/teacher/manage-class/${classId}`);
   };
+  
 
   return (
     <div className="container-fluid">

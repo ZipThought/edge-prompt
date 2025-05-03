@@ -165,7 +165,8 @@ app.post('/api/signout', authMiddleware, async (_req, res) => {
 // Delete Account
 app.delete('/api/delete-account', authMiddleware, async (req, res) => {
   const userId = req.user?.userId;  
-
+  console.log("Received delete account request for userId:", userId);
+  
   if (!userId) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
@@ -579,7 +580,6 @@ app.post('/api/generate', async (req, res): Promise<void> => {
     
     // Generate a UUID for the question
     const questionId = uuid();
-    
     // Save to database
     await db.createQuestion({
       materialId,
@@ -703,6 +703,7 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res): Promi
 
     const metadata = JSON.parse(req.body.metadata || '{}');
     const projectId = metadata.projectId || null;
+    const classroomId = metadata.classroomId || null;
     
     if (!projectId) {
       res.status(400).json({ error: 'Project ID is required' });
@@ -773,6 +774,7 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res): Promi
     // --- End of Metadata Validation ---
 
     // Extract content from file
+    const fileType = path.extname(req.file.originalname).toLowerCase().substring(1);
     const material: MaterialSource = {
       type: fileType,
       content: req.file.path,
@@ -799,6 +801,7 @@ app.post('/api/materials/upload', upload.single('file'), async (req, res): Promi
     // Create database record for the material
     const materialId = await db.createMaterial({
       projectId,
+      classroomId,
       title: metadata.title || 'Untitled Material',
       content: content,
       focusArea: metadata.focusArea,
@@ -856,8 +859,28 @@ app.get('/api/projects', async (_req, res): Promise<void> => {
   }
 });
 
+app.get('/api/classes/:classId/projects', authMiddleware, async (req, res): Promise<void> => {
+  try {
+    const { classId } = req.params;
+
+
+    // Fetch projects associated with the class
+    const projects = await db.getProjectsForClass(classId);
+
+
+    res.json(projects);
+  } catch (error) {
+    console.error('Failed to get projects for class:', error);
+    res.status(500).json({
+      error: 'Failed to get projects for class',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 app.post('/api/projects', async (req, res): Promise<void> => {
   try {
+    console.log("Received project creation request:", req.body);
     const projectId = await db.createProject(req.body);
     const project = await db.getProject(projectId);
     res.json(project);
@@ -866,6 +889,16 @@ app.post('/api/projects', async (req, res): Promise<void> => {
     res.status(500).json({ error: 'Failed to create project' });
   }
 });
+
+app.get('/api/projects/:id', authMiddleware, async (req, res): Promise<void> => {
+  try {
+    const project = await db.getProject(req.params.id);
+    res.json(project);
+  } catch (error) {
+    console.error('Failed to get project:', error);
+    res.status(500).json({ error: 'Failed to get project' });
+  }
+ });
 
 app.put('/api/projects/:id', async (req, res): Promise<void> => {
   try {
@@ -1030,6 +1063,41 @@ app.post('/api/questions', async (req, res): Promise<void> => {
   }
 });
 
+app.put('/api/questions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { question, rubric, metadata } = req.body;
+
+    if (!question) {
+      return res.status(400).json({ error: 'Question text is required' });
+    }
+
+    // Update the question and rubric inside metadata.rules
+    const updatedMetadata = {
+      ...metadata,
+      rules: JSON.stringify(rubric)
+    };
+
+    await db.updateQuestion(id, question, updatedMetadata);
+
+    res.json({ message: 'Question updated successfully' });
+  } catch (error) {
+    console.error('Failed to update question:', error);
+    res.status(500).json({ error: 'Failed to update question' });
+  }
+});
+
+app.delete('/api/questions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.deleteQuestion(id);
+    res.json({ message: 'Question deleted successfully' });
+  } catch (error) {
+    console.error('Failed to delete question:', error);
+    res.status(500).json({ error: 'Failed to delete question' });
+  }
+});
+
 // Add response endpoints
 app.get('/api/responses', async (req, res): Promise<void> => {
   try {
@@ -1138,6 +1206,28 @@ app.patch('/api/materials/:id/title', async (req, res): Promise<void> => {
   }
 });
 
+// Update multiple fields of a material
+app.put('/api/materials/:id', async (req, res): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { title, content, focusArea } = req.body;
+
+    if (!title && !content && !focusArea) {
+      return res.status(400).json({ error: 'No fields provided to update' });
+    }
+
+    await db.updateMaterialFields(id, { title, content, focusArea });
+    const updatedMaterial = await db.getMaterial(id);
+    res.json(updatedMaterial);
+  } catch (error) {
+    console.error('Error updating material:', error);
+    res.status(500).json({
+      error: 'Failed to update material',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Add this endpoint to re-upload and reprocess a material
 app.post('/api/materials/:id/reprocess', upload.single('file'), async (req, res): Promise<void> => {
   try {
@@ -1186,6 +1276,10 @@ app.post('/api/materials/:id/reprocess', upload.single('file'), async (req, res)
       originalMaterial.focusArea,
       originalMaterial.metadata?.useSourceLanguage
     );
+
+    console.log('objectives:', objectives);
+    console.log('originalMaterial.focusArea:', originalMaterial.focusArea);
+    console.log('originalMaterial.metadata?.useSourceLanguage:', originalMaterial.metadata?.useSourceLanguage);
     
     const templates = await materialProcessor.suggestQuestionTemplates(
       content, 
