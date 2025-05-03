@@ -23,6 +23,7 @@ interface ProjectRow {
   prompt_template_id: string;
   configuration: string;
   created_at: string;
+  classroom_id?: string;
 }
 
 interface ColumnInfo {
@@ -129,19 +130,21 @@ export class DatabaseService {
 
   async createProject(params: {
     name: string;
+    classroomId?: string;
     description?: string;
     modelName: string;
     promptTemplateId: string;
     configuration: any;
   }) {
     const stmt = this.db.prepare(`
-      INSERT INTO projects (id, name, description, model_name, prompt_template_id, configuration)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO projects (id, classroom_id, name, description, model_name, prompt_template_id, configuration)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
     const id = uuid();
     stmt.run(
       id,
+      params.classroomId || null,
       params.name,
       params.description || null,
       params.modelName,
@@ -249,6 +252,25 @@ export class DatabaseService {
     );
 
     return id;
+  }
+
+  async getProjectsForClass(classroomId: string): Promise<Project[]> {
+    const stmt = this.prepareStatement(`
+      SELECT * FROM projects WHERE classroom_id = ?
+    `);
+    const projects = stmt.all(classroomId) as ProjectRow[];
+  
+  
+    return projects.map(project => ({
+      id: project.id,
+      name: project.name,
+      description: project.description || '',
+      modelName: project.model_name,
+      promptTemplateId: project.prompt_template_id,
+      configuration: JSON.parse(project.configuration) as ProjectConfiguration,
+      createdAt: project.created_at,
+      classroom_id: project.classroom_id
+    }));
   }
 
   async getMaterial(id: string): Promise<Material> {
@@ -727,7 +749,10 @@ export class DatabaseService {
   }
 
   async deleteUserById(userId: string): Promise<void> {
-    await this.exec(`DELETE FROM users WHERE id = ?`, [userId]);
+    let stmt = this.prepareStatement('DELETE FROM user_roles WHERE user_id = ?');
+    stmt.run(userId);
+    stmt = this.db.prepare(`DELETE FROM users WHERE id = ?`);
+    stmt.run(userId);
   }
     
   //Function to create new role
