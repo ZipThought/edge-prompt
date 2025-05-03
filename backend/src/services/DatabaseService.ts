@@ -340,13 +340,15 @@ export class DatabaseService {
 
   async deleteMaterial(id: string): Promise<void> {
     const material = await this.getMaterial(id);
-    
+    let stmt = this.prepareStatement('DELETE FROM generated_questions WHERE material_id = ?');
+    stmt.run(id);
+
     // Delete original file if it exists
     if (material.filePath) {
       await rm(material.filePath, { force: true });
     }
 
-    const stmt = this.db.prepare('DELETE FROM materials WHERE id = ?');
+    stmt = this.db.prepare('DELETE FROM materials WHERE id = ?');
     stmt.run(id);
   }
 
