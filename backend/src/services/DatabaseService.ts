@@ -404,8 +404,7 @@ export class DatabaseService {
       INSERT INTO rubrics (id, question_id, rubric_text)
       VALUES (?, ?, ?)
     `);
-    
-    stmt.run(params.rubricId, params.questionId, JSON.stringify(params.rubric));
+\    stmt.run(params.rubricId, params.questionId, params.rubric);
     return params.rubricId;
   }
 
