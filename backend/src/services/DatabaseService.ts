@@ -990,18 +990,19 @@ export class DatabaseService {
     const transaction = this.db.transaction(() => {
       // Delete all materials associated with the classroom
       this.prepareStatement(`DELETE FROM materials WHERE classroom_id = ?`).run(id);
+      console.log("Deleted materials for classroom:", id);
       
       // Delete classroom-student relationships
       this.prepareStatement(`DELETE FROM classroom_students WHERE classroom_id = ?`).run(id);
+      console.log("Deleted students for classroom:", id);
       
       // Delete classroom-teacher relationships
       this.prepareStatement(`DELETE FROM classroom_teachers WHERE classroom_id = ?`).run(id);
-      
-      // Delete materials associated with classroom (if applicable)
-      this.prepareStatement(`DELETE FROM materials WHERE classroom_id = ?`).run(id);
-      
+      console.log("Deleted teachers for classroom:", id);
+
       // Finally delete the classroom itself
       this.prepareStatement(`DELETE FROM classrooms WHERE id = ?`).run(id);
+      console.log("Deleted classroom:", id);
     });
     
     transaction();
