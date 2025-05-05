@@ -76,6 +76,9 @@ const TeacherDashboard: React.FC = () => {
   const handleManageClass = (classId: string) => {
     navigate(`/dashboard/teacher/manage-class/${classId}`);
   };
+  const handleGradeClass = (classId: String) => {
+    navigate(`/dashboard/teacher/grade/${classId}`);
+  }
   
 
   return (
@@ -133,6 +136,12 @@ const TeacherDashboard: React.FC = () => {
                         onClick={() => handleManageClass(cls.id)}
                       >
                         Manage
+                      </button>
+                      <button
+                       className="btn btn-outline-primary btn-sm"
+                       onClick={() => handleGradeClass(cls.id)}
+                      >
+                        
                       </button>
                     </div>
                   </div>
