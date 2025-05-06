@@ -989,7 +989,6 @@ export class DatabaseService {
     const transaction = this.db.transaction(() => {
       // Delete all materials associated with the classroom
       this.prepareStatement(`DELETE FROM materials WHERE classroom_id = ?`).run(id);
-      console.log("Deleted materials for classroom:", id);
       
       // Delete classroom-student relationships
       this.prepareStatement(`DELETE FROM classroom_students WHERE classroom_id = ?`).run(id);
