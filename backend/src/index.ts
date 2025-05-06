@@ -599,7 +599,7 @@ app.post('/api/generate', async (req, res): Promise<void> => {
     await db.createRubric({
       rubricId,
       questionId,
-      rubric: JSON.stringify(rubric),
+      rubric: JSON.stringify(rubric).replace(/^["']|["']$/g, '').trim(),
     });
 
     // Return the complete question with its ID
