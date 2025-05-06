@@ -51,14 +51,6 @@ CREATE TABLE IF NOT EXISTS generated_questions (
   FOREIGN KEY(prompt_template_id) REFERENCES prompt_templates(id)
 );
 
-CREATE TABLE IF NOT EXISTS responses (
-  id TEXT PRIMARY KEY,
-  question_id TEXT NOT NULL,
-  response TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY(question_id) REFERENCES generated_questions(id)
-);
-
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   firstname TEXT NOT NULL,
@@ -133,7 +125,7 @@ CREATE TABLE IF NOT EXISTS responses (
     question_id TEXT NOT NULL,
     student_id TEXT NOT NULL,
     class_id TEXT NOT NULL,
-    answer_text TEXT NOT NULL,
+    response TEXT NOT NULL,
     submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (question_id) REFERENCES questions(id),
     FOREIGN KEY (student_id) REFERENCES users(id),

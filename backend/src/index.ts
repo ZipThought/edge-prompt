@@ -1156,14 +1156,16 @@ app.get('/api/responses', async (req, res): Promise<void> => {
 
 app.post('/api/responses', async (req, res): Promise<void> => {
   try {
-    const { questionId, response, score, feedback, metadata } = req.body;
+    const { questionId, response, score, feedback, metadata, studentId, classId } = req.body;
     
     if (!questionId || !response) {
       res.status(400).json({ 
         error: 'Missing required fields',
         details: {
           questionId: !questionId,
-          response: !response
+          response: !response,
+          studentId: !studentId,
+          classId: !classId
         }
       });
       return;
@@ -1173,6 +1175,8 @@ app.post('/api/responses', async (req, res): Promise<void> => {
     const responseId = await db.createResponse({
       questionId,
       response,
+      studentId,
+      classId
     });
     console.log('Created response with ID:', responseId);
 

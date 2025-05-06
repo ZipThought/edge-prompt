@@ -526,13 +526,26 @@ export class DatabaseService {
    }
 
   // Response methods
-  async getQuestionResponses(questionId: string) {
+  getQuestionResponses(questionId: string) {
     const stmt = this.db.prepare(`
-      SELECT * FROM responses 
-      WHERE question_id = ?
-      ORDER BY created_at DESC
+      SELECT 
+        r.id,
+        r.question_id,
+        r.response,
+        r.score,
+        r.feedback,
+        r.metadata,
+        r.created_at,
+        r.student_id,
+        r.class_id,
+        u.firstname,
+        u.lastname
+      FROM responses r
+      LEFT JOIN users u ON r.student_id = u.id
+      WHERE r.question_id = ?
+      ORDER BY r.created_at DESC
     `);
-    
+  
     const responses = stmt.all(questionId) as any[];
     return responses.map(r => ({
       id: r.id,
@@ -541,9 +554,13 @@ export class DatabaseService {
       score: r.score,
       feedback: r.feedback,
       metadata: JSON.parse(r.metadata || '{}'),
-      createdAt: r.created_at
+      createdAt: r.created_at,
+      studentId: r.student_id,
+      classId: r.class_id,
+      studentName: `${r.firstname} ${r.lastname}`
     }));
   }
+  
 
   async getResponse(id: string) {
     const stmt = this.db.prepare(`
@@ -574,13 +591,15 @@ export class DatabaseService {
 
   async createResponse(params: {
     questionId: string;
+    studentId: string;
+    classId: string;
     response: string;
   }) {
     const stmt = this.db.prepare(`
       INSERT INTO responses (
-        id, question_id, response
+        id, question_id, student_id, class_id, response
       )
-      VALUES (?, ?, ?)
+      VALUES (?, ?, ?, ?, ?)
     `);
 
     const id = uuid();
@@ -588,6 +607,8 @@ export class DatabaseService {
       id,
       params.questionId,
       params.response,
+      params.classId,
+      params.response
     );
     
     return id;
