@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
  import { Project } from "../../types";
 
 
+
  const TeacherGradeClassPage: React.FC = () => {
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
@@ -43,8 +44,8 @@ import React, { useEffect, useState } from "react";
     };
     const fetchStudents = async () => {
         try {
-          //const classStudents = await api.getStudentsForClass(classId!);
-          const classStudents: any = []
+          const classStudents = await api.getEnrolledStudents(classId!)
+          //const classStudents: any = []
           setStudents(classStudents);
         } catch (error) {
           console.error("Failed to fetch students", error);
@@ -79,6 +80,29 @@ import React, { useEffect, useState } from "react";
   const handleAssignGrade = (studentId: string) => {
     navigate(`/dashboard/teacher/grade/${studentId}`);
   };
+
+  if (loading) {
+    return (
+      <div className="container text-center mt-5">
+        <div className="spinner-border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+        <p className="mt-2">Loading class data...</p>
+      </div>
+    );
+  }
+  
+  if (!classData) {
+    return (
+      <div className="container mt-5">
+        <div className="alert alert-danger">Class not found.</div>
+        <button className="btn btn-secondary" onClick={handleBack}>
+          Back to Dashboard
+        </button>
+      </div>
+    );
+  }
+  
   
 
   
