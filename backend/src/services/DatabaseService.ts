@@ -404,7 +404,8 @@ export class DatabaseService {
       INSERT INTO rubrics (id, question_id, rubric_text)
       VALUES (?, ?, ?)
     `);
-    stmt.run(params.rubricId, params.questionId, params.rubric);
+    
+    stmt.run(params.rubricId, params.questionId, JSON.stringify(params.rubric));
     return params.rubricId;
   }
 
@@ -992,15 +993,15 @@ export class DatabaseService {
       
       // Delete classroom-student relationships
       this.prepareStatement(`DELETE FROM classroom_students WHERE classroom_id = ?`).run(id);
-      console.log("Deleted students for classroom:", id);
       
       // Delete classroom-teacher relationships
       this.prepareStatement(`DELETE FROM classroom_teachers WHERE classroom_id = ?`).run(id);
-      console.log("Deleted teachers for classroom:", id);
-
+      
+      // Delete materials associated with classroom (if applicable)
+      this.prepareStatement(`DELETE FROM materials WHERE classroom_id = ?`).run(id);
+      
       // Finally delete the classroom itself
       this.prepareStatement(`DELETE FROM classrooms WHERE id = ?`).run(id);
-      console.log("Deleted classroom:", id);
     });
     
     transaction();
