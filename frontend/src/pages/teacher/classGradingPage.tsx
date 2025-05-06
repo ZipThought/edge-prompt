@@ -61,12 +61,12 @@ import React, { useEffect, useState } from "react";
   }, [classId]);
 
   const handleCreateModule = () => {
-    setShowCreateForm(true); // Show the form instead of navigating
+    setShowCreateForm(true); 
   };
 
   const handleProjectCreated = () => {
-    setShowCreateForm(false); // Hide the form after creation
-    api.getProjectsForClass(classId!).then(setProjects); // Refresh the list after creation
+    setShowCreateForm(false); 
+    api.getProjectsForClass(classId!).then(setProjects); 
   };
 
   const handleViewModule = (moduleId: string) => {
@@ -78,7 +78,7 @@ import React, { useEffect, useState } from "react";
   };
 
   const handleAssignGrade = (studentId: string) => {
-    navigate(`/dashboard/teacher/grade/${studentId}`);
+    navigate(`/dashboard/teacher/grade/student/${studentId}`);
   };
 
   if (loading) {
@@ -132,9 +132,6 @@ import React, { useEffect, useState } from "react";
       <div className="col-12">
   <div className="d-flex justify-content-between align-items-center mb-4">
     <h2>Students</h2>
-    <button className="btn btn-primary" onClick={handleCreateModule}>
-      <i className="bi bi-plus-circle me-2"></i> Create Module
-    </button>
   </div>
 
   {students.length === 0 ? (

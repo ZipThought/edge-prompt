@@ -141,7 +141,7 @@ const TeacherDashboard: React.FC = () => {
                        className="btn btn-outline-primary btn-sm"
                        onClick={() => handleGradeClass(cls.id)}
                       >
-                        
+                        Grade Students
                       </button>
                     </div>
                   </div>
