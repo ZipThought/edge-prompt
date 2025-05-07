@@ -1187,6 +1187,39 @@ app.post('/api/responses', async (req, res): Promise<void> => {
   }
 });
 
+app.post('/api/responses/final-submit', async (req, res) => {
+  try {
+    const { materialId } = req.body;
+    if (!materialId) {
+      return res.status(400).json({ error: 'Material ID is required' });
+    }
+
+    await db.setFinalSubmissionForModule(materialId);
+    res.json({ message: 'Final submission recorded successfully' });
+
+  } catch (error) {
+    console.error('Error finalizing submission:', error);
+    res.status(500).json({ error: 'Failed to finalize submission', details: error.message });
+  }
+});
+
+app.get('/api/materials/:materialId/final-submission', authMiddleware, async (req, res) => {
+  try {
+      const id = req.params.materialId;
+      if (!id) {
+          return res.status(400).json({ error: 'Material ID is required' });
+      }
+
+      const isFinal = await db.isMaterialFinallySubmitted(id);
+      res.json({ isFinal });
+
+
+  } catch (error) {
+      console.error('Error checking final submission:', error);
+      res.status(500).json({ error: 'Failed to check final submission status', details: error.message });
+  }
+});
+
 // Add this endpoint to handle material content updates
 app.patch('/api/materials/:id/content', async (req, res): Promise<void> => {
   try {

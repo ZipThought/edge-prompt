@@ -540,7 +540,8 @@ export class DatabaseService {
       score: r.score,
       feedback: r.feedback,
       metadata: JSON.parse(r.metadata || '{}'),
-      createdAt: r.created_at
+      createdAt: r.created_at,
+      final_submission: r.final_submission
     }));
   }
 
@@ -562,7 +563,8 @@ export class DatabaseService {
       score: r.score,
       feedback: r.feedback,
       metadata: JSON.parse(r.metadata || '{}'),
-      createdAt: r.created_at
+      createdAt: r.created_at,
+      final_submission: r.final_submission
     };
   }
 
@@ -577,9 +579,9 @@ export class DatabaseService {
   }) {
     const stmt = this.db.prepare(`
       INSERT INTO responses (
-        id, question_id, response
+        id, question_id, response, final_submission
       )
-      VALUES (?, ?, ?)
+      VALUES (?, ?, ?, FALSE)
     `);
 
     const id = uuid();
@@ -592,6 +594,38 @@ export class DatabaseService {
     return id;
   }
 
+  async setFinalSubmissionForQuestion(questionId: string): Promise<void> {
+    const stmt = this.prepareStatement(`
+      UPDATE responses
+      SET final_submission = TRUE
+      WHERE question_id = ?
+    `);
+    stmt.run(questionId);
+  }
+
+  async setFinalSubmissionForModule(materialId: string): Promise<void> {
+    const stmt = this.prepareStatement(`
+      UPDATE responses
+      SET final_submission = TRUE
+      WHERE question_id IN (SELECT id FROM generated_questions WHERE material_id = ?)
+    `);
+    stmt.run(materialId);
+  }
+
+  async isMaterialFinallySubmitted(materialId: string): Promise<boolean> {
+    const stmt = this.prepareStatement(`
+      SELECT 
+        CASE 
+          WHEN COUNT(id) = 0 THEN 1  -- If no questions, consider it submitted
+          ELSE SUM(CASE WHEN final_submission = 0 THEN 1 ELSE 0 END) 
+        END AS allSubmitted
+      FROM responses
+      WHERE question_id IN (SELECT id FROM generated_questions WHERE material_id = ?)
+    `);
+    const result = stmt.get(materialId) as { allSubmitted: number };
+    return result.allSubmitted === 0;
+  }
+  
   getDatabasePath() {
     return this.db.name || 'research.db';
   }

@@ -383,6 +383,20 @@ class ApiClient {
     });
   }
 
+  async finalSubmit(materialId: string): Promise<{ message: string }> {
+    return this.request(`/responses/final-submit`, {
+      method: 'POST',
+      body: JSON.stringify({ materialId }),
+    });
+  }
+
+  async isMaterialFinallySubmitted(materialId: string): Promise<{ isFinal: boolean }> {
+    console.log('Checking final submission status for material:', materialId);
+    return this.request(`/materials/${materialId}/final-submission`, {
+        method: 'GET',
+    });
+  }
+
   // Content processing
   async processMaterial(material: MaterialSource, projectId: string) {
     return this.request<any>('/materials/process', {

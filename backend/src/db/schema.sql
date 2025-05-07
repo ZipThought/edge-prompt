@@ -171,3 +171,7 @@ CREATE INDEX IF NOT EXISTS idx_materials_status ON materials(status);
 CREATE INDEX IF NOT EXISTS idx_classroom_teachers ON classroom_teachers(classroom_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_classroom_students ON classroom_students(classroom_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_user_roles ON user_roles(user_id, role_id);
+
+-- Adding a column to track final submission status
+ALTER TABLE responses
+ADD COLUMN final_submission BOOLEAN DEFAULT FALSE;
