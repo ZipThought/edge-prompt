@@ -2,25 +2,16 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../../services/api";
 import { Material, Project } from "../../types";
-import { GeneratedQuestion } from '../../types/edgeprompt';
-// Import GeneratedQuestion type
-
-
-interface Class {
-  id: string;
-  name: string;
-}
-
 
 interface QuestionWithAnswer extends Omit<any, 'id'> {
   id: string;
   studentAnswer: string;
 }
 
-
 const StudentModulePage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+
   const [project, setProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -28,32 +19,19 @@ const StudentModulePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
-  const [submissionStatus, setSubmissionStatus] = useState<
-  { [questionId: string]: 'idle' | 'submitting' | 'success' | 'error' }
-  >({});
-  const [submissionErrors, setSubmissionErrors] = useState<
-  { [questionId: string]: string }
-  >({});
-  const [submissionConfirmation, setSubmissionConfirmation] = useState<
-  { [questionId: string]: boolean }
-  >({});
-  const [responses, setResponses] = useState<
-  { [questionId: string]: any }
-  >({});
-  const [editMode, setEditMode] = useState<{ [questionId: string]: boolean }>({}); // Track edit mode
+  const [activeTab, setActiveTab] = useState<'material' | 'questions'>('material');
+  const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<{ [questionId: string]: string }>({});
 
-
-  // Function to fetch response for a single question
   const fetchResponse = useCallback(async (questionId: string) => {
     try {
       const response = await api.getResponses(questionId);
-      return response ? response[0] : null; // Assuming getResponses returns an array
+      return response ? response[0] : null;
     } catch (error) {
       console.error(`Failed to fetch response for question ${questionId}:`, error);
       return null;
     }
   }, []);
-
 
   useEffect(() => {
     const fetchProjectData = async () => {
@@ -70,7 +48,6 @@ const StudentModulePage: React.FC = () => {
       }
     };
 
-
     const fetchMaterialsData = async () => {
       try {
         const materialsData = await api.getMaterials(projectId!);
@@ -83,11 +60,9 @@ const StudentModulePage: React.FC = () => {
       }
     };
 
-
     fetchProjectData();
     fetchMaterialsData();
   }, [projectId]);
-
 
   useEffect(() => {
     const fetchQuestionsAndResponses = async () => {
@@ -97,24 +72,18 @@ const StudentModulePage: React.FC = () => {
         try {
           const questionsData = await api.getQuestions(selectedMaterial.id);
           const initialResponses: { [questionId: string]: any } = {};
-
-
           for (const question of questionsData) {
             const response = await fetchResponse(question.id);
             if (response) {
               initialResponses[question.id] = response;
             }
           }
-
-
-          setResponses(initialResponses);
           setQuestions(questionsData.map(q => ({
             ...q,
-            studentAnswer: initialResponses[q.id]?.response || '', // Initialize with existing response
+            studentAnswer: initialResponses[q.id]?.response || '',
           })));
-          setEditMode(questionsData.reduce((acc, q) => ({ ...acc, [q.id]: !initialResponses[q.id] }), {}));
-
-
+          const hasExistingResponses = Object.values(initialResponses).some(res => res?.response?.trim());
+          setSubmissionSuccess(hasExistingResponses);
         } catch (error) {
           console.error("Failed to fetch questions and responses:", error);
           setError("Failed to load questions and responses.");
@@ -123,208 +92,88 @@ const StudentModulePage: React.FC = () => {
         }
       } else {
         setQuestions([]);
-        setResponses({});
-        setEditMode({});
       }
     };
-
 
     fetchQuestionsAndResponses();
   }, [selectedMaterial, fetchResponse]);
 
+  const handleSubmitAllAnswers = async () => {
+    const newErrors: { [questionId: string]: string } = {};
+    let hasError = false;
+    let firstInvalidId: string | null = null;
 
-  const handleProjectClick = (projectId: string) => {
-    navigate(`/dashboard/student/project/${projectId}`);
-  };
+    questions.forEach(q => {
+      if (!q.studentAnswer.trim()) {
+        newErrors[q.id] = "Please answer this question.";
+        if (!firstInvalidId) firstInvalidId = q.id;
+        hasError = true;
+      }
+    });
 
-
-  const handleBack = () => {
-    navigate(`/dashboard/student`);
-  };
-
-
-  const handleLogout = () => {
-    navigate("/");
-  };
-  const handleProfile = () => {
-    navigate("/profile");
-  };
-
-
-  const handleAnswerChange = (questionId: string, answer: string) => {
-    setQuestions(prevQuestions =>
-      prevQuestions.map(q =>
-        q.id === questionId ? { ...q, studentAnswer: answer } : q
-      )
-    );
-  };
-
-
-  const handleSubmitAnswer = async (questionId: string) => {
-    const question = questions.find(q => q.id === questionId);
-    if (!question || !question.studentAnswer.trim()) {
-      setSubmissionErrors(prevErrors => ({
-        ...prevErrors,
-        [questionId]: "Please provide an answer.",
-      }));
+    setValidationErrors(newErrors);
+    if (hasError && firstInvalidId) {
+      const el = document.getElementById(`question-${firstInvalidId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
+    if (hasError) return;
 
-
-    setResponses(prevResponses => ({
-      [questionId]: question.studentAnswer,
-    }));
-    setSubmissionStatus(prevStatus => ({
-      ...prevStatus,
-      [questionId]: 'submitting',
-    }));
-    setSubmissionErrors(prevErrors => ({
-      ...prevErrors,
-      [questionId]: '',
-    }));
     try {
-      const existingResponse = await api.getResponses(questionId);
-      let updatedResponse: any;
-      console.log("existingResponse", existingResponse);
-      if (Array.isArray(existingResponse) && existingResponse.length > 0 && existingResponse[0].response !== "") {
-        // Update the existing response
-        console.log("existingResponse", questionId);
-        updatedResponse = await api.updateResponse(questionId, question.studentAnswer);
-      } else {
-        // Create a new response
-        console.log("newResponse", questionId);
-        updatedResponse = await api.saveResponse({
-          questionId: question.id,
-          response: question.studentAnswer,
-        });
-      }
-      console.log("responses", responses);
-      setSubmissionConfirmation(prevConfirmation => ({
-        ...prevConfirmation,
-        [questionId]: true,
-      }));
-      setEditMode(prevEditMode => ({
-        ...prevEditMode,
-        [questionId]: false
-      }));
-      setSubmissionStatus(prevStatus => ({
-        ...prevStatus,
-        [questionId]: 'success',
-      }));
-    } catch (error: any) {
-      console.error("Failed to submit answer:", error);
-      setSubmissionStatus(prevStatus => ({
-        ...prevStatus,
-        [questionId]: 'error',
-      }));
-      setSubmissionErrors(prevErrors => ({
-        ...prevErrors,
-        [questionId]: error.message || "Failed to submit answer.",
-      }));
-    } finally {
-      setTimeout(() => {
-        setSubmissionStatus(prevStatus => ({
-          ...prevStatus,
-          [questionId]: 'idle',
-        }));
-        setSubmissionConfirmation(prevConfirmation => ({
-          ...prevConfirmation,
-          [questionId]: false, // Reset confirmation after the delay
-        }));
-      }, 3000);
+      await Promise.all(
+        questions.map(q =>
+          api.saveResponse({
+            questionId: q.id,
+            response: q.studentAnswer,
+          })
+        )
+      );
+      setSubmissionSuccess(true);
+    } catch (error) {
+      console.error("Failed to submit responses:", error);
+      alert("There was an error submitting your responses.");
     }
   };
 
+  const handleProjectClick = (projectId: string) => navigate(`/dashboard/student/project/${projectId}`);
+  const handleBack = () => navigate(`/dashboard/student`);
+  const handleLogout = () => navigate("/");
+  const handleProfile = () => navigate("/profile");
 
-  const toggleEditMode = (questionId: string) => {
-    setEditMode(prevEditMode => ({
-      ...prevEditMode,
-      [questionId]: !prevEditMode[questionId]
-    }));
+  const handleAnswerChange = (questionId: string, answer: string) => {
+    setQuestions(prev => prev.map(q => q.id === questionId ? { ...q, studentAnswer: answer } : q));
+    setValidationErrors(prev => ({ ...prev, [questionId]: "" }));
   };
 
-
-  if (loading) {
-    return (
-      <div className="container text-center mt-5">
-        <div className="spinner-border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-        <p className="mt-2">Loading project...</p>
-      </div>
-    );
-  }
-
-
-  if (error) {
-    return (
-      <div className="container mt-5">
-        <div className="alert alert-danger">{error}</div>
-        <button className="btn btn-secondary" onClick={handleBack}>
-          Back to Dashboard
-        </button>
-      </div>
-    );
-  }
-
-
-  if (!project) {
-    return (
-      <div className="container mt-5">
-        <div className="alert alert-warning">Project not found.</div>
-        <button className="btn btn-secondary" onClick={handleBack}>
-          Back to Dashboard
-        </button>
-      </div>
-    );
-  }
-
+  if (loading) return (<div className="container text-center mt-5"><div className="spinner-border" role="status" /><p className="mt-2">Loading project...</p></div>);
+  if (error) return (<div className="container mt-5"><div className="alert alert-danger">{error}</div><button className="btn btn-secondary" onClick={handleBack}>Back to Dashboard</button></div>);
+  if (!project) return (<div className="container mt-5"><div className="alert alert-warning">Project not found.</div><button className="btn btn-secondary" onClick={handleBack}>Back to Dashboard</button></div>);
 
   return (
     <div className="container-fluid">
       <header className="bg-primary text-white p-3 mb-4">
         <div className="d-flex justify-content-between align-items-center">
-          <h1 className="h4 mb-0">
-            <i className="bi bi-braces"></i> EdgePrompt | Project: {project.name}
-          </h1>
+          <h1 className="h4 mb-0"><i className="bi bi-braces"></i> EdgePrompt | Module: {project.name}</h1>
           <nav className="ms-auto d-flex align-items-center gap-3">
-            <button className="btn btn-light btn-sm" onClick={handleBack}>
-              <i className="bi bi-arrow-left me-1"></i> Back to Class
-            </button>
-            <button className="btn btn-light btn-sm" onClick={handleProfile}>
-              <i className="bi bi-person-circle me-1"></i> Profile
-            </button>
-            <button
-              className="btn btn-outline-light btn-sm"
-              onClick={handleLogout}
-            >
-              <i className="bi bi-box-arrow-right me-1"></i> Logout
-            </button>
+            <button className="btn btn-light btn-sm" onClick={handleBack}><i className="bi bi-arrow-left me-1"></i> Back to Class</button>
+            <button className="btn btn-light btn-sm" onClick={handleProfile}><i className="bi bi-person-circle me-1"></i> Profile</button>
+            <button className="btn btn-outline-light btn-sm" onClick={handleLogout}><i className="bi bi-box-arrow-right me-1"></i> Logout</button>
           </nav>
         </div>
       </header>
 
-
       <div className="row">
-        {/* Sidebar with Module List (as in the screenshot) */}
         <div className="col-md-4 col-lg-3">
           <div className="card shadow-sm mb-4">
-            <div className="card-header bg-light">
-              <h5 className="mb-0">
-                Modules
-              </h5>
-            </div>
+            <div className="card-header bg-light"><h5 className="mb-0">Modules</h5></div>
             <div className="card-body">
-              {projects.length === 0 ? (
-                <div className="alert alert-info">No projects available for this class.</div>
-              ) : (
+              {projects.length === 0 ? <div className="alert alert-info">No projects available for this class.</div> : (
                 <div className="list-group list-group-flush">
                   {projects.map(p => (
                     <button
                       key={p.id}
                       className={`list-group-item list-group-item-action ${p.id === projectId ? 'active' : ''}`}
                       onClick={() => handleProjectClick(p.id)}
-                      style={{ cursor: 'pointer' }}
                     >
                       {p.name}
                     </button>
@@ -334,102 +183,87 @@ const StudentModulePage: React.FC = () => {
             </div>
           </div>
         </div>
- 
 
-        {/* Main Content Area */}
         <div className="col-md-8 col-lg-9">
           <div className="card shadow-sm">
             <div className="card-body">
               <h2 className="card-title">{project.name}</h2>
               {project.description && <p className="card-text">{project.description}</p>}
- 
-
               <h4>Materials</h4>
-              {materials.length === 0 ? (
-                <div className="alert alert-info">No materials available for this project.</div>
-              ) : (
+              {materials.length === 0 ? <div className="alert alert-info">No materials available for this project.</div> : (
                 <div className="list-group">
                   {materials.map(material => (
-                    <button
-                      key={material.id}
-                      className={`list-group-item list-group-item-action ${selectedMaterial?.id === material.id ? 'active' : ''}`}
-                      onClick={() => setSelectedMaterial(material)}
-                    >
-                      {material.title}
-                    </button>
+                    <button key={material.id} className={`list-group-item list-group-item-action ${selectedMaterial?.id === material.id ? 'active' : ''}`} onClick={() => { setSelectedMaterial(material); setActiveTab('material'); }}>{material.title}</button>
                   ))}
                 </div>
               )}
             </div>
           </div>
- 
 
           {selectedMaterial && (
-            <div className="card shadow-sm mt-4">
-              <div className="card-body">
-                <h5>{selectedMaterial.title}</h5>
-                <p>{selectedMaterial.content}</p>
- 
+            <>
+              <ul className="nav nav-tabs mt-4">
+                <li className="nav-item">
+                  <button className={`nav-link ${activeTab === 'material' ? 'active' : ''}`} onClick={() => setActiveTab('material')}>Material</button>
+                </li>
+                <li className="nav-item">
+                  <button className={`nav-link ${activeTab === 'questions' ? 'active' : ''}`} onClick={() => setActiveTab('questions')}>Questions</button>
+                </li>
+              </ul>
 
-                {/* Display questions and answer inputs */}
-                {questions.length > 0 ? (
-                  <div>
-                    <h6>Questions:</h6>
-                    {questions.map(question => {
-                      const previousResponse = responses[question.id];
-                      const isEditing = editMode[question.id];
-                      return (
-                        <div key={question.id} className="card mt-3">
-                          <div className="card-body">
-                            <p>{question.question}</p>
-                            {/* Display existing response in the textarea */}
-                            <div className="mb-3">
-                              <label htmlFor={`answer-${question.id}`} className="form-label">Your Answer:</label>
-                              <textarea
-                                className="form-control"
-                                id={`answer-${question.id}`}
-                                rows={4}
-                                value={question.studentAnswer}
-                                onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                                placeholder="Type your answer here..."
-                              />
-                              {submissionErrors[question.id] && (
-                                <div className="text-danger">{submissionErrors[question.id]}</div>
-                              )}
-                            </div>
-                            <div className="d-flex justify-content-end">
-                              <button
-                                type="button"
-                                className="btn btn-success me-2"
-                                onClick={() => handleSubmitAnswer(question.id)}
-                                disabled={submissionStatus[question.id] === 'submitting'}
-                              >
-                                {submissionStatus[question.id] === 'submitting' ? (
-                                  <>
-                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                    Submitting...
-                                  </>
-                                ) : (
-                                  "Submit"
-                                )}
-                              </button>
-                              {/* Remove edit mode toggle */}
-                            </div>
-                            {submissionConfirmation[question.id] && (
-                              <div className="alert alert-success mt-3">
-                                Answer submitted successfully!
-                              </div>
+              {activeTab === 'material' && (
+                <div className="card shadow-sm mt-3">
+                  <div className="card-body">
+                    <h5 className="card-title">{selectedMaterial.title}</h5>
+                    <p className="card-text">{selectedMaterial.content}</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'questions' && (
+                <div className="card shadow-sm mt-3">
+                  <div className="card-body">
+                    <h5 className="card-title">Teacher Questions</h5>
+                    <form onSubmit={(e) => { e.preventDefault(); handleSubmitAllAnswers(); }}>
+                      {questions.length > 0 && !submissionSuccess ? (
+                        questions.map((question) => (
+                          <div key={question.id} id={`question-${question.id}`} className="mb-4">
+                            <p className="fw-bold">{question.question}</p>
+                            <textarea
+                              className="form-control"
+                              rows={4}
+                              value={question.studentAnswer}
+                              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+                              placeholder="Your answer here..."
+                            ></textarea>
+                            {validationErrors[question.id] && (
+                              <div className="text-danger mt-1">{validationErrors[question.id]}</div>
                             )}
                           </div>
-                        </div>
-                      );
-                    })}
+                        ))
+                      ) : questions.length === 0 && !submissionSuccess ? (
+                        <div className="alert alert-info">No questions yet for this material.</div>
+                      ) : null
+                    }
+                      {questions.length > 0 && !submissionSuccess && (
+                        <button type="submit" className="btn btn-success">Submit</button>
+                      )}
+                    </form>
+                    {submissionSuccess && (
+                      <div className="alert alert-success mt-3">
+                        Your responses have been submitted for review.
+                      </div>
+                    )}
+                    {submissionSuccess && (
+                      <div className="mt-4">
+                        <h6 className="fw-bold">Teacher Feedback</h6>
+                        <p className="text-muted">Coming soon...</p>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="alert alert-info">No questions available for this material.</div>
-                )}
-              </div>
-            </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
