@@ -23,6 +23,7 @@ import TeacherClassPage from "./pages/teacher/classPage";
 import MaterialDetailPage from "./pages/teacher/materialDetailPage";
 import ProjectDetailPage from "./pages/teacher/moduleView";
 import StudentModulePage from "./pages/student/StudentModulePage";
+import MaterialResponsePage from "./pages/teacher/materialResponsePage";
 
 const App: React.FC = () => {
   return (
@@ -48,6 +49,7 @@ const App: React.FC = () => {
             <Route path="/dashboard/teacher/manage-class/:classId" element={<ManageClass />} />
             <Route path="/material/:id" element={<MaterialDetailPage />} />
             <Route path="/dashboard/teacher/project/:id" element={<ProjectDetailPage />} />
+            <Route path="/dashboard/teacher/material/:materialId/responses" element={<MaterialResponsePage />} />
 
             {/*student dashboard*/}
             <Route path="/dashboard/student" element={<StudentDashboard />} />
