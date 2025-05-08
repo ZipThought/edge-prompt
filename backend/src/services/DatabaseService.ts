@@ -399,7 +399,36 @@ export class DatabaseService {
     };
   }
   
+  async createRubric(params: {rubricId: string; questionId: string; rubric: any}) {
+    const stmt = this.db.prepare(`
+      INSERT INTO rubrics (id, question_id, rubric_text)
+      VALUES (?, ?, ?)
+    `);
+    
+    stmt.run(params.rubricId, params.questionId, JSON.stringify(params.rubric));
+    return params.rubricId;
+  }
+
+  async getRubricFromQuestion(questionId: string) {
+    const stmt = this.db.prepare(`
+      SELECT * FROM rubrics 
+      WHERE question_id = ?
+    `);
+    
+    const r = stmt.get(questionId) as any;
+    if (!r) {
+      throw new Error(`Rubric not found for question: ${questionId}`);
+    }
+    
+    return {
+      id: r.id,
+      questionId: r.question_id,
+      rubric: r.rubric
+    };
+  }
+
   async createQuestion(params: {
+    questionId: string;
     materialId: string;
     promptTemplateId: string;
     question: string;
@@ -413,23 +442,38 @@ export class DatabaseService {
       )
       VALUES (?, ?, ?, ?, ?, ?)
     `);
-
-    const id = uuid();
-    stmt.run(
-      id,
-      params.materialId,
-      params.promptTemplateId,
-      params.question,
-      params.template,
-      params.metadata ? JSON.stringify({
-        ...params.metadata,
-        rules: params.rules
-      }) : null
-    );
     
-    return id;
+    if (params.rules !== "{}" && params.template !== "{}") {
+      stmt.run(
+        params.questionId,
+        params.materialId,
+        params.promptTemplateId,
+        params.question,
+        params.template,
+        params.metadata ? JSON.stringify({
+          ...params.metadata,
+          rules: params.rules
+        }) : null
+      );
+    }
+    
+    return params.questionId;
+  }
+
+  async updateQuestion(id: string, question: string, metadata: any) {
+    const stmt = this.db.prepare(`
+      UPDATE generated_questions 
+      SET question = ?, metadata = ?
+      WHERE id = ?
+    `);
+    stmt.run(question, JSON.stringify(metadata), id);
   }
   
+  async deleteQuestion(id: string) {
+    const stmt = this.db.prepare(`DELETE FROM generated_questions WHERE id = ?`);
+    stmt.run(id);
+  }  
+
   async getQuestionsByMaterial(materialId: string) {
     const stmt = this.db.prepare(`
       SELECT id, material_id, prompt_template_id, question, constraints, metadata
@@ -475,48 +519,6 @@ export class DatabaseService {
       };
     });
   }
-  
-  async updateQuestion(id: string, question: string, metadata: any) {
-    const stmt = this.db.prepare(`
-      UPDATE generated_questions 
-      SET question = ?, metadata = ?
-      WHERE id = ?
-    `);  
-    stmt.run(question, JSON.stringify(metadata), id);
-  }  
-  
-  async deleteQuestion(id: string) {
-    const stmt = this.db.prepare(`DELETE FROM generated_questions WHERE id = ?`);
-    stmt.run(id);
-  }    
-  
-  async createRubric(params: {rubricId: string; questionId: string; rubric: any}) {
-    const stmt = this.db.prepare(`
-      INSERT INTO rubrics (id, question_id, rubric_text)
-      VALUES (?, ?, ?)
-    `);  
-    
-    stmt.run(params.rubricId, params.questionId, JSON.stringify(params.rubric));
-    return params.rubricId;
-  }  
-
-  async getRubricFromQuestion(questionId: string) {
-    const stmt = this.db.prepare(`
-      SELECT * FROM rubrics 
-      WHERE question_id = ?
-    `);  
-    
-    const r = stmt.get(questionId) as any;
-    if (!r) {
-      throw new Error(`Rubric not found for question: ${questionId}`);
-    }  
-    
-    return {
-      id: r.id,
-      questionId: r.question_id,
-      rubric: r.rubric
-    };  
-  }  
 
   async updateRubric(questionId: string, rubricText: string) {
     const stmt = this.db.prepare(`
@@ -526,16 +528,31 @@ export class DatabaseService {
     `);
     stmt.run(rubricText, questionId);
   }
-  
+
+  async updateResponse(id: string, response: string) {
+    const stmt = this.db.prepare('UPDATE responses SET response = ? WHERE question_id = ?');
+    stmt.run(response, id);
+  }
+
+  async updateQuestionStatus(id: string, status: string) {
+    const stmt = this.db.prepare(`
+      UPDATE generated_questions 
+      SET status = ?, 
+          metadata = JSON_SET(COALESCE(metadata, '{}'), '$.publishedAt', ?)
+      WHERE id = ?
+    `);
+    stmt.run(status, new Date().toISOString(), id);
+  }
+
   // Response methods
   async getQuestionResponses(questionId: string) {
     const stmt = this.db.prepare(`
       SELECT * FROM responses 
       WHERE question_id = ?
       ORDER BY created_at DESC
-      `);
+    `);
     
-      const responses = stmt.all(questionId) as any[];
+    const responses = stmt.all(questionId) as any[];
     return responses.map(r => ({
       id: r.id,
       questionId: r.question_id,
@@ -547,7 +564,7 @@ export class DatabaseService {
       final_submission: r.final_submission
     }));
   }
-  
+
   async getResponse(id: string) {
     const stmt = this.db.prepare(`
       SELECT * FROM responses 
@@ -570,12 +587,12 @@ export class DatabaseService {
       final_submission: r.final_submission
     };
   }
-  
+
   async deleteResponse(id: string) {
     const stmt = this.db.prepare('DELETE FROM responses WHERE id = ?');
     stmt.run(id);
-  }
-  
+   }
+
   async createResponse(params: {
     questionId: string;
     studentId: string;
@@ -584,9 +601,9 @@ export class DatabaseService {
     const stmt = this.db.prepare(`
       INSERT INTO responses (
         id, question_id, student_id, response, final_submission
-        )
-        VALUES (?, ?, ? , ?, FALSE)
-        `);
+      )
+      VALUES (?, ?, ? , ?, FALSE)
+    `);
 
     const id = uuid();
     stmt.run(
@@ -597,21 +614,6 @@ export class DatabaseService {
     );
     
     return id;
-  }
-  
-  async updateResponse(id: string, response: string) {
-    const stmt = this.db.prepare('UPDATE responses SET response = ? WHERE question_id = ?');
-    stmt.run(response, id);
-  }
-
-  async updateQuestionStatus(id: string, status: string) {
-    const stmt = this.db.prepare(`
-      UPDATE generated_questions 
-      SET status = ?, 
-          metadata = JSON_SET(COALESCE(metadata, '{}'), '$.publishedAt', ?)
-      WHERE id = ?
-    `);
-    stmt.run(status, new Date().toISOString(), id);
   }
 
   async setFinalSubmissionForQuestion(questionId: string): Promise<void> {
@@ -805,7 +807,7 @@ export class DatabaseService {
     }
   }
   
-  // Function to get a user by email
+    // Function to get a user by email
   async getUserByEmail(email: string): Promise<User | null> { // Changed return type
     try {
       const stmt = await this.db.prepare(`
@@ -821,7 +823,7 @@ export class DatabaseService {
     }
   }
 
-  // Function to get user's information when logged in
+  //Function to get user's information when logged in
   async getUserById(userId: string): Promise<User | null> {
     try {
       const stmt = this.prepareStatement(`
@@ -837,7 +839,6 @@ export class DatabaseService {
     }
   }
 
-  // Function to delete user by id
   async deleteUserById(userId: string): Promise<void> {
     let stmt = this.prepareStatement('DELETE FROM user_roles WHERE user_id = ?');
     stmt.run(userId);
@@ -845,7 +846,7 @@ export class DatabaseService {
     stmt.run(userId);
   }
     
-  // Function to create new role
+  //Function to create new role
   async createRole(role: { id: string; name: string; description?: string }): Promise<void> {
     const stmt = this.prepareStatement(`
         INSERT INTO roles (id, name, description) VALUES (?, ?, ?)
@@ -853,7 +854,7 @@ export class DatabaseService {
     await stmt.run(role.id, role.name, role.description);
   }
 
-  // Function to get role by role name
+  //Functino to get role by role name
   async getRoleByName(roleName: string): Promise<{ id: string, name: string } | null> {
     try {
       const stmt = this.db.prepare(`
@@ -867,7 +868,7 @@ export class DatabaseService {
     }
   }
 
-  // Function to assign role to user
+  //Function to assign role to user
   async assignRoleToUser(userId: string, roleId: string): Promise<void> {
     try {
       const stmt = this.db.prepare(`
@@ -881,7 +882,7 @@ export class DatabaseService {
     }
   }
 
-  // Function to get user role by user.id
+  //Function to get user role by user.id
   async getUserRoles(userId: string): Promise<string[]> {
     try {
       const stmt = this.db.prepare(`
@@ -898,7 +899,7 @@ export class DatabaseService {
     }
   }
 
-  // Function to get users by roles
+  //Function to get users by roles
   async getUsersByRole(roleName: string): Promise<{ id: string; firstname: string; lastname: string; email: string }[]> {
     const stmt = this.prepareStatement(`
       SELECT u.id, u.firstname, u.lastname, u.email
@@ -910,7 +911,7 @@ export class DatabaseService {
     return stmt.all(roleName);
   }
 
-  // Function to achieve user permissions
+  //Function to achieve user permissions
   async getUserPermissions(userId: string): Promise<string[]> {
     try {
       const stmt = this.db.prepare(`
@@ -928,7 +929,7 @@ export class DatabaseService {
     }
   }
 
-  // Function to achieve role permissions
+  //Function to achieve role permissions
   async getRolePermissions(roleId: string): Promise<string[]> {
       const stmt = this.prepareStatement(`
           SELECT p.name
@@ -951,7 +952,6 @@ export class DatabaseService {
     return id;
   }
 
-  // Function to get all classrooms
   async getClassroom(id: string): Promise<any> {
       const stmt = this.prepareStatement(`
           SELECT * FROM classrooms WHERE id = ?
@@ -959,7 +959,6 @@ export class DatabaseService {
       return stmt.get(id);
   }
 
-  // Function to get classroom by name
   async getClassroomWithDetailsById(classId: string): Promise<any> {
     const stmt = this.prepareStatement(`
       SELECT id as classId, name as className
@@ -982,7 +981,6 @@ export class DatabaseService {
     };
   }
 
-  // Function to get all classrooms
   async getClassroomsForTeacher(userId: string): Promise<any[]> {
       const stmt = this.prepareStatement(`
           SELECT c.* FROM classrooms c
@@ -992,7 +990,6 @@ export class DatabaseService {
       return stmt.all(userId);
   }
 
-  // Function to add a teacher to a classroom
   async addTeacherToClassroom(classroomId: string, userId: string): Promise<void> {
       const stmt = this.prepareStatement(`
           INSERT INTO classroom_teachers (classroom_id, user_id) VALUES (?, ?)
@@ -1000,7 +997,6 @@ export class DatabaseService {
       await stmt.run(classroomId, userId);
   }
 
-  // Function to add a student to a classroom
   async addStudentToClassroom(classroomId: string, userId: string): Promise<void> {
       const stmt = this.prepareStatement(`
           INSERT INTO classroom_students (classroom_id, user_id) VALUES (?, ?)
@@ -1008,7 +1004,6 @@ export class DatabaseService {
       await stmt.run(classroomId, userId);
   }
 
-  // Function to get all students in a classroom
   async getStudentsInClassroom(classroomId: string): Promise<any[]> {
       const stmt = this.prepareStatement(`
           SELECT u.id, u.firstname || ' ' || u.lastname as name, u.email 
@@ -1019,7 +1014,6 @@ export class DatabaseService {
       return stmt.all(classroomId);
   }
 
-  // Function to get all materials in a classroom
   async getMaterialsForClassroom(classroomId: string): Promise<any[]> {
       const stmt = this.prepareStatement(`
           SELECT * FROM materials WHERE classroom_id = ?
@@ -1027,7 +1021,6 @@ export class DatabaseService {
       return stmt.all(classroomId);
   }
 
-  // Function to get all classrooms for a student
   async getStudentClasses(userId: string): Promise<any[]> {
     const stmt = this.prepareStatement(`
       SELECT c.id, c.name
@@ -1038,7 +1031,6 @@ export class DatabaseService {
     return stmt.all(userId);
   }
   
-  // Function to check if a teacher has access to a classroom
   async verifyTeacherClassroomAccess(classroomId: string, teacherId: string): Promise<boolean> {
     const stmt = this.prepareStatement(`
       SELECT COUNT(*) as count FROM classroom_teachers 
@@ -1048,7 +1040,6 @@ export class DatabaseService {
     return result.count > 0;
   }
 
-  // Function to delete a classroom
   async deleteClassroom(id: string): Promise<void> {
     // Start transaction to ensure all related records are deleted
     const transaction = this.db.transaction(() => {
@@ -1071,7 +1062,6 @@ export class DatabaseService {
     transaction();
   }
   
-  // Function to update classroom details
   async updateClassroom(id: string, name: string, description?: string): Promise<void> {
     const stmt = this.prepareStatement(`
       UPDATE classrooms SET name = ?, description = ? WHERE id = ?
@@ -1079,7 +1069,6 @@ export class DatabaseService {
     await stmt.run(name, description, id);
   }
 
-  // Function to remove a teacher from a classroom
   async removeStudentFromClassroom(classroomId: string, userId: string): Promise<void> {
     const stmt = this.prepareStatement(`
       DELETE FROM classroom_students 
@@ -1088,7 +1077,6 @@ export class DatabaseService {
     await stmt.run(classroomId, userId);
   }
 
-  // Function to get all students in a classroom
   async getEnrolledStudents(classroomId: string): Promise<any[]> {
     const stmt = this.prepareStatement(`
       SELECT u.id, u.firstname || ' ' || u.lastname as name, u.email 
@@ -1099,7 +1087,6 @@ export class DatabaseService {
     return stmt.all(classroomId);
   }
 
-  // Function to get all available students for a classroom
   async getAvailableStudentsForClassroom(classroomId: string): Promise<any[]> {
     const stmt = this.prepareStatement(`
       SELECT u.id, u.firstname || ' ' || u.lastname as name, u.email 

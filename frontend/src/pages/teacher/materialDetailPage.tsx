@@ -44,6 +44,15 @@ const MaterialDetailPage = () => {
     navigate(`/dashboard/teacher/class/${classId}/material/${id}/questions`);
   };
 
+  const handleDeleteQuestion = async (questionId: string) => {
+    try {
+      await api.deleteQuestion(questionId);
+      setQuestions(prev => prev.filter(q => q.id !== questionId));
+    } catch {
+      alert("Failed to delete question");
+    }
+  };
+
   const handleSaveEdit = async () => {
     if (!editingId || !editedQuestion) return;
     try {
@@ -173,6 +182,12 @@ const MaterialDetailPage = () => {
                                   }}
                                 >
                                   Edit
+                                </button>
+                                <button
+                                  className="btn btn-outline-danger btn-sm"
+                                  onClick={() => handleDeleteQuestion(q.id)}
+                                >
+                                  Delete
                                 </button>
                               </div>
                             </>

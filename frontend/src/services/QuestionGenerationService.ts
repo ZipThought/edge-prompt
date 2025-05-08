@@ -39,4 +39,19 @@ export class QuestionGenerationService {
       throw new Error("Failed to save generated question.");
     }
   }
+  
+  /**
+   * Deletes all questions for a specific material
+   */
+  static async deleteAllMaterialQuestions(materialId: string): Promise<void> {
+    try {
+      const questions = await api.getQuestions(materialId);
+      if (questions.length > 0) {
+        await api.deleteQuestions(questions.map(q => q.id));
+      }
+    } catch (error) {
+      console.error("Error deleting questions:", error);
+      throw new Error("Failed to delete existing questions.");
+    }
+  }
 }
