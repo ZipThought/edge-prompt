@@ -2,10 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { DatabaseService } from '../services/DatabaseService.js';
 import dotenv from 'dotenv';
+import { generateJwtSecret } from '../utils/jwtUtils.js';
 
 dotenv.config();
 
-export const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+export const jwtSecret = process.env.JWT_SECRET || generateJwtSecret();
 
 declare module 'express-serve-static-core' {
     interface Request {

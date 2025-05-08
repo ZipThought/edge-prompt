@@ -54,9 +54,11 @@ CREATE TABLE IF NOT EXISTS generated_questions (
 CREATE TABLE IF NOT EXISTS responses (
   id TEXT PRIMARY KEY,
   question_id TEXT NOT NULL,
+  student_id TEXT NOT NULL,
   response TEXT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(question_id) REFERENCES generated_questions(id)
+  FOREIGN KEY(STUDENT_ID) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -125,19 +127,6 @@ CREATE TABLE IF NOT EXISTS classroom_students (
     PRIMARY KEY (classroom_id, user_id),
     FOREIGN KEY (classroom_id) REFERENCES classrooms(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
-);
-
---Creating response TABLE
-CREATE TABLE IF NOT EXISTS responses (
-    id TEXT PRIMARY KEY,
-    question_id TEXT NOT NULL,
-    student_id TEXT NOT NULL,
-    class_id TEXT NOT NULL,
-    answer_text TEXT NOT NULL,
-    submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (question_id) REFERENCES questions(id),
-    FOREIGN KEY (student_id) REFERENCES users(id),
-    FOREIGN KEY (class_id) REFERENCES classrooms(id)
 );
 
 --Creating rubric TABLE
