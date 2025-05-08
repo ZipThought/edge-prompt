@@ -39,9 +39,49 @@ const MaterialDetailPage = () => {
     return template?.name || template?.title || "Unknown Template";
   };
 
-  const handleGenerateQuestions = () => {
-    // Simply redirect to the questions tab where QuestionGenerator is used
-    navigate(`/dashboard/teacher/class/${classId}/material/${id}/questions`);
+  const handleGenerateQuestions = async () => {
+    if (!material?.metadata?.templates?.length) {
+      alert("No templates found for this material.");
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const templates = material.metadata.templates;
+      const promptTemplates = await api.getPromptTemplates();
+      const defaultPromptTemplateId = promptTemplates[0]?.id;
+
+      if (!defaultPromptTemplateId) {
+        throw new Error("No prompt template found in the system.");
+      }
+
+      await Promise.all(
+        templates.map((template: any, index: number) => {
+          const payload = {
+            materialId: id!,
+            promptTemplateId: template.promptTemplateId || defaultPromptTemplateId,
+            templateIndex: index,
+            useSourceLanguage: material.metadata?.useSourceLanguage || false,
+          };
+
+          return api.generateQuestion(
+            payload.materialId,
+            payload.promptTemplateId,
+            payload.templateIndex,
+            { useSourceLanguage: payload.useSourceLanguage }
+          );
+        })
+      );
+
+      const updatedQuestions = await api.getQuestions(id!);
+      setQuestions(updatedQuestions);
+      setSuccessMessage("Questions generated successfully.");
+    } catch (error) {
+      console.error("Failed to generate questions", error);
+      alert("Failed to generate questions");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleDeleteQuestion = async (questionId: string) => {
