@@ -403,6 +403,28 @@ classroomRouter.get('/:classroom_id/materials', authMiddleware, async (req, res)
   }
 });
 
+app.get('/api/students/:id', authMiddleware, async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    const student = await db.getUserById(studentId); 
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    res.json({
+      id: student.id,
+      name: `${student.firstname} ${student.lastname}`,
+      email: student.email
+    });
+  } catch (error) {
+    console.error('Failed to fetch student:', error);
+    res.status(500).json({ error: 'Failed to fetch student' });
+  }
+});
+
+
+
 app.use('/api/classrooms', classroomRouter); // Mount the classroom router
 
 // Update classroom details

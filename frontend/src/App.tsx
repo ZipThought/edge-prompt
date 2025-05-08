@@ -23,6 +23,8 @@ import TeacherClassPage from "./pages/teacher/classPage";
 import MaterialDetailPage from "./pages/teacher/materialDetailPage";
 import ProjectDetailPage from "./pages/teacher/moduleView";
 import StudentModulePage from "./pages/student/StudentModulePage";
+import TeacherGradeClassPage from "./pages/teacher/classGradingPage";
+import TeacherAssignStudentGradePage from "./pages/teacher/studentGradingPage";
 
 const App: React.FC = () => {
   return (
@@ -48,11 +50,14 @@ const App: React.FC = () => {
             <Route path="/dashboard/teacher/manage-class/:classId" element={<ManageClass />} />
             <Route path="/material/:id" element={<MaterialDetailPage />} />
             <Route path="/dashboard/teacher/project/:id" element={<ProjectDetailPage />} />
+            <Route path="/dashboard/teacher/grade/:classId" element={<TeacherGradeClassPage/>} />
+            <Route path="/dashboard/teacher/grade/student/:studentId" element={<TeacherAssignStudentGradePage/>} />
 
             {/*student dashboard*/}
             <Route path="/dashboard/student" element={<StudentDashboard />} />
             <Route path="/dashboard/student/class/:classId" element={<ClassPage />} />
             <Route path="/dashboard/student/project/:projectId" element={<StudentModulePage />} />
+            
 
             {/* Fallback route - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

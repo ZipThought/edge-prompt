@@ -214,10 +214,12 @@ class ApiClient {
     return this.request<{ id: string; name: string; email: string }[]>('/users/students');
   }
 
-  // Get a specific student by ID (for managing a student's details within a class)
-  async getStudentById(studentId: string) {
-    return this.request<{ id: string; name: string; email: string }>(`/users/students/${studentId}`);
+  
+
+  async getUserById(studentId: string) {
+    return this.request<{ id: string; name: string; email: string }>(`/students/${studentId}`);
   }
+  
 
   // Get students enrolled in a specific class
   async getClassStudents(classId: string) {
