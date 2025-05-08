@@ -520,6 +520,15 @@ export class DatabaseService {
     });
   }
 
+  async updateRubric(questionId: string, rubricText: string) {
+    const stmt = this.db.prepare(`
+      UPDATE rubrics 
+      SET rubric_text = ?
+      WHERE question_id = ?
+    `);
+    stmt.run(rubricText, questionId);
+  }
+
   async updateResponse(id: string, response: string) {
     const stmt = this.db.prepare('UPDATE responses SET response = ? WHERE question_id = ?');
     stmt.run(response, id);

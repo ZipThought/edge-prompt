@@ -1074,24 +1074,47 @@ app.post('/api/questions', async (req, res): Promise<void> => {
 app.put('/api/questions/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { question, rubric, metadata } = req.body;
+    const { question, rubric } = req.body;
 
     if (!question) {
       return res.status(400).json({ error: 'Question text is required' });
     }
 
-    // Update the question and rubric inside metadata.rules
-    const updatedMetadata = {
-      ...metadata,
-      rules: JSON.stringify(rubric)
-    };
+    // First update the question
+    await db.updateQuestion(id, question, { 
+      updatedAt: new Date().toISOString() 
+    });
 
-    await db.updateQuestion(id, question, updatedMetadata);
+    // If rubric is provided, update it too
+    if (rubric) {
+      await db.updateRubric(id, JSON.stringify(rubric));
+    }
 
     res.json({ message: 'Question updated successfully' });
   } catch (error) {
     console.error('Failed to update question:', error);
-    res.status(500).json({ error: 'Failed to update question' });
+    res.status(500).json({ error: 'Failed to update question', details: error.message });
+  }
+});
+
+// Add batch delete endpoint for questions
+app.post('/api/questions/delete-batch', async (req, res) => {
+  try {
+    const { questionIds } = req.body;
+    
+    if (!Array.isArray(questionIds) || questionIds.length === 0) {
+      return res.status(400).json({ error: 'Question IDs array is required' });
+    }
+    
+    // Delete all questions in the list
+    for (const id of questionIds) {
+      await db.deleteQuestion(id);
+    }
+    
+    res.json({ message: `Successfully deleted ${questionIds.length} questions` });
+  } catch (error) {
+    console.error('Failed to delete questions:', error);
+    res.status(500).json({ error: 'Failed to delete questions' });
   }
 });
 

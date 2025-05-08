@@ -68,6 +68,7 @@ export interface EdgeRubric {
  * Generated question with validation structure
  */
 export interface GeneratedQuestion {
+  id: string;
   materialId: string;
   promptTemplateId: string;
   questionId?: string;

@@ -450,20 +450,31 @@ class ApiClient {
     return response.json();
   }
 
-  // Delete a question
-async deleteQuestion(questionId: string) {
-  return this.request<{ message: string }>(`/questions/${questionId}`, {
-    method: 'DELETE',
-  });
-}
+  // Add method to delete multiple questions at once
+  async deleteQuestions(questionIds: string[]) {
+    return this.request<{ message: string }>('/questions/delete-batch', {
+      method: 'POST',
+      body: JSON.stringify({ questionIds }),
+    });
+  }
 
-// Update a question
-async updateQuestion(questionId: string, updatedText: string) {
-  return this.request<{ message: string }>(`/questions/${questionId}`, {
-    method: 'PUT',
-    body: JSON.stringify({ question: updatedText }),
-  });
-}
+  // Delete a question
+  async deleteQuestion(questionId: string) {
+    return this.request<{ message: string }>(`/questions/${questionId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Update a question with its rubric
+  async updateQuestion(questionId: string, questionText: string, rubric: any = null) {
+    return this.request<{ message: string }>(`/questions/${questionId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ 
+        question: questionText,
+        rubric: rubric 
+      }),
+    });
+  }
 
 }
 
