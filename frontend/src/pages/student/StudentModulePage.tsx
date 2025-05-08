@@ -480,8 +480,8 @@ import React, { useEffect, useState, useCallback } from "react";
 
                               {/* Placeholder for feedback and score */}
                               <div className="mt-3">
-                                <p>Score: [Score will appear here]</p>
-                                <p>Feedback: [Feedback will appear here]</p>
+                                <p>Score: [Not yet marked]</p>
+                                <p>Feedback: [Not yet marked]</p>
                               </div>
                             </div>
                           </div>
