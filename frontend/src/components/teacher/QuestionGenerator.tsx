@@ -5,7 +5,7 @@ import { api } from '../../services/api';
 import { useProject } from '../../contexts/ProjectContext';
 import { Project, PromptTemplate } from '../../types';
 import { QuestionGenerationService } from '../../services/QuestionGenerationService';
-import { useQuestions } from '../../contexts/QuestionContext';
+// import { useQuestions } from '../../contexts/QuestionContext';
 
 interface Props {
   project: Project;
@@ -18,6 +18,7 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
   const [generatingTemplate, setGeneratingTemplate] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedQuestions, setSavedQuestions] = useState<GeneratedQuestion[]>([]);
+
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [editedQuestionText, setEditedQuestionText] = useState<string>('');
   const [editingRubric, setEditingRubric] = useState<boolean>(false);
@@ -62,7 +63,8 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
   }, [material.id]);
 
   const handleGenerateQuestion = async (template: any, index: number) => {
-    if (!project?.promptTemplateId) {
+    // if (!project?.promptTemplateId) {
+    if (!activeProject?.promptTemplateId) {
       setError('Module has no prompt template configured');
       return;
     }
@@ -75,11 +77,6 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
       const existingQuestion = savedQuestions.find(q => 
         q.metadata?.templateIndex === index
       );
-      
-      // If we found an existing question, delete it first
-      if (existingQuestion && existingQuestion.id) {
-        await api.deleteQuestion(existingQuestion.id);
-      }
       
       // Generate a new question
       const generatedQuestion = await QuestionGenerationService.generateQuestion(

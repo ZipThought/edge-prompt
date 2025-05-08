@@ -354,6 +354,25 @@ class ApiClient {
     });
   }
 
+  // Update a question with its rubric
+  async updateQuestion(questionId: string, questionText: string, rubric: any = null) {
+    return this.request<{ message: string }>(`/questions/${questionId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ 
+        question: questionText,
+        rubric: rubric 
+      }),
+    });
+  }
+
+  // Post questions to students (make them available)
+  async postQuestionsToStudents(questionIds: string[]) {
+    return this.request<{ message: string }>('/questions/publish', {
+      method: 'POST',
+      body: JSON.stringify({ questionIds }),
+    });
+  }
+
   // Response validation endpoints
   async validateResponse(questionId: string, answer: string) {
     return this.request<ValidationResult>('/validate', {
@@ -448,40 +467,6 @@ class ApiClient {
     }
 
     return response.json();
-  }
-
-  // Add method to delete multiple questions at once
-  async deleteQuestions(questionIds: string[]) {
-    return this.request<{ message: string }>('/questions/delete-batch', {
-      method: 'POST',
-      body: JSON.stringify({ questionIds }),
-    });
-  }
-
-  // Delete a question
-  async deleteQuestion(questionId: string) {
-    return this.request<{ message: string }>(`/questions/${questionId}`, {
-      method: 'DELETE',
-    });
-  }
-
-  // Update a question with its rubric
-  async updateQuestion(questionId: string, questionText: string, rubric: any = null) {
-    return this.request<{ message: string }>(`/questions/${questionId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ 
-        question: questionText,
-        rubric: rubric 
-      }),
-    });
-  }
-
-  // Post questions to students (make them available)
-  async postQuestionsToStudents(questionIds: string[]) {
-    return this.request<{ message: string }>('/questions/publish', {
-      method: 'POST',
-      body: JSON.stringify({ questionIds }),
-    });
   }
 
 }

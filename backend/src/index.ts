@@ -394,6 +394,7 @@ classroomRouter.get('/:classroom_id/students', authMiddleware, async (req, res) 
   }
 });
 
+// Get materials in classroom
 classroomRouter.get('/:classroom_id/materials', authMiddleware, async (req, res) => {
   try {
       const materials = await db.getMaterialsForClassroom(req.params.classroom_id);
@@ -403,6 +404,7 @@ classroomRouter.get('/:classroom_id/materials', authMiddleware, async (req, res)
   }
 });
 
+// Get all classrooms
 app.use('/api/classrooms', classroomRouter); // Mount the classroom router
 
 // Update classroom details
@@ -462,23 +464,7 @@ classroomRouter.get('/:classroom_id/students/available', authMiddleware, async (
   }
 });
 
-app.get('/api/health', async (_req, res): Promise<void> => {
-  try {
-    const isLMStudioAvailable = await lmStudio.isAvailable();
-    res.json({ 
-      status: 'ok',
-      lmStudio: isLMStudioAvailable 
-    });
-  } catch (error) {
-    console.error('Health check error:', error);
-    res.status(500).json({ 
-      status: 'error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-
-  }
-});
-
+// Validate answer endpoint
 app.post('/api/validate', async (req, res): Promise<void> => {
   try {
     const { questionId, answer } = req.body;
@@ -493,7 +479,7 @@ app.post('/api/validate', async (req, res): Promise<void> => {
       });
       return;
     }
-
+    
     // Retrieve the question from database
     const question = await db.getQuestion(questionId);
     if (!question) {
@@ -507,7 +493,7 @@ app.post('/api/validate', async (req, res): Promise<void> => {
       res.status(404).json({ error: 'Prompt template not found' });
       return;
     }
-
+    
     // Validate the answer using the retrieved data and prompt template
     const result = await validator.validateResponse(
       question.question,
@@ -540,7 +526,7 @@ app.post('/api/generate', async (req, res): Promise<void> => {
       });
       return;
     }
-
+    
     // Retrieve material from database
     const material = await db.getMaterial(materialId);
     if (!material) {
@@ -561,7 +547,7 @@ app.post('/api/generate', async (req, res): Promise<void> => {
       res.status(404).json({ error: 'Question template not found at specified index' });
       return;
     }
-
+    
     // Generate question using the material's content and templates
     const questionText = await materialProcessor.generateQuestion(
       questionTemplate, 
@@ -580,7 +566,7 @@ app.post('/api/generate', async (req, res): Promise<void> => {
     // Generate a UUID for the question
     const questionId = uuid();
     const rubricId = uuid();
-
+    
     // Save to database
     await db.createQuestion({
       questionId,
@@ -601,7 +587,7 @@ app.post('/api/generate', async (req, res): Promise<void> => {
       questionId,
       rubric: JSON.stringify(rubric),
     });
-
+    
     // Return the complete question with its ID
     res.json({ 
       id: questionId,
@@ -625,6 +611,23 @@ app.post('/api/generate', async (req, res): Promise<void> => {
   }
 });
 
+app.get('/api/health', async (_req, res): Promise<void> => {
+  try {
+    const isLMStudioAvailable = await lmStudio.isAvailable();
+    res.json({ 
+      status: 'ok',
+      lmStudio: isLMStudioAvailable 
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({ 
+      status: 'error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+
+  }
+});
+
 app.post('/api/materials/process', async (req, res): Promise<void> => {
   const { material, projectId } = req.body;
   
@@ -636,8 +639,8 @@ app.post('/api/materials/process', async (req, res): Promise<void> => {
   try {
     // Extract content if not already provided
     const content = typeof material.content === 'string' && !material.content.startsWith('/') 
-      ? material.content 
-      : await materialProcessor.extractContent(material);
+    ? material.content 
+    : await materialProcessor.extractContent(material);
     
     // Generate objectives and templates
     const objectives = await materialProcessor.extractLearningObjectives(
@@ -1015,7 +1018,10 @@ app.get('/api/questions', async (req, res): Promise<void> => {
     res.json(questions.map(q => ({
       id: q.id,
       materialId: q.materialId,
-      question: q.question
+      question: q.question,
+      template: q.template,
+      rubric: q.rubric,
+      metadata: q.metadata
     })));
   } catch (error) {
     console.error('Failed to get questions:', error);
@@ -1071,6 +1077,7 @@ app.post('/api/questions', async (req, res): Promise<void> => {
   }
 });
 
+// Update question endpoint
 app.put('/api/questions/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1094,38 +1101,6 @@ app.put('/api/questions/:id', async (req, res) => {
   } catch (error) {
     console.error('Failed to update question:', error);
     res.status(500).json({ error: 'Failed to update question', details: error.message });
-  }
-});
-
-// Add batch delete endpoint for questions
-app.post('/api/questions/delete-batch', async (req, res) => {
-  try {
-    const { questionIds } = req.body;
-    
-    if (!Array.isArray(questionIds) || questionIds.length === 0) {
-      return res.status(400).json({ error: 'Question IDs array is required' });
-    }
-    
-    // Delete all questions in the list
-    for (const id of questionIds) {
-      await db.deleteQuestion(id);
-    }
-    
-    res.json({ message: `Successfully deleted ${questionIds.length} questions` });
-  } catch (error) {
-    console.error('Failed to delete questions:', error);
-    res.status(500).json({ error: 'Failed to delete questions' });
-  }
-});
-
-app.delete('/api/questions/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    await db.deleteQuestion(id);
-    res.json({ message: 'Question deleted successfully' });
-  } catch (error) {
-    console.error('Failed to delete question:', error);
-    res.status(500).json({ error: 'Failed to delete question' });
   }
 });
 
@@ -1177,7 +1152,7 @@ app.put('/api/responses/:questionId', async (req, res) => {
     console.error('Error updating response:', error);
     res.status(500).json({ error: 'Failed to update response', details: error.message });
   }
- });
+});
 
 // Add response endpoints
 app.get('/api/responses', async (req, res): Promise<void> => {
