@@ -1129,6 +1129,26 @@ app.delete('/api/questions/:id', async (req, res) => {
   }
 });
 
+app.post('/api/questions/publish', async (req, res) => {
+  try {
+    const { questionIds } = req.body;
+    
+    if (!Array.isArray(questionIds) || questionIds.length === 0) {
+      return res.status(400).json({ error: 'No question IDs provided' });
+    }
+    
+    // Update each question's status to 'published'
+    for (const id of questionIds) {
+      await db.updateQuestionStatus(id, 'published');
+    }
+    
+    res.json({ message: 'Questions published successfully' });
+  } catch (error) {
+    console.error('Failed to publish questions:', error);
+    res.status(500).json({ error: 'Failed to publish questions', details: error.message });
+  }
+});
+
 app.put('/api/responses/:questionId', async (req, res) => {
   try {
     const { questionId } = req.params;

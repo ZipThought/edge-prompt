@@ -5,6 +5,7 @@ import { api } from '../../services/api';
 import { useProject } from '../../contexts/ProjectContext';
 import { Project, PromptTemplate } from '../../types';
 import { QuestionGenerationService } from '../../services/QuestionGenerationService';
+import { useQuestions } from '../../contexts/QuestionContext';
 
 interface Props {
   project: Project;
@@ -21,6 +22,27 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
   const [editedQuestionText, setEditedQuestionText] = useState<string>('');
   const [editingRubric, setEditingRubric] = useState<boolean>(false);
   const [editedRubricItems, setEditedRubricItems] = useState<string[]>([]);
+  const [isPosting, setIsPosting] = useState(false);
+  const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(new Set());
+
+  // Uncomment if using context for questions
+  // const { 
+  //   questions, 
+  //   loading, 
+  //   error, 
+  //   selectedQuestions,
+  //   editingQuestionId,
+  //   generateQuestion,
+  //   saveQuestion,
+  //   deleteQuestion,
+  //   toggleQuestionSelection,
+  //   setEditingQuestion,
+  //   postQuestionsToStudents
+  // } = useQuestions();
+  
+  // // Local state for editing
+  // const [editedQuestionText, setEditedQuestionText] = useState('');
+  // const [editedRubricItems, setEditedRubricItems] = useState<string[]>([]);
   
   // Get templates from material metadata
   const availableTemplates = material.metadata?.templates || [];
@@ -234,6 +256,44 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
     }
   };
 
+  // Toggle question selection for posting
+  const toggleQuestionSelection = (questionId: string) => {
+    setSelectedQuestions(prev => {
+      const newSelection = new Set(prev);
+      if (newSelection.has(questionId)) {
+        newSelection.delete(questionId);
+      } else {
+        newSelection.add(questionId);
+      }
+      return newSelection;
+    });
+  };
+
+  // Handle posting questions to students
+  const handlePostToStudents = async () => {
+    if (selectedQuestions.size === 0) {
+      alert('Please select at least one question to post');
+      return;
+    }
+    
+    setIsPosting(true);
+    
+    try {
+      // Call API to post questions to students
+      await api.postQuestionsToStudents(Array.from(selectedQuestions));
+      
+      // Reset selection and show success message
+      setSelectedQuestions(new Set());
+      alert('Questions have been posted to students successfully');
+      
+    } catch (error) {
+      console.error('Error posting questions:', error);
+      setError(error instanceof Error ? error.message : 'Failed to post questions');
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
@@ -296,7 +356,21 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
                     <div className="mb-3">
                       <div className="card">
                         <div className="card-header bg-light d-flex justify-content-between align-items-center">
-                          <h6 className="mb-0">Generated Question</h6>
+                          <div className="d-flex align-items-center">
+                            <div className="form-check me-2">
+                              <input 
+                                className="form-check-input" 
+                                type="checkbox" 
+                                checked={selectedQuestions.has(generatedQuestion.id)}
+                                onChange={() => toggleQuestionSelection(generatedQuestion.id)}
+                                id={`question-select-${generatedQuestion.id}`}
+                              />
+                              <label className="form-check-label visually-hidden" htmlFor={`question-select-${generatedQuestion.id}`}>
+                                Select question
+                              </label>
+                            </div>
+                            <h6 className="mb-0">Generated Question</h6>
+                          </div>
                           <div>
                             {editingQuestionId === generatedQuestion.id ? (
                               <>
@@ -423,6 +497,39 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
                               )}
                             </div>
                           )}
+
+                          {savedQuestions.length > 0 && (
+                            <div className="mt-4 d-flex justify-content-between">
+                              <div>
+                                <span className="me-2">Selected: {selectedQuestions.size}/{savedQuestions.length}</span>
+                                <button 
+                                  className="btn btn-sm btn-outline-secondary"
+                                  onClick={() => setSelectedQuestions(new Set())}
+                                  disabled={selectedQuestions.size === 0}
+                                >
+                                  Clear Selection
+                                </button>
+                              </div>
+                              <button 
+                                className="btn btn-primary"
+                                onClick={handlePostToStudents}
+                                disabled={isPosting || selectedQuestions.size === 0}
+                              >
+                                {isPosting ? (
+                                  <>
+                                    <span className="spinner-border spinner-border-sm me-2"></span>
+                                    Posting...
+                                  </>
+                                ) : (
+                                  <>
+                                    <i className="bi bi-send-fill me-2"></i>
+                                    Post Selected Questions to Students
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          )}
+                          
                         </div>
                       </div>
                     </div>

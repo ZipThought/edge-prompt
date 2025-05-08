@@ -532,7 +532,17 @@ export class DatabaseService {
   async updateResponse(id: string, response: string) {
     const stmt = this.db.prepare('UPDATE responses SET response = ? WHERE question_id = ?');
     stmt.run(response, id);
-   }
+  }
+
+  async updateQuestionStatus(id: string, status: string) {
+    const stmt = this.db.prepare(`
+      UPDATE generated_questions 
+      SET status = ?, 
+          metadata = JSON_SET(COALESCE(metadata, '{}'), '$.publishedAt', ?)
+      WHERE id = ?
+    `);
+    stmt.run(status, new Date().toISOString(), id);
+  }
 
   // Response methods
   async getQuestionResponses(questionId: string) {

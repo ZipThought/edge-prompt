@@ -476,6 +476,14 @@ class ApiClient {
     });
   }
 
+  // Post questions to students (make them available)
+  async postQuestionsToStudents(questionIds: string[]) {
+    return this.request<{ message: string }>('/questions/publish', {
+      method: 'POST',
+      body: JSON.stringify({ questionIds }),
+    });
+  }
+
 }
 
 export const api = new ApiClient(); 

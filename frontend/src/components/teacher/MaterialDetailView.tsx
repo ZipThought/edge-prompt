@@ -490,6 +490,11 @@ export const MaterialDetailView: React.FC<Props> = ({ project, materialId, onBac
           project={project}
           material={material} />
         )}
+        {/* {activeTab === 'questions' && project && (
+          <QuestionProvider materialId={material.id}>
+            <QuestionGenerator project={project} material={material} />
+          </QuestionProvider>
+        )} */}
       </div>
 
       <div className="card-footer bg-light d-flex justify-content-between">
