@@ -528,12 +528,24 @@ export class DatabaseService {
   // Response methods
   async getQuestionResponses(questionId: string) {
     const stmt = this.db.prepare(`
-      SELECT * FROM responses 
-      WHERE question_id = ?
-      ORDER BY created_at DESC
+      SELECT r.*, u.firstname, u.lastname
+      FROM responses r
+      JOIN users u ON r.student_id = u.id
+      WHERE r.question_id = ?
+        AND r.final_submission = TRUE
+        AND r.id IN (
+          SELECT id FROM (
+            SELECT id,
+                   ROW_NUMBER() OVER (PARTITION BY student_id ORDER BY created_at DESC) AS rn
+            FROM responses
+            WHERE question_id = ? AND final_submission = TRUE
+          )
+          WHERE rn = 1
+        )
+      ORDER BY r.created_at DESC
     `);
-    
-    const responses = stmt.all(questionId) as any[];
+  
+    const responses = stmt.all(questionId, questionId) as any[];
     return responses.map(r => ({
       id: r.id,
       questionId: r.question_id,
@@ -542,9 +554,30 @@ export class DatabaseService {
       feedback: r.feedback,
       metadata: JSON.parse(r.metadata || '{}'),
       createdAt: r.created_at,
-      final_submission: r.final_submission
+      final_submission: r.final_submission,
+      studentName: `${r.firstname} ${r.lastname}`
     }));
   }
+  
+
+  async getStudentResponsesWithDetails(studentId: string, materialId: string) {
+    const stmt = this.db.prepare(`
+      SELECT 
+        q.id AS questionId,
+        q.question AS questionText,
+        r.answer_text AS studentAnswer,
+        rb.rubric_text AS rubric,
+        f.feedback_text AS feedback,
+        f.score AS score
+      FROM generated_questions q
+      LEFT JOIN responses r ON q.id = r.question_id AND r.student_id = ?
+      LEFT JOIN rubrics rb ON q.id = rb.question_id
+      LEFT JOIN feedback f ON r.id = f.response_id
+      WHERE q.material_id = ?
+    `);
+  
+    return stmt.all(studentId, materialId);
+  }  
 
   async getResponse(id: string) {
     const stmt = this.db.prepare(`
@@ -606,14 +639,43 @@ export class DatabaseService {
     stmt.run(questionId);
   }
 
-  async setFinalSubmissionForModule(materialId: string): Promise<void> {
-    const stmt = this.prepareStatement(`
-      UPDATE responses
-      SET final_submission = TRUE
-      WHERE question_id IN (SELECT id FROM generated_questions WHERE material_id = ?)
-    `);
-    stmt.run(materialId);
-  }
+  async setFinalSubmissionForModule(materialId: string, studentId: string): Promise<void> {
+    const tx = this.db.transaction(() => {
+      // 1. Set current student's responses to false
+      this.db.prepare(`
+        UPDATE responses
+        SET final_submission = FALSE
+        WHERE student_id = ?
+          AND question_id IN (
+            SELECT id FROM generated_questions WHERE material_id = ?
+          )
+      `).run(studentId, materialId);
+  
+      // 2. Get all question IDs for this material
+      const questions = this.db.prepare(`
+        SELECT id FROM generated_questions WHERE material_id = ?
+      `).all(materialId) as { id: string }[];
+  
+      // 3. For each question, mark the latest response from this student as final
+      const updateStmt = this.db.prepare(`
+        UPDATE responses
+        SET final_submission = TRUE
+        WHERE id = (
+          SELECT id FROM responses
+          WHERE question_id = ?
+            AND student_id = ?
+          ORDER BY created_at DESC
+          LIMIT 1
+        )
+      `);
+  
+      for (const q of questions) {
+        updateStmt.run(q.id, studentId);
+      }
+    });
+  
+    tx();
+  }  
 
   async isMaterialFinallySubmitted(materialId: string): Promise<boolean> {
     const stmt = this.prepareStatement(`
