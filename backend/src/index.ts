@@ -15,7 +15,7 @@ import { StorageService } from './services/StorageService.js';
 import { v4 as uuid } from 'uuid';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { authMiddleware } from './middleware/authMiddleware.js';
+import { authMiddleware, jwtSecret } from './middleware/authMiddleware.js';
 import escape from 'escape-html';
 import { validateUploadedFile } from './utils/fileValidation.js';
 
@@ -138,7 +138,7 @@ app.post('/api/signin', async (req, res) => {
     // 5. Generate JWT
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: userRole },
-      process.env.JWT_SECRET || 'your-secret-key',
+      jwtSecret,
       { expiresIn: '1h' }
     );
 
@@ -1043,12 +1043,14 @@ app.post('/api/questions', async (req, res): Promise<void> => {
     }
     
     // Use the DatabaseService createQuestion method
-    const questionId = await db.createQuestion({
+    const questionId = uuid();
+    await db.createQuestion({
+      questionId,
       materialId,
       promptTemplateId,
       question,
-      template: JSON.stringify({}),  // Empty template object since we're not using it anymore
-      rules: JSON.stringify({}),     // Empty rules object since we're not using it anymore
+      template: JSON.stringify({}),  
+      rules: JSON.stringify({}),
       metadata
     });
     
@@ -1156,7 +1158,12 @@ app.get('/api/responses', async (req, res): Promise<void> => {
 
 app.post('/api/responses', async (req, res): Promise<void> => {
   try {
-    const { questionId, response, score, feedback, metadata } = req.body;
+    const { questionId, response } = req.body;
+    console.log('Received response creation request:', req.body);
+
+    const token = req.headers.authorization?.split(' ')[1];
+    const decodedToken = token ? jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') : null;
+    const studentId = decodedToken?.userId;
     
     if (!questionId || !response) {
       res.status(400).json({ 
@@ -1172,6 +1179,7 @@ app.post('/api/responses', async (req, res): Promise<void> => {
     console.log('Received response creation request:', req.body);
     const responseId = await db.createResponse({
       questionId,
+      studentId,
       response,
     });
     console.log('Created response with ID:', responseId);

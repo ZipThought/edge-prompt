@@ -370,8 +370,13 @@ class ApiClient {
   }
 
   async saveResponse(response: any) {
+    const token = localStorage.getItem('token');
+
     return this.request<any>('/responses', {
       method: 'POST',
+      headers: {
+        ...(token ? { token } : {}),
+      },
       body: JSON.stringify(response),
     });
   }

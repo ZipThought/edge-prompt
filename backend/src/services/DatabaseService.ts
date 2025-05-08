@@ -576,19 +576,21 @@ export class DatabaseService {
 
   async createResponse(params: {
     questionId: string;
+    studentId: string;
     response: string;
   }) {
     const stmt = this.db.prepare(`
       INSERT INTO responses (
-        id, question_id, response, final_submission
+        id, question_id, student_id, response, final_submission
       )
-      VALUES (?, ?, ?, FALSE)
+      VALUES (?, ?, ? , ?, FALSE)
     `);
 
     const id = uuid();
     stmt.run(
       id,
       params.questionId,
+      params.studentId,
       params.response,
     );
     
