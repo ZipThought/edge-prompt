@@ -62,7 +62,6 @@ const upload = multer({
   }
 });
 
-
 // Signup Endpoint - connected to DatabaseService.ts
 app.post('/api/signup', async (req, res) => {
   console.log("Received signup request:", req.body);
@@ -302,6 +301,7 @@ app.get('/api/class/:id', authMiddleware, async (req, res) => {
   }
 });
 
+// Classroom routes
 const classroomRouter = express.Router();
 
 // Classroom routes
@@ -394,6 +394,7 @@ classroomRouter.get('/:classroom_id/students', authMiddleware, async (req, res) 
   }
 });
 
+// Get materials for classroom
 classroomRouter.get('/:classroom_id/materials', authMiddleware, async (req, res) => {
   try {
       const materials = await db.getMaterialsForClassroom(req.params.classroom_id);
@@ -403,7 +404,8 @@ classroomRouter.get('/:classroom_id/materials', authMiddleware, async (req, res)
   }
 });
 
-app.use('/api/classrooms', classroomRouter); // Mount the classroom router
+// Mount the classroom router
+app.use('/api/classrooms', classroomRouter);
 
 // Update classroom details
 classroomRouter.put('/:id', authMiddleware, async (req, res) => {
@@ -462,6 +464,7 @@ classroomRouter.get('/:classroom_id/students/available', authMiddleware, async (
   }
 });
 
+// Health check endpoint
 app.get('/api/health', async (_req, res): Promise<void> => {
   try {
     const isLMStudioAvailable = await lmStudio.isAvailable();
@@ -479,6 +482,7 @@ app.get('/api/health', async (_req, res): Promise<void> => {
   }
 });
 
+// Validation endpoint
 app.post('/api/validate', async (req, res): Promise<void> => {
   try {
     const { questionId, answer } = req.body;
@@ -525,6 +529,7 @@ app.post('/api/validate', async (req, res): Promise<void> => {
   }
 });
 
+// Question generation endpoint
 app.post('/api/generate', async (req, res): Promise<void> => {
   try {
     const { materialId, promptTemplateId, templateIndex, useSourceLanguage } = req.body;
@@ -625,6 +630,7 @@ app.post('/api/generate', async (req, res): Promise<void> => {
   }
 });
 
+// Material processing endpoint
 app.post('/api/materials/process', async (req, res): Promise<void> => {
   const { material, projectId } = req.body;
   
@@ -867,6 +873,7 @@ app.get('/api/projects', async (_req, res): Promise<void> => {
   }
 });
 
+// Get projects for a specific class
 app.get('/api/classes/:classId/projects', authMiddleware, async (req, res): Promise<void> => {
   try {
     const { classId } = req.params;
@@ -886,6 +893,7 @@ app.get('/api/classes/:classId/projects', authMiddleware, async (req, res): Prom
   }
 });
 
+// Create a new project
 app.post('/api/projects', async (req, res): Promise<void> => {
   try {
     console.log("Received project creation request:", req.body);
@@ -898,6 +906,7 @@ app.post('/api/projects', async (req, res): Promise<void> => {
   }
 });
 
+// Get a specific project
 app.get('/api/projects/:id', authMiddleware, async (req, res): Promise<void> => {
   try {
     const project = await db.getProject(req.params.id);
@@ -908,6 +917,7 @@ app.get('/api/projects/:id', authMiddleware, async (req, res): Promise<void> => 
   }
  });
 
+// Update a project
 app.put('/api/projects/:id', async (req, res): Promise<void> => {
   try {
     await db.updateProject(req.params.id, req.body);
@@ -919,6 +929,7 @@ app.put('/api/projects/:id', async (req, res): Promise<void> => {
   }
 });
 
+// Delete a project
 app.delete('/api/projects/:id', async (req, res): Promise<void> => {
   try {
     await db.deleteProject(req.params.id);
@@ -940,6 +951,7 @@ app.get('/api/prompt-templates', async (_req, res): Promise<void> => {
   }
 });
 
+// Get a specific prompt template
 app.post('/api/prompt-templates', async (req, res): Promise<void> => {
   try {
     const templateId = await db.createPromptTemplate(req.body);
@@ -971,6 +983,7 @@ app.get('/api/materials', async (req, res): Promise<void> => {
   }
 });
 
+// Get materials for a specific classroom
 app.get('/api/materials/:id', async (req, res): Promise<void> => {
   try {
     const id = req.params.id;
@@ -985,6 +998,7 @@ app.get('/api/materials/:id', async (req, res): Promise<void> => {
   }
 });
 
+// Delete material endpoint
 app.delete('/api/materials/:id', async (req, res): Promise<void> => {
   try {
     const id = req.params.id;
@@ -1029,6 +1043,7 @@ app.get('/api/questions', async (req, res): Promise<void> => {
   }
 });
 
+// Create a new question
 app.post('/api/questions', async (req, res): Promise<void> => {
   try {
     const { materialId, promptTemplateId, question, metadata } = req.body;
@@ -1074,22 +1089,23 @@ app.post('/api/questions', async (req, res): Promise<void> => {
   }
 });
 
+// Update a question
 app.put('/api/questions/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { question, rubric, metadata } = req.body;
+    const { question, rubric } = req.body;
 
     if (!question) {
       return res.status(400).json({ error: 'Question text is required' });
     }
 
-    // Update the question and rubric inside metadata.rules
-    const updatedMetadata = {
-      ...metadata,
-      rules: JSON.stringify(rubric)
+    // Create metadata with the rubric information
+    const metadata = {
+      rules: JSON.stringify(rubric || {})
     };
 
-    await db.updateQuestion(id, question, updatedMetadata);
+    // Update the question in the database
+    await db.updateQuestion(id, question, metadata);
 
     res.json({ message: 'Question updated successfully' });
   } catch (error) {
@@ -1098,6 +1114,7 @@ app.put('/api/questions/:id', async (req, res) => {
   }
 });
 
+// Delete a question
 app.delete('/api/questions/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1109,6 +1126,7 @@ app.delete('/api/questions/:id', async (req, res) => {
   }
 });
 
+// Update a response
 app.put('/api/responses/:questionId', async (req, res) => {
   try {
     const { questionId } = req.params;
@@ -1159,6 +1177,7 @@ app.get('/api/responses', async (req, res): Promise<void> => {
   }
 });
 
+// Create a new response
 app.post('/api/responses', async (req, res): Promise<void> => {
   try {
     const { questionId, response } = req.body;
@@ -1198,6 +1217,7 @@ app.post('/api/responses', async (req, res): Promise<void> => {
   }
 });
 
+// Final submission endpoint
 app.post('/api/responses/final-submit', authMiddleware, async (req, res) => {
   try {
     const { materialId } = req.body;
@@ -1216,7 +1236,7 @@ app.post('/api/responses/final-submit', authMiddleware, async (req, res) => {
   }
 });
 
-
+// Get student responses with details
 app.get('/api/teacher/student-responses/:studentId/:materialId', authMiddleware, async (req, res) => {
   const { studentId, materialId } = req.params;
 
@@ -1229,6 +1249,7 @@ app.get('/api/teacher/student-responses/:studentId/:materialId', authMiddleware,
   }
 });
 
+// Check if a material has been finally submitted
 app.get('/api/materials/:materialId/final-submission', authMiddleware, async (req, res) => {
   try {
       const id = req.params.materialId;

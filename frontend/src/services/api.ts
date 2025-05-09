@@ -336,11 +336,11 @@ class ApiClient {
       }),
     });
   }
-
+  
   async getQuestions(materialId: string) {
     return this.request<any[]>(`/questions?materialId=${materialId}`);
   }
-
+  
   async saveQuestion(question: {
     materialId: string;
     promptTemplateId: string;
@@ -351,6 +351,24 @@ class ApiClient {
     return this.request<any>('/questions', {
       method: 'POST',
       body: JSON.stringify(question),
+    });
+  }
+  
+  // Delete a question
+  async deleteQuestion(questionId: string) {
+    return this.request<{ message: string }>(`/questions/${questionId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Update a question
+  async updateQuestion(questionId: string, updatedText: string, rubric?: any) {
+    return this.request<{ message: string }>(`/questions/${questionId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ 
+        question: updatedText,
+        rubric: rubric
+      }),
     });
   }
 
@@ -453,21 +471,6 @@ class ApiClient {
 
     return response.json();
   }
-
-  // Delete a question
-async deleteQuestion(questionId: string) {
-  return this.request<{ message: string }>(`/questions/${questionId}`, {
-    method: 'DELETE',
-  });
-}
-
-// Update a question
-async updateQuestion(questionId: string, updatedText: string) {
-  return this.request<{ message: string }>(`/questions/${questionId}`, {
-    method: 'PUT',
-    body: JSON.stringify({ question: updatedText }),
-  });
-}
 
 }
 
