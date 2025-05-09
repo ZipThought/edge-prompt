@@ -481,44 +481,48 @@ export class DatabaseService {
       WHERE material_id = ?
       ORDER BY created_at DESC
     `);
-    
+  
     const questions = stmt.all(materialId) as any[];
-    
+  
     return questions.map(q => {
-      // Parse metadata to get the rules field (which contains our rubric)
       let metadata = {};
       let rubric = {};
-      
+  
       try {
         metadata = JSON.parse(q.metadata || '{}');
-        // The rules are stored in metadata.rules in our database schema
+  
+        // Preserve rules (do not delete it)
         if (metadata.rules) {
-          rubric = JSON.parse(metadata.rules);
-          delete metadata.rules; // Remove from metadata to avoid duplication
+          try {
+            rubric = JSON.parse(metadata.rules);
+          } catch (e) {
+            console.warn(`Failed to parse metadata.rules for question ${q.id}:`, e);
+          }
         }
+  
       } catch (e) {
-        console.warn(`Failed to parse metadata for question ${q.id}`, e);
+        console.warn(`Failed to parse metadata for question ${q.id}:`, e);
       }
-      
-      // Parse template constraints
+  
       let template = {};
       try {
         template = JSON.parse(q.constraints || '{}');
       } catch (e) {
-        console.warn(`Failed to parse constraints for question ${q.id}`, e);
+        console.warn(`Failed to parse constraints for question ${q.id}:`, e);
       }
-      
+  
       return {
         id: q.id,
         materialId: q.material_id,
         promptTemplateId: q.prompt_template_id,
         question: q.question,
         template,
-        rubric,  // Include the parsed rubric
-        metadata
+        rubric,
+        metadata 
       };
     });
   }
+  
 
   async updateResponse(id: string, response: string) {
     const stmt = this.db.prepare('UPDATE responses SET response = ? WHERE question_id = ?');

@@ -1015,8 +1015,11 @@ app.get('/api/questions', async (req, res): Promise<void> => {
     res.json(questions.map(q => ({
       id: q.id,
       materialId: q.materialId,
-      question: q.question
-    })));
+      question: q.question,
+      metadata: q.metadata,       // include metadata
+      rubric: q.rubric,           
+      template: q.template        
+    })));    
   } catch (error) {
     console.error('Failed to get questions:', error);
     res.status(500).json({
