@@ -12,8 +12,11 @@ const MaterialDetailPage = () => {
   const [questions, setQuestions] = useState<any[]>([]);
   const [promptTemplates, setPromptTemplates] = useState<any[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Modify the state to include rubric editing
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedQuestion, setEditedQuestion] = useState("");
+  const [editedValidationChecks, setEditedValidationChecks] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
@@ -93,18 +96,45 @@ const MaterialDetailPage = () => {
     }
   };
 
+  // Modify the handleSaveEdit function
   const handleSaveEdit = async () => {
     if (!editingId || !editedQuestion) return;
     try {
-      await api.updateQuestion(editingId, editedQuestion);
+      // Create a rubric object with the validation checks
+      const rubric = {
+        validationChecks: editedValidationChecks
+      };
+
+      // Call the API to update the question with both text and rubric
+      await api.updateQuestion(editingId, editedQuestion, rubric);
+
+      // Update the local state
       setQuestions(prev =>
-        prev.map(q => (q.id === editingId ? { ...q, question: editedQuestion } : q))
+        prev.map(q => (q.id === editingId ? { 
+          ...q, 
+          question: editedQuestion,
+          rubric: { ...q.rubric, validationChecks: editedValidationChecks }
+        } : q))
       );
+
+      // Reset editing state
       setEditingId(null);
       setEditedQuestion("");
+      setEditedValidationChecks([]);
+      setSuccessMessage("Question updated successfully.");
     } catch {
       alert("Failed to update question");
     }
+  };
+
+  // Add function to prepare for editing
+  const prepareEdit = (question: any) => {
+    setEditingId(question.id);
+    setEditedQuestion(question.question);
+
+    // Extract validation checks from the rubric
+    const checks = question.rubric?.validationChecks || [];
+    setEditedValidationChecks(Array.isArray(checks) ? checks : []);
   };
 
   if (!material) return <div className="text-center mt-5">Loading...</div>;
@@ -197,41 +227,76 @@ const MaterialDetailPage = () => {
                                 className="form-control mb-2"
                                 value={editedQuestion}
                                 onChange={(e) => setEditedQuestion(e.target.value)}
+                                rows={3}
                               />
+                              
+                              <h6 className="mt-3 mb-2">Marking Criteria</h6>
+                              {editedValidationChecks.map((check, idx) => (
+                                <div key={idx} className="input-group mb-2">
+                                  <input
+                                    type="text"
+                                    className="form-control form-control-sm"
+                                    value={check}
+                                    onChange={(e) => {
+                                      const updated = [...editedValidationChecks];
+                                      updated[idx] = e.target.value;
+                                      setEditedValidationChecks(updated);
+                                    }}
+                                  />
+                                  <button
+                                    className="btn btn-sm btn-outline-danger"
+                                    onClick={() => {
+                                      const updated = editedValidationChecks.filter((_, i) => i !== idx);
+                                      setEditedValidationChecks(updated);
+                                    }}
+                                  >
+                                    <i className="bi bi-trash"></i>
+                                  </button>
+                                </div>
+                              ))}
+                              
+                              <button
+                                className="btn btn-sm btn-outline-primary mb-3"
+                                onClick={() => setEditedValidationChecks([...editedValidationChecks, ''])}
+                              >
+                                <i className="bi bi-plus"></i> Add Criterion
+                              </button>
+                              
                               <div className="d-flex gap-2">
                                 <button className="btn btn-success btn-sm" onClick={handleSaveEdit}>
                                   Save
                                 </button>
                                 <button
                                   className="btn btn-secondary btn-sm"
-                                  onClick={() => setEditingId(null)}
+                                  onClick={() => {
+                                    setEditingId(null);
+                                    setEditedQuestion("");
+                                    setEditedValidationChecks([]);
+                                  }}
                                 >
                                   Cancel
                                 </button>
                               </div>
                             </>
                           ) : (
-                            <>
-                              <p>{q.question}</p>
-                              <div className="d-flex gap-2">
-                                <button
-                                  className="btn btn-outline-primary btn-sm"
-                                  onClick={() => {
-                                    setEditingId(q.id);
-                                    setEditedQuestion(q.question);
-                                  }}
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  className="btn btn-outline-danger btn-sm"
-                                  onClick={() => handleDeleteQuestion(q.id)}
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </>
-                          )}
+                          <>
+                            <p>{q.question}</p>
+                            <div className="d-flex gap-2">
+                              <button
+                                className="btn btn-outline-primary btn-sm"
+                                onClick={() => prepareEdit(q)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="btn btn-outline-danger btn-sm"
+                                onClick={() => handleDeleteQuestion(q.id)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </>
+                        )}
 
                           {q.rubric?.validationChecks && (
                             <>

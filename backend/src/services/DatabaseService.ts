@@ -109,6 +109,7 @@ export class DatabaseService {
     }));
   }
 
+  // Get project by ID
   getProject(id: string): Project {
     const stmt = this.db.prepare('SELECT * FROM projects WHERE id = ?');
     const project = stmt.get(id) as ProjectRow | undefined;
@@ -128,6 +129,7 @@ export class DatabaseService {
     };
   }
 
+  // Create project method
   async createProject(params: {
     name: string;
     classroomId?: string;
@@ -154,6 +156,7 @@ export class DatabaseService {
     return id;
   }
 
+  // Update project method
   async updateProject(id: string, params: {
     name: string;
     description?: string;
@@ -178,6 +181,7 @@ export class DatabaseService {
     );
   }
 
+  // Delete project method
   async deleteProject(id: string) {
     const stmt = this.db.prepare('DELETE FROM projects WHERE id = ?');
     stmt.run(id);
@@ -188,10 +192,12 @@ export class DatabaseService {
     return this.db.prepare('SELECT * FROM prompt_templates ORDER BY name, version').all();
   }
 
+  // Get prompt template by ID
   async getPromptTemplate(id: string) {
     return this.db.prepare('SELECT * FROM prompt_templates WHERE id = ?').get(id);
   }
 
+  // Get prompt template by name
   async createPromptTemplate(params: {
     name: string;
     version: string;
@@ -217,6 +223,7 @@ export class DatabaseService {
   }
 
   // Material management methods
+  // Create material method
   async createMaterial(params: {
     projectId: string;
     classroomId?: string;
@@ -254,6 +261,7 @@ export class DatabaseService {
     return id;
   }
 
+  // Get all projects for a classroom
   async getProjectsForClass(classroomId: string): Promise<Project[]> {
     const stmt = this.prepareStatement(`
       SELECT * FROM projects WHERE classroom_id = ?
@@ -273,6 +281,7 @@ export class DatabaseService {
     }));
   }
 
+  // Get all materials for a project
   async getMaterial(id: string): Promise<Material> {
     const stmt = this.db.prepare(`
       SELECT m.*, p.name as project_name 
@@ -302,6 +311,7 @@ export class DatabaseService {
     };
   }
 
+  // Get all materials for a project
   async getProjectMaterials(projectId: string): Promise<Material[]> {
     const stmt = this.db.prepare(`
       SELECT m.*, p.name as project_name 
@@ -328,6 +338,7 @@ export class DatabaseService {
     }));
   }
 
+  // Update material status
   async updateMaterialStatus(id: string, status: MaterialStatus): Promise<void> {
     const stmt = this.db.prepare(`
       UPDATE materials 
@@ -338,6 +349,7 @@ export class DatabaseService {
     stmt.run(status, id);
   }
 
+  // Delete material method
   async deleteMaterial(id: string): Promise<void> {
     const material = await this.getMaterial(id);
     let stmt = this.prepareStatement('DELETE FROM generated_questions WHERE material_id = ?');
@@ -377,6 +389,7 @@ export class DatabaseService {
     }));
   }
 
+  // Get question by ID
   async getQuestion(id: string) {
     const stmt = this.db.prepare(`
       SELECT * FROM generated_questions 
@@ -399,6 +412,7 @@ export class DatabaseService {
     };
   }
   
+  // Create rubric method
   async createRubric(params: {rubricId: string; questionId: string; rubric: any}) {
     const stmt = this.db.prepare(`
       INSERT INTO rubrics (id, question_id, rubric_text)
@@ -409,6 +423,7 @@ export class DatabaseService {
     return params.rubricId;
   }
 
+  // Get rubric by question ID
   async getRubricFromQuestion(questionId: string) {
     const stmt = this.db.prepare(`
       SELECT * FROM rubrics 
@@ -427,6 +442,7 @@ export class DatabaseService {
     };
   }
 
+  // Create question method
   async createQuestion(params: {
     questionId: string;
     materialId: string;
@@ -460,20 +476,46 @@ export class DatabaseService {
     return params.questionId;
   }
 
+  // Update question method
   async updateQuestion(id: string, question: string, metadata: any) {
-    const stmt = this.db.prepare(`
+    // First retrieve existing metadata
+    const stmt1 = this.db.prepare(`
+      SELECT metadata FROM generated_questions WHERE id = ?
+    `);
+    const existingData = stmt1.get(id) as any;
+    
+    let updatedMetadata = metadata;
+    
+    // If there's existing metadata, merge it with the new metadata
+    if (existingData && existingData.metadata) {
+      try {
+        const existingMetadata = JSON.parse(existingData.metadata);
+        updatedMetadata = {
+          ...existingMetadata,
+          ...metadata
+        };
+      } catch (e) {
+        console.warn(`Failed to parse existing metadata for question ${id}:`, e);
+      }
+    }
+    
+    // Update the question with merged metadata
+    const stmt2 = this.db.prepare(`
       UPDATE generated_questions 
       SET question = ?, metadata = ?
       WHERE id = ?
     `);
-    stmt.run(question, JSON.stringify(metadata), id);
+    
+    stmt2.run(question, JSON.stringify(updatedMetadata), id);
   }
   
+  // Delete question method
   async deleteQuestion(id: string) {
     const stmt = this.db.prepare(`DELETE FROM generated_questions WHERE id = ?`);
     stmt.run(id);
   }  
 
+  // Get all questions for a material
   async getQuestionsByMaterial(materialId: string) {
     const stmt = this.db.prepare(`
       SELECT id, material_id, prompt_template_id, question, constraints, metadata
@@ -523,13 +565,13 @@ export class DatabaseService {
     });
   }
   
-
+  // Update response method
   async updateResponse(id: string, response: string) {
     const stmt = this.db.prepare('UPDATE responses SET response = ? WHERE question_id = ?');
     stmt.run(response, id);
    }
 
-  // Response methods
+  // Get all responses for a question
   async getQuestionResponses(questionId: string) {
     const stmt = this.db.prepare(`
       SELECT r.*, u.firstname, u.lastname
@@ -563,7 +605,7 @@ export class DatabaseService {
     }));
   }
   
-
+  // Get all responses for a student
   async getStudentResponsesWithDetails(studentId: string, materialId: string) {
     const stmt = this.db.prepare(`
       SELECT 
@@ -606,6 +648,7 @@ export class DatabaseService {
     };
   }
 
+  // Delete response method
   async deleteResponse(id: string) {
     const stmt = this.db.prepare('DELETE FROM responses WHERE id = ?');
     stmt.run(id);
@@ -634,6 +677,7 @@ export class DatabaseService {
     return id;
   }
 
+  // Set final submission for a question
   async setFinalSubmissionForQuestion(questionId: string): Promise<void> {
     const stmt = this.prepareStatement(`
       UPDATE responses
@@ -643,6 +687,7 @@ export class DatabaseService {
     stmt.run(questionId);
   }
 
+  // Set final submission for a module
   async setFinalSubmissionForModule(materialId: string, studentId: string): Promise<void> {
     const tx = this.db.transaction(() => {
       // 1. Set current student's responses to false
@@ -681,6 +726,7 @@ export class DatabaseService {
     tx();
   }  
 
+  // Check if all questions for a material are finally submitted
   async isMaterialFinallySubmitted(materialId: string): Promise<boolean> {
     const stmt = this.prepareStatement(`
       SELECT 
@@ -695,10 +741,12 @@ export class DatabaseService {
     return result.allSubmitted === 0;
   }
   
+  // Get database path
   getDatabasePath() {
     return this.db.name || 'research.db';
   }
 
+  // Update material metadata
   async updateMaterialMetadata(materialId: string, metadata: any): Promise<void> {
     const stmt = this.prepareStatement(`
       UPDATE materials 
@@ -712,6 +760,7 @@ export class DatabaseService {
     );
   }
 
+  // Update material content and title
   async updateMaterialContent(materialId: string, content: string): Promise<void> {
     const stmt = this.prepareStatement(`
       UPDATE materials 
@@ -725,6 +774,7 @@ export class DatabaseService {
     );
   }
 
+  // Update material title
   async updateMaterialTitle(materialId: string, title: string): Promise<void> {
     const stmt = this.prepareStatement(`
       UPDATE materials 
@@ -738,6 +788,7 @@ export class DatabaseService {
     );
   }
 
+  // Update material fields
   async updateMaterialFields(id: string, data: { title?: string; content?: string; focusArea?: string }): Promise<void> {
     const updates: string[] = [];
     const params: any[] = [];
@@ -768,6 +819,7 @@ export class DatabaseService {
     stmt.run(...params);
   }  
 
+  // Update material reprocessed
   async updateMaterialReprocessed(params: {
     id: string;
     content: string;
@@ -807,6 +859,7 @@ export class DatabaseService {
       stmt.run(user.id, user.firstname, user.lastname, user.email, user.passwordhash, user.dob);
   }
 
+  // Update user profile
   async updateUserProfile(userId: string, data: {
     firstname: string;
     lastname: string;
@@ -826,6 +879,7 @@ export class DatabaseService {
     }
   }
 
+  // Update user password
   async updateUserPassword(userId: string, passwordHash: string): Promise<void> {
     try {
       const stmt = this.db.prepare(`
@@ -840,7 +894,7 @@ export class DatabaseService {
     }
   }
 
-  // Function to delete a user by email
+  // Delete a user by email
   async deleteUserByEmail(email: string): Promise<void> {
     try {
       const stmt = await this.db.prepare(`
@@ -854,7 +908,7 @@ export class DatabaseService {
     }
   }
   
-    // Function to get a user by email
+  // Get a user by email
   async getUserByEmail(email: string): Promise<User | null> { // Changed return type
     try {
       const stmt = await this.db.prepare(`
@@ -870,7 +924,7 @@ export class DatabaseService {
     }
   }
 
-  //Function to get user's information when logged in
+  // Get user's information when logged in
   async getUserById(userId: string): Promise<User | null> {
     try {
       const stmt = this.prepareStatement(`
@@ -886,6 +940,7 @@ export class DatabaseService {
     }
   }
 
+  // Delete user by ID
   async deleteUserById(userId: string): Promise<void> {
     let stmt = this.prepareStatement('DELETE FROM user_roles WHERE user_id = ?');
     stmt.run(userId);
@@ -893,7 +948,7 @@ export class DatabaseService {
     stmt.run(userId);
   }
     
-  //Function to create new role
+  // Create new role
   async createRole(role: { id: string; name: string; description?: string }): Promise<void> {
     const stmt = this.prepareStatement(`
         INSERT INTO roles (id, name, description) VALUES (?, ?, ?)
@@ -915,7 +970,7 @@ export class DatabaseService {
     }
   }
 
-  //Function to assign role to user
+  // Assign role to user
   async assignRoleToUser(userId: string, roleId: string): Promise<void> {
     try {
       const stmt = this.db.prepare(`
@@ -929,7 +984,7 @@ export class DatabaseService {
     }
   }
 
-  //Function to get user role by user.id
+  // Get user role by user.id
   async getUserRoles(userId: string): Promise<string[]> {
     try {
       const stmt = this.db.prepare(`
@@ -946,7 +1001,7 @@ export class DatabaseService {
     }
   }
 
-  //Function to get users by roles
+  // Get users by roles
   async getUsersByRole(roleName: string): Promise<{ id: string; firstname: string; lastname: string; email: string }[]> {
     const stmt = this.prepareStatement(`
       SELECT u.id, u.firstname, u.lastname, u.email
@@ -958,7 +1013,7 @@ export class DatabaseService {
     return stmt.all(roleName);
   }
 
-  //Function to achieve user permissions
+  // Achieve user permissions
   async getUserPermissions(userId: string): Promise<string[]> {
     try {
       const stmt = this.db.prepare(`
@@ -976,7 +1031,7 @@ export class DatabaseService {
     }
   }
 
-  //Function to achieve role permissions
+  // Achieve role permissions
   async getRolePermissions(roleId: string): Promise<string[]> {
       const stmt = this.prepareStatement(`
           SELECT p.name
@@ -989,7 +1044,7 @@ export class DatabaseService {
       return result.map((row: any) => row.name);
   }
 
-  // Classrom functions
+  // Create classroom
   async createClassroom(name: string, description?: string): Promise<string> {
     const stmt = this.prepareStatement(`
         INSERT INTO classrooms (id, name, description) VALUES (?, ?, ?)
@@ -999,6 +1054,7 @@ export class DatabaseService {
     return id;
   }
 
+  // Get all classrooms
   async getClassroom(id: string): Promise<any> {
       const stmt = this.prepareStatement(`
           SELECT * FROM classrooms WHERE id = ?
@@ -1006,6 +1062,7 @@ export class DatabaseService {
       return stmt.get(id);
   }
 
+  // Get all classrooms by user ID
   async getClassroomWithDetailsById(classId: string): Promise<any> {
     const stmt = this.prepareStatement(`
       SELECT id as classId, name as className
@@ -1028,6 +1085,7 @@ export class DatabaseService {
     };
   }
 
+  // Get all classrooms for a teacher
   async getClassroomsForTeacher(userId: string): Promise<any[]> {
       const stmt = this.prepareStatement(`
           SELECT c.* FROM classrooms c
@@ -1037,6 +1095,7 @@ export class DatabaseService {
       return stmt.all(userId);
   }
 
+  // Add teacher to classroom
   async addTeacherToClassroom(classroomId: string, userId: string): Promise<void> {
       const stmt = this.prepareStatement(`
           INSERT INTO classroom_teachers (classroom_id, user_id) VALUES (?, ?)
@@ -1044,6 +1103,7 @@ export class DatabaseService {
       await stmt.run(classroomId, userId);
   }
 
+  // Add student to classroom
   async addStudentToClassroom(classroomId: string, userId: string): Promise<void> {
       const stmt = this.prepareStatement(`
           INSERT INTO classroom_students (classroom_id, user_id) VALUES (?, ?)
@@ -1051,6 +1111,7 @@ export class DatabaseService {
       await stmt.run(classroomId, userId);
   }
 
+  // Get all classrooms in which a student is enrolled
   async getStudentsInClassroom(classroomId: string): Promise<any[]> {
       const stmt = this.prepareStatement(`
           SELECT u.id, u.firstname || ' ' || u.lastname as name, u.email 
@@ -1061,6 +1122,7 @@ export class DatabaseService {
       return stmt.all(classroomId);
   }
 
+  // Get all materials for a classroom
   async getMaterialsForClassroom(classroomId: string): Promise<any[]> {
       const stmt = this.prepareStatement(`
           SELECT * FROM materials WHERE classroom_id = ?
@@ -1068,6 +1130,7 @@ export class DatabaseService {
       return stmt.all(classroomId);
   }
 
+  // Get all classrooms for a student
   async getStudentClasses(userId: string): Promise<any[]> {
     const stmt = this.prepareStatement(`
       SELECT c.id, c.name
@@ -1078,6 +1141,7 @@ export class DatabaseService {
     return stmt.all(userId);
   }
   
+  // Verify if a teacher has access to a classroom
   async verifyTeacherClassroomAccess(classroomId: string, teacherId: string): Promise<boolean> {
     const stmt = this.prepareStatement(`
       SELECT COUNT(*) as count FROM classroom_teachers 
@@ -1087,6 +1151,7 @@ export class DatabaseService {
     return result.count > 0;
   }
 
+  // Delete classroom
   async deleteClassroom(id: string): Promise<void> {
     // Start transaction to ensure all related records are deleted
     const transaction = this.db.transaction(() => {
@@ -1109,6 +1174,7 @@ export class DatabaseService {
     transaction();
   }
   
+  // Update classroom
   async updateClassroom(id: string, name: string, description?: string): Promise<void> {
     const stmt = this.prepareStatement(`
       UPDATE classrooms SET name = ?, description = ? WHERE id = ?
@@ -1116,6 +1182,7 @@ export class DatabaseService {
     await stmt.run(name, description, id);
   }
 
+  // Remove teacher from classroom
   async removeStudentFromClassroom(classroomId: string, userId: string): Promise<void> {
     const stmt = this.prepareStatement(`
       DELETE FROM classroom_students 
@@ -1124,6 +1191,7 @@ export class DatabaseService {
     await stmt.run(classroomId, userId);
   }
 
+  // Get all students in a classroom
   async getEnrolledStudents(classroomId: string): Promise<any[]> {
     const stmt = this.prepareStatement(`
       SELECT u.id, u.firstname || ' ' || u.lastname as name, u.email 
@@ -1134,6 +1202,7 @@ export class DatabaseService {
     return stmt.all(classroomId);
   }
 
+  // Get all available students for a classroom
   async getAvailableStudentsForClassroom(classroomId: string): Promise<any[]> {
     const stmt = this.prepareStatement(`
       SELECT u.id, u.firstname || ' ' || u.lastname as name, u.email 

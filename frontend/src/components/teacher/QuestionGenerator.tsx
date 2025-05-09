@@ -17,6 +17,11 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
   const [generatingTemplate, setGeneratingTemplate] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedQuestions, setSavedQuestions] = useState<GeneratedQuestion[]>([]);
+
+  // Add to the existing state variables at the top of the component
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [editedQuestionText, setEditedQuestionText] = useState('');
+  const [editedRubricChecks, setEditedRubricChecks] = useState<string[]>([]);
   
   // Get templates from material metadata
   const availableTemplates = material.metadata?.templates || [];
@@ -34,6 +39,50 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
     
     loadQuestions();
   }, [material.id]);
+
+  // Add this function to handle saving edited questions
+  const handleSaveEditedQuestion = async (questionId: string) => {
+    if (!editedQuestionText.trim()) {
+      return;
+    }
+
+    try {
+      // Create a rubric object with the edited validation checks
+      const rubric = {
+        validationChecks: editedRubricChecks
+      };
+
+      // Call the API to update the question
+      await api.updateQuestion(questionId, editedQuestionText, rubric);
+
+      // Update the local state to reflect the changes
+      const updatedQuestions = savedQuestions.map(q => {
+        if (q.materialId === questionId) {
+          return {
+            ...q,
+            question: editedQuestionText,
+            rubric: {
+              ...q.rubric,
+              validationChecks: editedRubricChecks
+            }
+          };
+        }
+        return q;
+      });
+
+      // Reset the editing state
+      setSavedQuestions(updatedQuestions);
+      setEditingQuestionId(null);
+      setEditedQuestionText('');
+      setEditedRubricChecks([]);
+
+      // Refresh questions from the server
+      const questions = await api.getQuestions(material.id);
+      setSavedQuestions(questions);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save question');
+    }
+  };
 
   const handleGenerateQuestion = async (template: any, index: number) => {
     if (!project?.promptTemplateId) {
@@ -214,40 +263,124 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
                         <div className="card-header bg-light d-flex justify-content-between align-items-center">
                           <h6 className="mb-0">Generated Question</h6>
                           <div>
-                            <button 
-                              className="btn btn-sm btn-outline-primary me-2"
-                              onClick={() => handleGenerateQuestion(template, index)}
-                              disabled={generatingTemplate !== null}
-                            >
-                              <i className="bi bi-arrow-repeat me-1"></i>
-                              Regenerate
-                            </button>
-                            <button 
-                              className="btn btn-sm btn-outline-success"
-                              onClick={() => {
-                                navigator.clipboard.writeText(generatedQuestion.question);
-                                alert('Question copied to clipboard');
-                              }}
-                            >
-                              <i className="bi bi-clipboard me-1"></i>
-                              Copy
-                            </button>
+                            {editingQuestionId === generatedQuestion.materialId ? (
+                              <>
+                                <button 
+                                  className="btn btn-sm btn-success me-2"
+                                  onClick={() => handleSaveEditedQuestion(generatedQuestion.materialId)}
+                                >
+                                  <i className="bi bi-check me-1"></i>
+                                  Save
+                                </button>
+                                <button 
+                                  className="btn btn-sm btn-outline-secondary"
+                                  onClick={() => {
+                                    setEditingQuestionId(null);
+                                    setEditedQuestionText('');
+                                    setEditedRubricChecks([]);
+                                  }}
+                                >
+                                  <i className="bi bi-x me-1"></i>
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button 
+                                  className="btn btn-sm btn-outline-primary me-2"
+                                  onClick={() => handleGenerateQuestion(template, index)}
+                                  disabled={generatingTemplate !== null}
+                                >
+                                  <i className="bi bi-arrow-repeat me-1"></i>
+                                  Regenerate
+                                </button>
+                                <button 
+                                  className="btn btn-sm btn-outline-secondary me-2"
+                                  onClick={() => {
+                                    setEditingQuestionId(generatedQuestion.materialId);
+                                    setEditedQuestionText(generatedQuestion.question);
+                                    setEditedRubricChecks(
+                                      generatedQuestion.rubric?.validationChecks || []
+                                    );
+                                  }}
+                                >
+                                  <i className="bi bi-pencil me-1"></i>
+                                  Edit
+                                </button>
+                                <button 
+                                  className="btn btn-sm btn-outline-success"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(generatedQuestion.question);
+                                    alert('Question copied to clipboard');
+                                  }}
+                                >
+                                  <i className="bi bi-clipboard me-1"></i>
+                                  Copy
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className="card-body">
                           <div>
                             <h6>Question:</h6>
-                            <p className="card-text">{generatedQuestion.question}</p>
+                            {editingQuestionId === generatedQuestion.materialId ? (
+                              <textarea
+                                className="form-control mb-3"
+                                value={editedQuestionText}
+                                onChange={(e) => setEditedQuestionText(e.target.value)}
+                                rows={4}
+                              />
+                            ) : (
+                              <p className="card-text">{generatedQuestion.question}</p>
+                            )}
                           </div>
                           
-                          {generatedQuestion.rubric && generatedQuestion.rubric.validationChecks && Array.isArray(generatedQuestion.rubric.validationChecks) && (
+                          {(generatedQuestion.rubric?.validationChecks || editingQuestionId === generatedQuestion.materialId) && (
                             <div className="mt-3">
                               <h6>Rubric:</h6>
-                              <ul className="list-group list-group-flush">
-                                {generatedQuestion.rubric.validationChecks.map((check: string, idx: number) => (
-                                  <li key={idx} className="list-group-item py-1 small">{check}</li>
-                                ))}
-                              </ul>
+                              {editingQuestionId === generatedQuestion.materialId ? (
+                                <div className="mb-3">
+                                  {editedRubricChecks.map((check, idx) => (
+                                    <div key={idx} className="input-group mb-2">
+                                      <input
+                                        type="text"
+                                        className="form-control form-control-sm"
+                                        value={check}
+                                        onChange={(e) => {
+                                          const updated = [...editedRubricChecks];
+                                          updated[idx] = e.target.value;
+                                          setEditedRubricChecks(updated);
+                                        }}
+                                      />
+                                      <button
+                                        className="btn btn-sm btn-outline-danger"
+                                        onClick={() => {
+                                          const updated = editedRubricChecks.filter((_, i) => i !== idx);
+                                          setEditedRubricChecks(updated);
+                                        }}
+                                      >
+                                        <i className="bi bi-trash"></i>
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <button
+                                    className="btn btn-sm btn-outline-primary"
+                                    onClick={() => setEditedRubricChecks([...editedRubricChecks, ''])}
+                                  >
+                                    <i className="bi bi-plus"></i> Add Criterion
+                                  </button>
+                                </div>
+                              ) : (
+                                <ul className="list-group list-group-flush">
+                                  {Array.isArray(generatedQuestion.rubric?.validationChecks) ? 
+                                    generatedQuestion.rubric.validationChecks.map((check: string, idx: number) => (
+                                      <li key={idx} className="list-group-item py-1 small">{check}</li>
+                                    )) : 
+                                    <li className="list-group-item py-1 small">No validation checks available</li>
+                                  }
+                                </ul>
+                              )}
                             </div>
                           )}
                         </div>
