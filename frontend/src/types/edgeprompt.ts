@@ -78,8 +78,15 @@ export interface GeneratedQuestion {
     generatedAt: string;
     templateIndex?: number;
     validationStages?: string[];
+    rules?: {
+      validationChecks?: string[];
+      scoringGuidelines?: string[];
+      maxScore?: number;
+      [key: string]: any;
+    };
   };
 }
+
 
 /**
  * Validation result from backend

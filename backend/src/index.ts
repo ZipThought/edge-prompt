@@ -1015,8 +1015,11 @@ app.get('/api/questions', async (req, res): Promise<void> => {
     res.json(questions.map(q => ({
       id: q.id,
       materialId: q.materialId,
-      question: q.question
-    })));
+      question: q.question,
+      metadata: q.metadata,       // include metadata
+      rubric: q.rubric,           
+      template: q.template        
+    })));    
   } catch (error) {
     console.error('Failed to get questions:', error);
     res.status(500).json({
@@ -1145,7 +1148,7 @@ app.get('/api/responses', async (req, res): Promise<void> => {
       return;
     }
     
-    const responses = await db.getQuestionResponses(questionId);
+    const responses = (await db.getQuestionResponses(questionId)).filter(r => r.final_submission);
     res.json(responses);
   } catch (error) {
     console.error('Failed to get responses:', error);
@@ -1195,19 +1198,34 @@ app.post('/api/responses', async (req, res): Promise<void> => {
   }
 });
 
-app.post('/api/responses/final-submit', async (req, res) => {
+app.post('/api/responses/final-submit', authMiddleware, async (req, res) => {
   try {
     const { materialId } = req.body;
-    if (!materialId) {
-      return res.status(400).json({ error: 'Material ID is required' });
+    const studentId = req.user?.userId;
+
+    if (!materialId || !studentId) {
+      return res.status(400).json({ error: 'Material ID and authenticated student are required' });
     }
 
-    await db.setFinalSubmissionForModule(materialId);
+    await db.setFinalSubmissionForModule(materialId, studentId);
     res.json({ message: 'Final submission recorded successfully' });
 
   } catch (error) {
     console.error('Error finalizing submission:', error);
     res.status(500).json({ error: 'Failed to finalize submission', details: error.message });
+  }
+});
+
+
+app.get('/api/teacher/student-responses/:studentId/:materialId', authMiddleware, async (req, res) => {
+  const { studentId, materialId } = req.params;
+
+  try {
+    const responses = await db.getStudentResponsesWithDetails(studentId, materialId);
+    res.json(responses);
+  } catch (err) {
+    console.error("Error fetching student responses:", err);
+    res.status(500).json({ error: "Failed to retrieve student responses" });
   }
 });
 

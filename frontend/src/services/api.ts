@@ -388,6 +388,10 @@ class ApiClient {
     });
   }
 
+  async getStudentResponsesForMaterial(studentId: string, materialId: string) {
+    return this.request<any[]>(`/teacher/student-responses/${studentId}/${materialId}`);
+  }  
+
   async finalSubmit(materialId: string): Promise<{ message: string }> {
     return this.request(`/responses/final-submit`, {
       method: 'POST',
