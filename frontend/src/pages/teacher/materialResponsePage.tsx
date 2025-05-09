@@ -25,7 +25,6 @@ const MaterialResponsePage: React.FC = () => {
       setLoading(true);
       try {
         const questionData = await api.getQuestions(materialId);
-        console.log("Fetched questions:", questionData);
         setQuestions(questionData);
 
         const allResponses: Record<string, Response[]> = {};
@@ -86,6 +85,18 @@ const MaterialResponsePage: React.FC = () => {
           const questionId = (question as any).questionId || (question as any).id;
           const responseList = responses[questionId] || [];
 
+          let validationChecks: string[] = [];
+
+          try {
+            const rules = question.metadata?.rules;
+            const parsedRules = typeof rules === 'string' ? JSON.parse(rules) : rules;
+            if (Array.isArray(parsedRules?.validationChecks)) {
+              validationChecks = parsedRules.validationChecks;
+            }
+          } catch (e) {
+            console.warn(`Failed to parse validationChecks for question ${questionId}`, e);
+          }
+
           return (
             <div className="card shadow-sm mb-4" key={questionId}>
               <div className="card-header bg-light">
@@ -95,22 +106,35 @@ const MaterialResponsePage: React.FC = () => {
                 {responseList.length === 0 ? (
                   <div className="text-muted">No student responses yet.</div>
                 ) : (
-                  <table className="table table-bordered table-hover">
-                    <thead>
-                      <tr>
-                        <th>Student Name</th>
-                        <th>Response</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {responseList.map((resp, i) => (
-                        <tr key={i}>
-                          <td>{resp.studentName}</td>
-                          <td>{resp.response}</td>
+                  <>
+                    <table className="table table-bordered table-hover">
+                      <thead className="table-light">
+                        <tr>
+                          <th>Student Name</th>
+                          <th>Response</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {responseList.map((resp, i) => (
+                          <tr key={i}>
+                            <td>{resp.studentName}</td>
+                            <td>{resp.response}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {validationChecks.length > 0 && (
+                      <div className="mt-4 border-top pt-3">
+                        <h6 className="text-secondary">Validation Criteria</h6>
+                        <ul className="mb-0 ps-3">
+                          {validationChecks.map((check, idx) => (
+                            <li key={idx}>{check}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
