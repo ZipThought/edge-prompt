@@ -1142,13 +1142,19 @@ app.put('/api/responses/:questionId', async (req, res) => {
 // Add response endpoints
 app.get('/api/responses', async (req, res): Promise<void> => {
   try {
+    console.log('Received request to get responses:', req.query);
     const questionId = req.query.questionId as string;
     if (!questionId) {
       res.status(400).json({ error: 'Missing questionId parameter' });
       return;
     }
     
-    const responses = (await db.getQuestionResponses(questionId)).filter(r => r.final_submission);
+    const token = req.headers.authorization?.split(' ')[1];
+    const decodedToken = token ? jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') : null;
+    const studentId = decodedToken?.userId;
+
+    const responses = await db.getResponseByQuestionIdAndStudentId(questionId, studentId)
+    console.log('Fetched responses:', responses);
     res.json(responses);
   } catch (error) {
     console.error('Failed to get responses:', error);
@@ -1161,7 +1167,7 @@ app.get('/api/responses', async (req, res): Promise<void> => {
 
 app.post('/api/responses', async (req, res): Promise<void> => {
   try {
-    const { questionId, response } = req.body;
+    const { questionId, materialId, response } = req.body;
     console.log('Received response creation request:', req.body);
 
     const token = req.headers.authorization?.split(' ')[1];
@@ -1182,6 +1188,7 @@ app.post('/api/responses', async (req, res): Promise<void> => {
     console.log('Received response creation request:', req.body);
     const responseId = await db.createResponse({
       questionId,
+      materialId,
       studentId,
       response,
     });
@@ -1231,18 +1238,76 @@ app.get('/api/teacher/student-responses/:studentId/:materialId', authMiddleware,
 
 app.get('/api/materials/:materialId/final-submission', authMiddleware, async (req, res) => {
   try {
-      const id = req.params.materialId;
-      if (!id) {
+      const materialid = req.params.materialId;
+      if (!materialid) {
           return res.status(400).json({ error: 'Material ID is required' });
       }
 
-      const isFinal = await db.isMaterialFinallySubmitted(id);
-      res.json({ isFinal });
+      const token = req.headers.authorization?.split(' ')[1];
+      const decodedToken = token ? jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') : null;
+      const studentId = decodedToken?.userId;
 
+      const isFinal = await db.isMaterialFinallySubmitted(materialid, studentId);
+      console.log(isFinal);
+      res.json({ isFinal });
 
   } catch (error) {
       console.error('Error checking final submission:', error);
       res.status(500).json({ error: 'Failed to check final submission status', details: error.message });
+  }
+});
+
+app.get('/api/materials/:materialId/grade-summary', async (req, res) => {
+  try {
+      const { materialId } = req.params;
+      const db = new DatabaseService();
+
+      // 1. Get total submissions for the material
+      const totalSubmissions = await db.countTotalSubmissionsForMaterial(materialId);
+
+      // 2. Get the number of graded submissions for the material
+      const gradedSubmissions = await db.countGradedSubmissionsForMaterial(materialId);
+
+      res.json({ totalSubmissions, gradedSubmissions });
+  } catch (error) {
+      console.error('Error fetching grade summary:', error);
+      res.status(500).json({ error: 'Failed to fetch grade summary', details: error.message });
+  }
+});
+
+app.get('/api/materials/:materialId/responses', async (req, res) => {
+  try {
+    console.log('Received request to get student responses:', req.params);
+    const { materialId } = req.params;  // Get materialId from URL
+    const studentId = req.query.studentId as string; // Get studentId from query parameter
+
+    if (!studentId) {
+      return res.status(400).json({ error: 'studentId is required as a query parameter' });
+    }
+
+    const responses = await db.getResponsesWithStudentInfo(materialId, studentId);
+    console.log('Fetched student responses:', responses);
+    res.json(responses);
+  } catch (error) {
+    console.error('Error fetching student responses:', error);
+    res.status(500).json({ error: 'Failed to fetch student responses', details: error.message });
+  }
+ });
+
+app.put('/api/grading/:responseId', async (req, res) => {
+  try {
+      const { responseId } = req.params;
+      const { grade, feedback } = req.body;
+
+      const token = req.headers.authorization?.split(' ')[1];
+      const decodedToken = token ? jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') : null;
+      const teacherId = decodedToken?.userId;
+
+      await db.updateResponseGradeAndFeedback(responseId, grade, feedback, teacherId);
+      res.json({ message: 'Grade and feedback updated successfully' });
+  } catch (error) {
+      console.error('Error updating grade and feedback:', error);
+      res.status(500).json({ error: 'Failed to update grade and feedback', details: error.message });
   }
 });
 

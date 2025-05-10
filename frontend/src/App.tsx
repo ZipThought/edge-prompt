@@ -24,6 +24,7 @@ import MaterialDetailPage from "./pages/teacher/materialDetailPage";
 import ProjectDetailPage from "./pages/teacher/moduleView";
 import StudentModulePage from "./pages/student/StudentModulePage";
 import MaterialResponsePage from "./pages/teacher/materialResponsePage";
+import GradeResponsesPage from "./pages/teacher/gradeResponsesPage";
 
 const App: React.FC = () => {
   return (
@@ -50,6 +51,7 @@ const App: React.FC = () => {
             <Route path="/material/:id" element={<MaterialDetailPage />} />
             <Route path="/dashboard/teacher/project/:id" element={<ProjectDetailPage />} />
             <Route path="/dashboard/teacher/material/:materialId/responses" element={<MaterialResponsePage />} />
+            <Route path="/dashboard/teacher/project/:projectId/grade-responses" element={<GradeResponsesPage />} />
 
             {/*student dashboard*/}
             <Route path="/dashboard/student" element={<StudentDashboard />} />

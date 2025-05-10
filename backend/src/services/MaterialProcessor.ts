@@ -402,6 +402,8 @@ Generate a detailed rubric with:
 3. Maximum score
 4. Criteria weights
 
+Criteria weights should reflect each validation check and scoring for each check, and total scoring of criteria weights should equal maximum score.
+
 Format as valid JSON with these keys: 
 { 
   "validationChecks": string[], 
