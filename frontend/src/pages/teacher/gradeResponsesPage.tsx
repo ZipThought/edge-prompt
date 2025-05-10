@@ -24,11 +24,9 @@ import React, { useState, useEffect, useCallback } from 'react';
  }
 
  const GradeResponsesPage: React.FC = () => {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { classId, projectId, materialId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
-  const classId = location.state?.classId;
-  const materialId = location.state?.materialId;
+
   const [students, setStudents] = useState<Student[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [material, setMaterial] = useState<Material | null>(null);
@@ -48,6 +46,9 @@ import React, { useState, useEffect, useCallback } from 'react';
     setError(null);
     try {
       // Fetch students
+      if (!classId) {
+        throw new Error("classId is undefined");
+      }
       const studentData = await api.getClassStudents(classId);
       setStudents(studentData);
 

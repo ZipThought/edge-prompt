@@ -49,9 +49,9 @@ const App: React.FC = () => {
             <Route path="/dashboard/teacher/class/:id" element={<TeacherClassPage />} />
             <Route path="/dashboard/teacher/manage-class/:classId" element={<ManageClass />} />
             <Route path="/material/:id" element={<MaterialDetailPage />} />
-            <Route path="/dashboard/teacher/project/:id" element={<ProjectDetailPage />} />
+            <Route path="/dashboard/teacher/class/:classId/project/:id" element={<ProjectDetailPage />} />
             <Route path="/dashboard/teacher/material/:materialId/responses" element={<MaterialResponsePage />} />
-            <Route path="/dashboard/teacher/project/:projectId/grade-responses" element={<GradeResponsesPage />} />
+            <Route path="/dashboard/teacher/class/:classId/project/:projectId/grade-responses/:materialId" element={<GradeResponsesPage />} />
 
             {/*student dashboard*/}
             <Route path="/dashboard/student" element={<StudentDashboard />} />

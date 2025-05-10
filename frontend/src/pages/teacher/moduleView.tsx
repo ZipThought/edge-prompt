@@ -5,13 +5,9 @@ import { MaterialDetailView } from '../../components/teacher/MaterialDetailView'
 import { SimplifiedMaterialUploader } from '../../components/teacher/SimplifiedMaterialUploader';
 import { Material, Project } from '../../types';
 
-
 const ProjectDetailPage: React.FC = () => { // Receive classId as a prop
-    const { id } = useParams<{ id: string }>();
+    const { classId, id: id } = useParams();
     const navigate = useNavigate();
-    const location = useLocation();
-    const classId = location.state?.id; // Get classId from the state
-    console.log("moduleView.tsx - classId:", classId);
 
     const [project, setProject] = useState<Project | null>(null);
     const [materials, setMaterials] = useState<Material[]>([]);
@@ -45,17 +41,12 @@ const ProjectDetailPage: React.FC = () => { // Receive classId as a prop
     };
 
     const handleGradeResponses = (materialId: string) => {
-        console.log("moduleView.tsx - Navigating to grade-responses with:");
-        console.log("  projectId:", id);
-        console.log("  materialId:", materialId);
-        console.log("  classId:", classId);
-        const navigationPath = `/dashboard/teacher/project/${id}/grade-responses`;
-        const navigationState = { state: { classId, materialId } };
-        navigate(navigationPath, navigationState);
+        const navigationPath = `/dashboard/teacher/class/${classId}/project/${id}/grade-responses/${materialId}`;
+        navigate(navigationPath);
     };
 
     const handleProjectClick = (projectId: string) => {
-        navigate(`/dashboard/teacher/project/${projectId}`, { state: { classId } });
+        navigate(`/dashboard/teacher/class/${classId}/project/${projectId}`);
     };
 
     const handleBack = () => {
