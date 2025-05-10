@@ -61,7 +61,7 @@ const StudentDashboard: React.FC = () => {
   };
 
   const handleViewClass = (classId: string) => {
-    navigate(`/dashboard/student/class/${classId}`);
+    navigate(`/dashboard/student/${classId}`);
   };
 
   return (

@@ -71,7 +71,7 @@ import React, { useEffect, useState } from "react";
   }, [classId]);
 
   const handleModuleClick = (moduleId: string) => {
-    navigate(`/dashboard/student/project/${moduleId}`); // This line is the focus
+    navigate(`/dashboard/student/${classId}/${moduleId}`); // This line is the focus
   };
 
   const handleBack = () => {

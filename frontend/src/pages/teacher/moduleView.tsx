@@ -41,12 +41,12 @@ const ProjectDetailPage: React.FC = () => { // Receive classId as a prop
     };
 
     const handleGradeResponses = (materialId: string) => {
-        const navigationPath = `/dashboard/teacher/class/${classId}/project/${id}/grade-responses/${materialId}`;
+        const navigationPath = `/dashboard/teacher/${classId}/${id}/${materialId}`;
         navigate(navigationPath);
     };
 
     const handleProjectClick = (projectId: string) => {
-        navigate(`/dashboard/teacher/class/${classId}/project/${projectId}`);
+        navigate(`/dashboard/teacher/${classId}/${projectId}`);
     };
 
     const handleBack = () => {

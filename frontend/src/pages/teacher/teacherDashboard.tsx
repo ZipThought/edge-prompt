@@ -124,7 +124,7 @@ const TeacherDashboard: React.FC = () => {
                     <div className="d-flex justify-content-center gap-2 mt-2 flex-wrap">
                       <button
                         className="btn btn-outline-primary btn-sm"
-                        onClick={() => navigate(`/dashboard/teacher/class/${cls.id}`)}
+                        onClick={() => navigate(`/dashboard/teacher/${cls.id}`)}
                       >
                         View Materials
                       </button>

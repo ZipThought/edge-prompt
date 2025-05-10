@@ -46,17 +46,17 @@ const App: React.FC = () => {
             {/* Teacher dashboard */}
             <Route path="/dashboard/teacher" element={<TeacherDashboard />} />
             <Route path="/dashboard/teacher/create-class" element={<CreateClass />} />
-            <Route path="/dashboard/teacher/class/:id" element={<TeacherClassPage />} />
+            <Route path="/dashboard/teacher/:classId" element={<TeacherClassPage />} />
             <Route path="/dashboard/teacher/manage-class/:classId" element={<ManageClass />} />
             <Route path="/material/:id" element={<MaterialDetailPage />} />
-            <Route path="/dashboard/teacher/class/:classId/project/:id" element={<ProjectDetailPage />} />
+            <Route path="/dashboard/teacher/:classId/:moduleId" element={<ProjectDetailPage />} />
             <Route path="/dashboard/teacher/material/:materialId/responses" element={<MaterialResponsePage />} />
-            <Route path="/dashboard/teacher/class/:classId/project/:projectId/grade-responses/:materialId" element={<GradeResponsesPage />} />
+            <Route path="/dashboard/teacher/:classId/:moduletId/:materialId" element={<GradeResponsesPage />} />
 
             {/*student dashboard*/}
             <Route path="/dashboard/student" element={<StudentDashboard />} />
-            <Route path="/dashboard/student/class/:classId" element={<ClassPage />} />
-            <Route path="/dashboard/student/project/:projectId" element={<StudentModulePage />} />
+            <Route path="/dashboard/student/:classId" element={<ClassPage />} />
+            <Route path="/dashboard/student/:classId/:projectId" element={<StudentModulePage />} />
 
             {/* Fallback route - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />

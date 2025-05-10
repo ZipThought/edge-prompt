@@ -49,7 +49,7 @@ import React, { useEffect, useState } from "react";
   };
 
   const handleViewModule = (moduleId: string) => {
-    const navigationPath = `/dashboard/teacher/class/${id}/project/${moduleId}`;
+    const navigationPath = `/dashboard/teacher/${id}/${moduleId}`;
     navigate(navigationPath);
   };
 
