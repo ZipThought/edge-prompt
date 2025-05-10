@@ -369,28 +369,31 @@ export class DatabaseService {
     return stmt.all() as ColumnInfo[];
   }
 
-  // Question methods
-  async getMaterialQuestions(materialId: string) {
+  // New method to check if an ID is likely a material ID rather than a question ID
+  async isLikelyMaterialId(id: string): Promise<boolean> {
+    // First check if this ID exists as a question ID
+    try {
+      const question = await this.getQuestion(id, false); // Use silent mode
+      if (question) {
+        return false; // It's a valid question ID
+      }
+    } catch (e) {
+      // Question not found, continue checking
+    }
+    
+    // Now check if any questions have this as a material_id
     const stmt = this.db.prepare(`
-      SELECT * FROM generated_questions 
+      SELECT COUNT(*) as count 
+      FROM generated_questions 
       WHERE material_id = ?
-      ORDER BY created_at DESC
     `);
     
-    const questions = stmt.all(materialId) as any[];
-    return questions.map(q => ({
-      id: q.id,
-      materialId: q.material_id,
-      promptTemplateId: q.prompt_template_id,
-      question: q.question,
-      constraints: JSON.parse(q.constraints || '{}'),
-      metadata: JSON.parse(q.metadata || '{}'),
-      createdAt: q.created_at
-    }));
+    const result = stmt.get(id) as { count: number };
+    return result.count > 0; // If we found questions with this material_id, it's likely a material ID
   }
 
-  // Get question by ID
-  async getQuestion(id: string) {
+  // Get question by ID - with improved error handling and silent mode option
+  async getQuestion(id: string, throwError: boolean = true) {
     const stmt = this.db.prepare(`
       SELECT * FROM generated_questions 
       WHERE id = ?
@@ -398,7 +401,11 @@ export class DatabaseService {
     
     const q = stmt.get(id) as any;
     if (!q) {
-      throw new Error(`Question not found: ${id}`);
+      if (throwError) {
+        throw new Error(`Question not found: ${id}`);
+      } else {
+        return null;
+      }
     }
     
     return {
@@ -412,90 +419,46 @@ export class DatabaseService {
     };
   }
   
-  // Create rubric method
-  async createRubric(params: {rubricId: string; questionId: string; rubric: any}) {
-    const stmt = this.db.prepare(`
-      INSERT INTO rubrics (id, question_id, rubric_text)
-      VALUES (?, ?, ?)
+  // Update question method - ENHANCED for better rubric handling and ID validation
+  async updateQuestion(id: string, questionText: string, metadata: any) {
+    // First check if the question exists
+    const questionCheck = this.db.prepare(`
+      SELECT id FROM generated_questions WHERE id = ?
     `);
-    
-    stmt.run(params.rubricId, params.questionId, JSON.stringify(params.rubric));
-    return params.rubricId;
-  }
-
-  // Get rubric by question ID
-  async getRubricFromQuestion(questionId: string) {
-    const stmt = this.db.prepare(`
-      SELECT * FROM rubrics 
-      WHERE question_id = ?
-    `);
-    
-    const r = stmt.get(questionId) as any;
-    if (!r) {
-      throw new Error(`Rubric not found for question: ${questionId}`);
+    const exists = questionCheck.get(id);
+    if (!exists) {
+      throw new Error(`Question not found: ${id}`);
     }
     
-    return {
-      id: r.id,
-      questionId: r.question_id,
-      rubric: r.rubric
-    };
-  }
-
-  // Create question method
-  async createQuestion(params: {
-    questionId: string;
-    materialId: string;
-    promptTemplateId: string;
-    question: string;
-    template: string;
-    rules: string;
-    metadata?: any;
-  }) {
-    const stmt = this.prepareStatement(`
-      INSERT INTO generated_questions (
-        id, material_id, prompt_template_id, question, constraints, metadata
-      )
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
-    
-    if (params.rules !== "{}" && params.template !== "{}") {
-      stmt.run(
-        params.questionId,
-        params.materialId,
-        params.promptTemplateId,
-        params.question,
-        params.template,
-        params.metadata ? JSON.stringify({
-          ...params.metadata,
-          rules: params.rules
-        }) : null
-      );
-    }
-    
-    return params.questionId;
-  }
-
-  // Update question method
-  async updateQuestion(id: string, question: string, metadata: any) {
     // First retrieve existing metadata
     const stmt1 = this.db.prepare(`
       SELECT metadata FROM generated_questions WHERE id = ?
     `);
     const existingData = stmt1.get(id) as any;
     
-    let updatedMetadata = metadata;
+    let updatedMetadata = metadata || {};
     
-    // If there's existing metadata, merge it with the new metadata
+    // If there's existing metadata, merge it properly
     if (existingData && existingData.metadata) {
       try {
         const existingMetadata = JSON.parse(existingData.metadata);
+        
+        // Create a proper merge that preserves existing fields
         updatedMetadata = {
           ...existingMetadata,
-          ...metadata
+          ...updatedMetadata
         };
+        
+        // Special handling for rules/rubric
+        if (updatedMetadata.rules) {
+          // Ensure rules is stored as a string
+          if (typeof updatedMetadata.rules !== 'string') {
+            updatedMetadata.rules = JSON.stringify(updatedMetadata.rules);
+          }
+        }
       } catch (e) {
         console.warn(`Failed to parse existing metadata for question ${id}:`, e);
+        // If parsing fails, use the new metadata only
       }
     }
     
@@ -506,17 +469,19 @@ export class DatabaseService {
       WHERE id = ?
     `);
     
-    stmt2.run(question, JSON.stringify(updatedMetadata), id);
+    stmt2.run(questionText, JSON.stringify(updatedMetadata), id);
+    
+    // Return the updated question to match API expectations
+    return {
+      id,
+      question: questionText,
+      metadata: updatedMetadata
+    };
   }
   
-  // Delete question method
-  async deleteQuestion(id: string) {
-    const stmt = this.db.prepare(`DELETE FROM generated_questions WHERE id = ?`);
-    stmt.run(id);
-  }  
-
-  // Get all questions for a material
+  // Get all questions for a material - with clarified ID handling
   async getQuestionsByMaterial(materialId: string) {
+    console.log(`Getting questions for material ID: ${materialId}`);
     const stmt = this.db.prepare(`
       SELECT id, material_id, prompt_template_id, question, constraints, metadata
       FROM generated_questions 
@@ -525,18 +490,27 @@ export class DatabaseService {
     `);
   
     const questions = stmt.all(materialId) as any[];
+    console.log(`Found ${questions.length} questions for material ID: ${materialId}`);
   
     return questions.map(q => {
       let metadata = {};
-      let rubric = {};
+      let rubric = { validationChecks: [] }; // Ensure there's always a default rubric structure
   
       try {
         metadata = JSON.parse(q.metadata || '{}');
   
-        // Preserve rules (do not delete it)
-        if (metadata.rules) {
+        // Extract rules from metadata to build rubric
+        if ((metadata as { rules?: any }).rules) {
           try {
-            rubric = JSON.parse(metadata.rules);
+            const parsedRules = 'rules' in metadata && typeof metadata.rules === 'string'
+              ? JSON.parse(metadata.rules)
+              : 'rules' in metadata
+              ? JSON.parse(JSON.stringify(metadata.rules))
+              : {};
+            // Ensure the expected structure is always returned
+            rubric = {
+              validationChecks: parsedRules.validationChecks || []
+            };
           } catch (e) {
             console.warn(`Failed to parse metadata.rules for question ${q.id}:`, e);
           }
@@ -554,8 +528,8 @@ export class DatabaseService {
       }
   
       return {
-        id: q.id,
-        materialId: q.material_id,
+        id: q.id, // This is the question ID, not the material ID
+        materialId: q.material_id, // This is the material ID
         promptTemplateId: q.prompt_template_id,
         question: q.question,
         template,
@@ -563,6 +537,22 @@ export class DatabaseService {
         metadata 
       };
     });
+  }
+  
+  // Delete question method - with improved validation
+  async deleteQuestion(id: string) {
+    // Verify the question exists first
+    const checkStmt = this.db.prepare(`
+      SELECT id FROM generated_questions WHERE id = ?
+    `);
+    const exists = checkStmt.get(id);
+    if (!exists) {
+      throw new Error(`Question not found: ${id}`);
+    }
+    
+    const stmt = this.db.prepare(`DELETE FROM generated_questions WHERE id = ?`);
+    stmt.run(id);
+    return { success: true, id };
   }
   
   // Update response method

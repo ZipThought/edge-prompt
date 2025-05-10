@@ -18,10 +18,13 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
   const [error, setError] = useState<string | null>(null);
   const [savedQuestions, setSavedQuestions] = useState<GeneratedQuestion[]>([]);
 
-  // Add to the existing state variables at the top of the component
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  // Use a composite key that uniquely identifies a question
+  // This ensures we can differentiate between questions unambiguously
+  const [editingQuestionKey, setEditingQuestionKey] = useState<string | null>(null);
   const [editedQuestionText, setEditedQuestionText] = useState('');
   const [editedRubricChecks, setEditedRubricChecks] = useState<string[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   
   // Get templates from material metadata
   const availableTemplates = material.metadata?.templates || [];
@@ -40,7 +43,21 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
     loadQuestions();
   }, [material.id]);
 
-  // Add this function to handle saving edited questions
+  // Generate a unique key for each question
+  const getQuestionKey = (questionId: string, templateIndex: number) => {
+    return `${questionId}-${templateIndex}`;
+  };
+
+  // Reset all editing states
+  const resetEditingState = () => {
+    setEditingQuestionKey(null);
+    setEditedQuestionText('');
+    setEditedRubricChecks([]);
+    setHasUnsavedChanges(false);
+    setShowCancelConfirmation(false);
+  };
+
+  // Handle saving edited questions
   const handleSaveEditedQuestion = async (questionId: string) => {
     if (!editedQuestionText.trim()) {
       return;
@@ -57,10 +74,10 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
 
       // Update the local state to reflect the changes
       const updatedQuestions = savedQuestions.map(q => {
-        if (q.materialId === questionId) {
+        if (q.questionId === questionId) { // Use question.questionId instead of materialId
           return {
             ...q,
-            question: editedQuestionText,
+            question: editedQuestionText, 
             rubric: {
               ...q.rubric,
               validationChecks: editedRubricChecks
@@ -72,9 +89,10 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
 
       // Reset the editing state
       setSavedQuestions(updatedQuestions);
-      setEditingQuestionId(null);
-      setEditedQuestionText('');
-      setEditedRubricChecks([]);
+      resetEditingState();
+
+      // Show success message
+      setError(null);
 
       // Refresh questions from the server
       const questions = await api.getQuestions(material.id);
@@ -84,9 +102,37 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
     }
   };
 
+  // Handle edit cancellation with confirmation if there are unsaved changes
+  const handleCancelEdit = () => {
+    if (hasUnsavedChanges) {
+      setShowCancelConfirmation(true);
+    } else {
+      resetEditingState();
+    }
+  };
+
+  // Handle entering edit mode for a question
+  const handleEditQuestion = (question: GeneratedQuestion, questionKey: string) => {
+    // Don't allow editing if already editing another question
+    if (editingQuestionKey !== null && editingQuestionKey !== questionKey) {
+      return;
+    }
+    
+    setEditingQuestionKey(questionKey);
+    setEditedQuestionText(question.question);
+    setEditedRubricChecks(question.rubric?.validationChecks || []);
+    setHasUnsavedChanges(false);
+  };
+
   const handleGenerateQuestion = async (template: any, index: number) => {
     if (!project?.promptTemplateId) {
       setError('Module has no prompt template configured');
+      return;
+    }
+
+    // Don't allow generating if we're currently editing
+    if (editingQuestionKey !== null) {
+      setError('Please finish editing the current question before generating a new one');
       return;
     }
 
@@ -137,6 +183,12 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
 
     if (availableTemplates.length === 0) {
       setError('No templates available for this material');
+      return;
+    }
+
+    // Don't allow generating all if we're currently editing
+    if (editingQuestionKey !== null) {
+      setError('Please finish editing the current question before generating new questions');
       return;
     }
 
@@ -201,25 +253,66 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
 
   return (
     <div>
+      {/* Confirmation Modal for Canceling Edit */}
+      {showCancelConfirmation && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Discard Changes?</h5>
+                <button type="button" className="btn-close" onClick={() => setShowCancelConfirmation(false)}></button>
+              </div>
+              <div className="modal-body">
+                <p>You have unsaved changes. Are you sure you want to discard them?</p>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowCancelConfirmation(false)}
+                >
+                  Continue Editing
+                </button>
+                <button 
+                  className="btn btn-danger" 
+                  onClick={() => {
+                    resetEditingState();
+                  }}
+                >
+                  Discard Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h5 className="mb-0">Question Generator</h5>
-        <button 
-          className="btn btn-primary"
-          onClick={handleGenerateAllQuestions}
-          disabled={generatingTemplate !== null || availableTemplates.length === 0}
-        >
-          {generatingTemplate === 'all' ? (
-            <>
-              <span className="spinner-border spinner-border-sm me-2"></span>
-              Generating All Questions...
-            </>
-          ) : (
-            <>
-              <i className="bi bi-lightning-charge-fill me-2"></i>
-              Generate All Questions
-            </>
+        <div>
+          {editingQuestionKey && (
+            <div className="badge bg-warning text-dark me-3">
+              <i className="bi bi-pencil me-1"></i>
+              Editing in progress
+            </div>
           )}
-        </button>
+          <button 
+            className="btn btn-primary"
+            onClick={handleGenerateAllQuestions}
+            disabled={generatingTemplate !== null || availableTemplates.length === 0 || editingQuestionKey !== null}
+          >
+            {generatingTemplate === 'all' ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2"></span>
+                Generating All Questions...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-lightning-charge-fill me-2"></i>
+                Generate All Questions
+              </>
+            )}
+          </button>
+        </div>
       </div>
       
       {error && (
@@ -240,9 +333,14 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
           <div className="list-group">
             {availableTemplates.map((template, index) => {
               const generatedQuestion = getQuestionForTemplate(index);
+              // Create a unique key for this question
+              const questionKey = generatedQuestion 
+                ? getQuestionKey(generatedQuestion.materialId, index) 
+                : null;
+              const isEditing = questionKey && editingQuestionKey === questionKey;
               
               return (
-                <div key={index} className="list-group-item">
+                <div key={index} className={`list-group-item ${isEditing ? 'border-primary' : ''}`}>
                   <div className="d-flex flex-column mb-3">
                     <div className="fw-bold mb-2">{template.pattern}</div>
                     <div className="d-flex align-items-center mb-2">
@@ -259,26 +357,33 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
                   
                   {generatedQuestion ? (
                     <div className="mb-3">
-                      <div className="card">
+                      <div className={`card ${isEditing ? 'border-primary' : ''}`}>
                         <div className="card-header bg-light d-flex justify-content-between align-items-center">
-                          <h6 className="mb-0">Generated Question</h6>
+                          <h6 className="mb-0">
+                            Generated Question
+                            {isEditing && (
+                              <span className="badge bg-primary ms-2">Editing</span>
+                            )}
+                          </h6>
                           <div>
-                            {editingQuestionId === generatedQuestion.materialId ? (
+                            {isEditing ? (
                               <>
                                 <button 
                                   className="btn btn-sm btn-success me-2"
-                                  onClick={() => handleSaveEditedQuestion(generatedQuestion.materialId)}
+                                  onClick={() => {
+                                    if (generatedQuestion.questionId) {
+                                      handleSaveEditedQuestion(generatedQuestion.questionId);
+                                    } else {
+                                      console.error('Question ID is undefined');
+                                    }
+                                  }}
                                 >
                                   <i className="bi bi-check me-1"></i>
                                   Save
                                 </button>
                                 <button 
                                   className="btn btn-sm btn-outline-secondary"
-                                  onClick={() => {
-                                    setEditingQuestionId(null);
-                                    setEditedQuestionText('');
-                                    setEditedRubricChecks([]);
-                                  }}
+                                  onClick={handleCancelEdit}
                                 >
                                   <i className="bi bi-x me-1"></i>
                                   Cancel
@@ -289,7 +394,7 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
                                 <button 
                                   className="btn btn-sm btn-outline-primary me-2"
                                   onClick={() => handleGenerateQuestion(template, index)}
-                                  disabled={generatingTemplate !== null}
+                                  disabled={generatingTemplate !== null || editingQuestionKey !== null}
                                 >
                                   <i className="bi bi-arrow-repeat me-1"></i>
                                   Regenerate
@@ -297,12 +402,11 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
                                 <button 
                                   className="btn btn-sm btn-outline-secondary me-2"
                                   onClick={() => {
-                                    setEditingQuestionId(generatedQuestion.materialId);
-                                    setEditedQuestionText(generatedQuestion.question);
-                                    setEditedRubricChecks(
-                                      generatedQuestion.rubric?.validationChecks || []
-                                    );
+                                    if (questionKey && generatedQuestion) {
+                                      handleEditQuestion(generatedQuestion, questionKey);
+                                    }
                                   }}
+                                  disabled={editingQuestionKey !== null && editingQuestionKey !== questionKey}
                                 >
                                   <i className="bi bi-pencil me-1"></i>
                                   Edit
@@ -324,11 +428,14 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
                         <div className="card-body">
                           <div>
                             <h6>Question:</h6>
-                            {editingQuestionId === generatedQuestion.materialId ? (
+                            {isEditing ? (
                               <textarea
                                 className="form-control mb-3"
                                 value={editedQuestionText}
-                                onChange={(e) => setEditedQuestionText(e.target.value)}
+                                onChange={(e) => {
+                                  setEditedQuestionText(e.target.value);
+                                  setHasUnsavedChanges(true);
+                                }}
                                 rows={4}
                               />
                             ) : (
@@ -336,10 +443,10 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
                             )}
                           </div>
                           
-                          {(generatedQuestion.rubric?.validationChecks || editingQuestionId === generatedQuestion.materialId) && (
+                          {(generatedQuestion.rubric?.validationChecks || isEditing) && (
                             <div className="mt-3">
                               <h6>Rubric:</h6>
-                              {editingQuestionId === generatedQuestion.materialId ? (
+                              {isEditing ? (
                                 <div className="mb-3">
                                   {editedRubricChecks.map((check, idx) => (
                                     <div key={idx} className="input-group mb-2">
@@ -351,6 +458,7 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
                                           const updated = [...editedRubricChecks];
                                           updated[idx] = e.target.value;
                                           setEditedRubricChecks(updated);
+                                          setHasUnsavedChanges(true);
                                         }}
                                       />
                                       <button
@@ -358,6 +466,7 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
                                         onClick={() => {
                                           const updated = editedRubricChecks.filter((_, i) => i !== idx);
                                           setEditedRubricChecks(updated);
+                                          setHasUnsavedChanges(true);
                                         }}
                                       >
                                         <i className="bi bi-trash"></i>
@@ -366,7 +475,10 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
                                   ))}
                                   <button
                                     className="btn btn-sm btn-outline-primary"
-                                    onClick={() => setEditedRubricChecks([...editedRubricChecks, ''])}
+                                    onClick={() => {
+                                      setEditedRubricChecks([...editedRubricChecks, '']);
+                                      setHasUnsavedChanges(true);
+                                    }}
                                   >
                                     <i className="bi bi-plus"></i> Add Criterion
                                   </button>
@@ -391,7 +503,7 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
                       <button 
                         className="btn btn-outline-primary"
                         onClick={() => handleGenerateQuestion(template, index)}
-                        disabled={generatingTemplate !== null}
+                        disabled={generatingTemplate !== null || editingQuestionKey !== null}
                       >
                         {generatingTemplate === `${index}` ? (
                           <>
@@ -415,4 +527,4 @@ export const QuestionGenerator: React.FC<Props> = ({ project, material }) => {
       </div>
     </div>
   );
-}; 
+};

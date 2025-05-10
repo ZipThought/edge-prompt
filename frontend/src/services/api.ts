@@ -363,11 +363,16 @@ class ApiClient {
 
   // Update a question
   async updateQuestion(questionId: string, updatedText: string, rubric?: any) {
+    // Format the rubric to match backend expectations
+    const formattedRubric = rubric ? {
+      validationChecks: rubric.validationChecks || []
+    } : null;
+    
     return this.request<{ message: string }>(`/questions/${questionId}`, {
       method: 'PUT',
       body: JSON.stringify({ 
         question: updatedText,
-        rubric: rubric
+        rubric: formattedRubric
       }),
     });
   }

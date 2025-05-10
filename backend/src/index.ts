@@ -1026,14 +1026,34 @@ app.get('/api/questions', async (req, res): Promise<void> => {
     const questions = await db.getQuestionsByMaterial(materialId as string);
     console.log('Fetched questions:', questions);
 
-    res.json(questions.map(q => ({
-      id: q.id,
-      materialId: q.materialId,
-      question: q.question,
-      metadata: q.metadata,       // include metadata
-      rubric: q.rubric,           
-      template: q.template        
-    })));    
+    // Transform the questions to match the frontend's expected format
+    res.json(questions.map(q => {
+      // Parse rules from metadata to get the rubric, if it exists
+      let rubric = { validationChecks: [] };
+      if (q.metadata && (q.metadata as { rules?: string }).rules) {
+        try {
+          const parsedRules = JSON.parse((q.metadata as { rules?: string }).rules || '{}');
+          if (parsedRules && parsedRules.validationChecks) {
+            rubric.validationChecks = parsedRules.validationChecks;
+          }
+        } catch (e) {
+          console.error('Failed to parse rules:', e);
+        }
+      }
+
+      return {
+        id: q.id, // Ensure we're sending the question ID, not material ID
+        materialId: q.materialId,
+        question: q.question,
+        metadata: {
+          ...q.metadata,
+          // Add templateIndex if available
+          templateIndex: (q.metadata as { templateIndex?: number })?.templateIndex || 0
+        },
+        rubric,
+        template: q.template
+      };
+    }));    
   } catch (error) {
     console.error('Failed to get questions:', error);
     res.status(500).json({
@@ -1074,7 +1094,7 @@ app.post('/api/questions', async (req, res): Promise<void> => {
     
     // Return the saved question with its ID
     res.json({
-      id: questionId,
+      id: questionId, // Return the generated question ID
       materialId,
       promptTemplateId,
       question,
@@ -1089,7 +1109,7 @@ app.post('/api/questions', async (req, res): Promise<void> => {
   }
 });
 
-// Update a question
+// Update a question - improved to handle ID validation
 app.put('/api/questions/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -1099,18 +1119,50 @@ app.put('/api/questions/:id', async (req, res) => {
       return res.status(400).json({ error: 'Question text is required' });
     }
 
-    // Create metadata with the rubric information
-    const metadata = {
-      rules: JSON.stringify(rubric || {})
-    };
+    // Check if ID looks like a material ID instead of a question ID
+    // This is a safety check - if no question is found but a material matches this ID,
+    // provide a helpful error message
+    if (await db.isLikelyMaterialId(id)) {
+      return res.status(400).json({ 
+        error: 'Invalid question ID', 
+        details: 'You provided a material ID instead of a question ID. Please use the question ID from the question list.'
+      });
+    }
 
-    // Update the question in the database
-    await db.updateQuestion(id, question, metadata);
+    // Get the existing question to check if it's being edited
+    try {
+      const existingQuestion = await db.getQuestion(id);
 
-    res.json({ message: 'Question updated successfully' });
+      // Store rubric in metadata rules in the expected format
+      const updatedMetadata = {
+        ...existingQuestion.metadata,
+        rules: JSON.stringify(rubric || { validationChecks: [] }),
+        // Clear edit lock when saving
+        editLock: null
+      };
+
+      // Update the question in the database
+      await db.updateQuestion(id, question, updatedMetadata);
+
+      res.json({ 
+        message: 'Question updated successfully',
+        id: id // Return the question ID to confirm the update
+      });
+    } catch (error) {
+      if ((error as Error).message.includes('Question not found')) {
+        return res.status(404).json({ 
+          error: 'Question not found', 
+          details: 'The question ID does not exist in the database.'
+        });
+      }
+      throw error; // Re-throw unexpected errors
+    }
   } catch (error) {
     console.error('Failed to update question:', error);
-    res.status(500).json({ error: 'Failed to update question' });
+    res.status(500).json({ 
+      error: 'Failed to update question',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
@@ -1118,11 +1170,23 @@ app.put('/api/questions/:id', async (req, res) => {
 app.delete('/api/questions/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Check if ID looks like a material ID instead of a question ID
+    if (await db.isLikelyMaterialId(id)) {
+      return res.status(400).json({ 
+        error: 'Invalid question ID', 
+        details: 'You provided a material ID instead of a question ID. Please use the question ID from the question list.'
+      });
+    }
+    
     await db.deleteQuestion(id);
     res.json({ message: 'Question deleted successfully' });
   } catch (error) {
     console.error('Failed to delete question:', error);
-    res.status(500).json({ error: 'Failed to delete question' });
+    res.status(500).json({ 
+      error: 'Failed to delete question',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
