@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS responses (
   question_id TEXT NOT NULL,
   student_id TEXT NOT NULL,
   response TEXT NOT NULL,
+  final_submission   BOOLEAN   DEFAULT FALSE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(question_id) REFERENCES generated_questions(id)
   FOREIGN KEY(STUDENT_ID) REFERENCES users(id)
@@ -161,6 +162,15 @@ CREATE INDEX IF NOT EXISTS idx_classroom_teachers ON classroom_teachers(classroo
 CREATE INDEX IF NOT EXISTS idx_classroom_students ON classroom_students(classroom_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_user_roles ON user_roles(user_id, role_id);
 
--- Adding a column to track final submission status
-ALTER TABLE responses
-ADD COLUMN final_submission BOOLEAN DEFAULT FALSE;
+-- -- Adding a column to track final submission status
+-- ALTER TABLE responses
+-- ADD COLUMN final_submission BOOLEAN DEFAULT FALSE;
+
+-- ── AI-Generated Feedback ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS ai_feedback (
+id TEXT PRIMARY KEY,
+response_id TEXT NOT NULL REFERENCES responses(id),
+feedback_text TEXT NOT NULL,
+created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+

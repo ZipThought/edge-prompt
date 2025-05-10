@@ -18,6 +18,7 @@ import jwt from 'jsonwebtoken';
 import { authMiddleware, jwtSecret } from './middleware/authMiddleware.js';
 import escape from 'escape-html';
 import { validateUploadedFile } from './utils/fileValidation.js';
+import { AIFeedbackService } from "./services/AIFeedbackService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -36,6 +37,7 @@ const validator = new ValidationService(lmStudio);
 const materialProcessor = new MaterialProcessor(lmStudio);
 const db = new DatabaseService();
 const storage = new StorageService();
+const aiService = new AIFeedbackService();
 await storage.initialize();
 
 // Configure multer for file uploads
@@ -1399,6 +1401,17 @@ app.post('/api/materials/:id/reprocess', upload.single('file'), async (req, res)
       error: 'Failed to reprocess material',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
+  }
+});
+
+app.post("/api/ai-feedback", async (req, res) => {
+  const { responseId } = req.body;
+  try {
+    const feedbackRec = await aiService.generate(String(responseId));
+    res.json({ feedback: feedbackRec.feedback_text });
+  } catch (err) {
+    console.error("AI-feedback error:", err);
+    res.status(500).json({ error: "Failed to generate AI feedback." });
   }
 });
 
