@@ -221,7 +221,7 @@ class ApiClient {
 
   // Get students enrolled in a specific class
   async getClassStudents(classId: string) {
-    return this.request<{ id: string; name: string; email: string }[]>(`/classes/${classId}/students`);
+    return this.request<{ id: string; name: string; email: string }[]>(`/classrooms/${classId}/students`);
   }
 
   // Get available students for class assignment
@@ -366,7 +366,12 @@ class ApiClient {
   }
 
   async getResponses(questionId: string) {
-    return this.request<any[]>(`/responses?questionId=${questionId}`);
+    const token = localStorage.getItem("token")
+    return this.request<any[]>(`/responses?questionId=${questionId}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
   }
 
   async saveResponse(response: any) {
@@ -388,10 +393,6 @@ class ApiClient {
     });
   }
 
-  async getStudentResponsesForMaterial(studentId: string, materialId: string) {
-    return this.request<any[]>(`/teacher/student-responses/${studentId}/${materialId}`);
-  }  
-
   async finalSubmit(materialId: string): Promise<{ message: string }> {
     return this.request(`/responses/final-submit`, {
       method: 'POST',
@@ -400,8 +401,12 @@ class ApiClient {
   }
 
   async isMaterialFinallySubmitted(materialId: string): Promise<{ isFinal: boolean }> {
+    const token = localStorage.getItem('token');
     console.log('Checking final submission status for material:', materialId);
     return this.request(`/materials/${materialId}/final-submission`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         method: 'GET',
     });
   }
@@ -466,6 +471,28 @@ async updateQuestion(questionId: string, updatedText: string) {
   return this.request<{ message: string }>(`/questions/${questionId}`, {
     method: 'PUT',
     body: JSON.stringify({ question: updatedText }),
+  });
+}
+
+async getGradeSummary(materialId: string): Promise<{ totalSubmissions: number; gradedSubmissions: number }> {
+  return this.request<{ totalSubmissions: number; gradedSubmissions: number }>(`/materials/${materialId}/grade-summary`);
+}
+
+// New method to get student responses with student info for a material
+async getStudentResponsesForMaterial(materialId: string, studentId : string): Promise<any[]> {
+  return this.request<any[]>(`/materials/${materialId}/responses?studentId=${studentId}`);
+}
+
+// New method to update a response's grade and feedback
+async updateResponseGradeAndFeedback(responseId: string, grade: number | null, feedback: string | null): Promise<any> {
+  const token = localStorage.getItem('token');
+  console.log('Updating response grade and feedback for response:', responseId);
+  return this.request<any>(`/grading/${responseId}`, {
+      method: 'PUT',
+      headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ grade, feedback }),
   });
 }
 

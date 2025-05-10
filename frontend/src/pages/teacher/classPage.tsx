@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
  import { api } from "../../services/api";
  import { Project } from "../../types";
  import { ProjectForm } from '../../components/project/ProjectForm'; // Import ProjectForm
+ import ProjectDetailPage from "../../pages/teacher/moduleView"; // Import ProjectDetailPage
 
  const TeacherClassPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -49,7 +50,9 @@ import React, { useEffect, useState } from "react";
   };
 
   const handleViewModule = (moduleId: string) => {
-    navigate(`/dashboard/teacher/project/${moduleId}`);
+    const navigationPath = `/dashboard/teacher/project/${moduleId}`;
+    const navigationState = { state: { id } };
+    navigate(navigationPath, navigationState);
   };
 
   const handleBack = () => {

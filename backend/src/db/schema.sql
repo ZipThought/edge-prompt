@@ -54,11 +54,18 @@ CREATE TABLE IF NOT EXISTS generated_questions (
 CREATE TABLE IF NOT EXISTS responses (
   id TEXT PRIMARY KEY,
   question_id TEXT NOT NULL,
+  material_id TEXT NOT NULL,
   student_id TEXT NOT NULL,
   response TEXT NOT NULL,
+  feedback TEXT,
+  grade REAL,
+  teacher_id TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  final_submission BOOLEAN DEFAULT FALSE,
   FOREIGN KEY(question_id) REFERENCES generated_questions(id)
-  FOREIGN KEY(STUDENT_ID) REFERENCES users(id)
+  FOREIGN KEY(student_id) REFERENCES users(id)
+  FOREIGN KEY(teacher_id) REFERENCES users(id)
+  FOREIGN KEY(material_id) REFERENCES materials(id)
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -138,19 +145,6 @@ CREATE TABLE IF NOT EXISTS rubrics (
     FOREIGN KEY (question_id) REFERENCES generated_questions(id)
 );
 
---Creating feedback TABLE
-CREATE TABLE IF NOT EXISTS feedback (
-    id TEXT PRIMARY KEY,
-    response_id TEXT NOT NULL,
-    teacher_id TEXT NOT NULL,
-    feedback_text TEXT NOT NULL,
-    score REAL NOT NULL,
-    given_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (response_id) REFERENCES responses(id),
-    FOREIGN KEY (teacher_id) REFERENCES users(id)
-);
-
-
 
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_materials_project ON materials(project_id);
@@ -160,7 +154,3 @@ CREATE INDEX IF NOT EXISTS idx_materials_status ON materials(status);
 CREATE INDEX IF NOT EXISTS idx_classroom_teachers ON classroom_teachers(classroom_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_classroom_students ON classroom_students(classroom_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_user_roles ON user_roles(user_id, role_id);
-
--- Adding a column to track final submission status
-ALTER TABLE responses
-ADD COLUMN final_submission BOOLEAN DEFAULT FALSE;

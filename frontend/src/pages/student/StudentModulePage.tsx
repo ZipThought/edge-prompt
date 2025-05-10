@@ -54,7 +54,9 @@ import React, { useEffect, useState, useCallback } from "react";
   // Function to fetch response for a single question
   const fetchResponse = useCallback(async (questionId: string) => {
     try {
+      console.log("Fetching response for question:", questionId);
       const response = await api.getResponses(questionId);
+      console.log("Past response", response)
       return response ? response[0] : null;
     } catch (error) {
       console.error(`Failed to fetch response for question ${questionId}:`, error);
@@ -147,6 +149,7 @@ import React, { useEffect, useState, useCallback } from "react";
         try {
           console.log("Checking final submission status for material:", selectedMaterial.id);
           const response = await api.isMaterialFinallySubmitted(selectedMaterial.id);
+          console.log("Final submission status response:", response);
           setIsMaterialFinallySubmitted(response.isFinal);
         } catch (error) {
           console.error("Failed to check final submission:", error);
@@ -213,6 +216,7 @@ import React, { useEffect, useState, useCallback } from "react";
     try {
       const responseData = await api.saveResponse({
         questionId: question.id,
+        materialId: selectedMaterial!.id,
         response: question.studentAnswer,
       });
       console.log("Response data:", responseData);

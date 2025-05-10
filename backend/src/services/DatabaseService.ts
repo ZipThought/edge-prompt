@@ -340,8 +340,18 @@ export class DatabaseService {
 
   async deleteMaterial(id: string): Promise<void> {
     const material = await this.getMaterial(id);
-    let stmt = this.prepareStatement('DELETE FROM generated_questions WHERE material_id = ?');
+    
+    let stmt = this.prepareStatement('DELETE FROM responses WHERE material_id = ?');
     stmt.run(id);
+    console.log("Deleted responses for material:", id);
+
+    stmt = this.prepareStatement('DELETE FROM rubrics WHERE question_id IN (SELECT id FROM generated_questions WHERE material_id = ?)');
+    stmt.run(id);
+    console.log("Deleted rubrics for material:", id);
+    
+    stmt = this.prepareStatement('DELETE FROM generated_questions WHERE material_id = ?');
+    stmt.run(id);
+    console.log("Deleted questions for material:", id);
 
     // Delete original file if it exists
     if (material.filePath) {
@@ -405,7 +415,7 @@ export class DatabaseService {
       VALUES (?, ?, ?)
     `);
     
-    stmt.run(params.rubricId, params.questionId, JSON.stringify(params.rubric));
+    stmt.run(params.rubricId, params.questionId, params.rubric);
     return params.rubricId;
   }
 
@@ -583,6 +593,15 @@ export class DatabaseService {
     return stmt.all(studentId, materialId);
   }  
 
+  async getResponseByQuestionIdAndStudentId(questionId: string, studentId: string): Promise<any | null> {
+    const stmt = this.prepareStatement(`
+      SELECT *
+      FROM responses
+      WHERE question_id = ? AND student_id = ?
+    `);
+    return stmt.all(questionId, studentId)
+  }
+
   async getResponse(id: string) {
     const stmt = this.db.prepare(`
       SELECT * FROM responses 
@@ -613,20 +632,22 @@ export class DatabaseService {
 
   async createResponse(params: {
     questionId: string;
+    materialId: string;
     studentId: string;
     response: string;
   }) {
     const stmt = this.db.prepare(`
       INSERT INTO responses (
-        id, question_id, student_id, response, final_submission
+        id, question_id, material_id, student_id, response, final_submission
       )
-      VALUES (?, ?, ? , ?, FALSE)
+      VALUES (?, ?, ?, ? , ?, FALSE)
     `);
 
     const id = uuid();
     stmt.run(
       id,
       params.questionId,
+      params.materialId,
       params.studentId,
       params.response,
     );
@@ -681,18 +702,93 @@ export class DatabaseService {
     tx();
   }  
 
-  async isMaterialFinallySubmitted(materialId: string): Promise<boolean> {
+  async isMaterialFinallySubmitted(materialId: string, studentId: string): Promise<boolean> {
+    // 1. Check if there are any questions for the material
+    const countResponseStmt = this.prepareStatement(`
+      SELECT COUNT(id) AS questionCount
+      FROM responses
+      WHERE student_id = ?
+    `);
+    const responseCountResult = countResponseStmt.get(studentId) as { questionCount: number } | undefined;
+    console.log("Question count result:", responseCountResult);
+    const responseCount = responseCountResult ? responseCountResult.questionCount : 0;
+    console.log("Question count:", responseCount);
+
+    if (responseCount === 0) {
+      return false;  // If no questions, consider it "submitted" (as before, but reconsider this!)
+    }
+ 
+
+    // 2. If there are questions, check the student's submission status
     const stmt = this.prepareStatement(`
-      SELECT 
-        CASE 
-          WHEN COUNT(id) = 0 THEN 1  -- If no questions, consider it submitted
-          ELSE SUM(CASE WHEN final_submission = 0 THEN 1 ELSE 0 END) 
-        END AS allSubmitted
+      SELECT
+        CASE
+          WHEN COUNT(id) = 0 THEN 0  -- Changed: 0 for no responses
+          ELSE SUM(CASE WHEN final_submission = 0 THEN 1 ELSE 0 END)
+        END AS notFinallySubmittedCount  -- Renamed variable
       FROM responses
       WHERE question_id IN (SELECT id FROM generated_questions WHERE material_id = ?)
+        AND student_id = ?
     `);
-    const result = stmt.get(materialId) as { allSubmitted: number };
-    return result.allSubmitted === 0;
+    const result = stmt.get(materialId, studentId) as { notFinallySubmittedCount: number } | undefined;  // Added undefined
+    console.log("Result:", result);
+    if (!result) {
+      return false;  // Or throw an error, depending on your error handling policy
+    }
+    return result.notFinallySubmittedCount === 0;
+  }
+
+  async getResponsesWithStudentInfo(materialId: string, studentId: string): Promise<any[]> {
+    const stmt = this.prepareStatement(`
+      SELECT
+          r.id AS responseId,
+          r.question_id,
+          r.student_id,
+          r.response,
+          r.feedback,
+          r.grade,
+          u.firstname,
+          u.lastname,
+          q.question,
+          q.metadata,  -- Fetch the question's metadata
+          rb.rubric_text AS rubric  -- Fetch the rubric
+      FROM responses r
+      JOIN users u ON r.student_id = u.id
+      JOIN generated_questions q ON r.question_id = q.id
+      LEFT JOIN rubrics rb ON q.id = rb.question_id -- Join to get the rubric
+      WHERE q.material_id = ? AND r.student_id = ?
+    `);
+    const responses = stmt.all(materialId, studentId);
+    return responses
+  }
+
+  async updateResponseGradeAndFeedback(responseId: string, grade: number | null, feedback: string | null, teacherId: string): Promise<void> {
+      const stmt = this.prepareStatement(`
+          UPDATE responses 
+          SET grade = ?, feedback = ?, teacher_id = ?
+          WHERE id = ?
+      `);
+      stmt.run(grade, feedback, teacherId, responseId);
+  }
+
+  async countTotalSubmissionsForMaterial(materialId: string): Promise<number> {
+    const stmt = this.prepareStatement(`
+        SELECT COUNT(DISTINCT student_id) AS total 
+        FROM responses 
+        WHERE material_id = ?
+    `);
+    const result = stmt.get(materialId) as any;
+    return result.total || 0;
+  }
+
+  async countGradedSubmissionsForMaterial(materialId: string): Promise<number> {
+      const stmt = this.prepareStatement(`
+          SELECT COUNT(DISTINCT student_id) AS graded 
+          FROM responses 
+          WHERE material_id = ? AND grade IS NOT NULL
+      `);
+      const result = stmt.get(materialId) as any;
+      return result.graded || 0;
   }
   
   getDatabasePath() {
@@ -887,10 +983,30 @@ export class DatabaseService {
   }
 
   async deleteUserById(userId: string): Promise<void> {
-    let stmt = this.prepareStatement('DELETE FROM user_roles WHERE user_id = ?');
+    let stmt = this.prepareStatement('SELECT * FROM user_roles where user_id = ?');
+    const userRoles = stmt.get(userId);
+    if (userRoles === "role_teacher") {
+      stmt = this.prepareStatement('DELETE FROM responses WHERE teacher_id = ?');
+      stmt.run(userId);
+      stmt = this.prepareStatement('DELETE FROM classroom_teachers WHERE user_id = ?');
+      stmt.run(userId);
+      console.log("Deleted responses for teacher:", userId);
+    }
+    else {
+      stmt = this.prepareStatement('DELETE FROM responses where student_id = ?');
+      stmt.run(userId);
+      stmt = this.prepareStatement('DELETE FROM classroom_students WHERE user_id = ?');
+      stmt.run(userId);
+      console.log("Deleted responses for student:", userId);
+    }
+
+    stmt = this.prepareStatement('DELETE FROM user_roles WHERE user_id = ?');
     stmt.run(userId);
+    console.log("Deleted user roles for user:", userId);
+    
     stmt = this.db.prepare(`DELETE FROM users WHERE id = ?`);
     stmt.run(userId);
+    console.log("Deleted user:", userId);
   }
     
   //Function to create new role
